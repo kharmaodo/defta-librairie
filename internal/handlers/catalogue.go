@@ -11,6 +11,8 @@ import (
 	"net/http"
 )
 
+
+
 var (
 	tmpl *template.Template // doit être initialisé dans main.go
 	cfg  *config.Config
@@ -24,7 +26,7 @@ func InitTemplates() {
 
 func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
 	// Récupérer les 30 premiers livres (premier chargement)
-	books, total, err := database.SearchBooks("", 0, cfg.PageSize)
+	books, total, err := database.SearchBooks("", 0, globalCfg.PageSize)
 	if err != nil {
 		log.Printf("Erreur chargement livres initiaux : %v", err)
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
@@ -47,6 +49,7 @@ func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
 		Total:     total,
 	}
 
+	log.Printf("Début CatalogueHandler - cfg: %v, tmpl: %v", cfg, tmpl)
 	// Rendre le template principal
 	if err := tmpl.ExecuteTemplate(w, "catalogue.html", data); err != nil {
 		log.Printf("Erreur rendu template : %v", err)

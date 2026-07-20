@@ -25,10 +25,13 @@ func main() {
 		log.Fatalf("Erreur chargement configuration : %v", err)
 	}
 
+	database.Init(cfg.DBPath) // ou ta fonction d'init DB
+    defer database.Close()
 
-	// Après chargement cfg
-	handlers.cfg = cfg               // si vous avez une variable globale cfg dans handlers
-	handlers.InitTemplates()
+	handlers.SetConfig(cfg)
+
+	// Charger les templates AVANT le serveur
+    handlers.InitTemplates()              // ← appelle la fonction qui initialise tmpl
 
 	// Initialiser la connexion SQLite
 	if err := database.Init(cfg.DBPath); err != nil {
@@ -39,9 +42,14 @@ func main() {
 	// ────────────────────────────────────────────────
 	// Définir les fonctions personnalisées AVANT ParseGlob
 	// ────────────────────────────────────────────────
-	funcMap := template.FuncMap{
-		"GetMsg": getMsg, // ← la fonction doit exister (voir ci-dessous)
-	}
+		funcMap := template.FuncMap{
+			"default": func(value, def string) string {
+				if value == "" {
+					return def
+				}
+				return value
+			},
+		}
 
 	// Charger les templates AVEC les fonctions
 	tmpl = template.New("").Funcs(funcMap)
