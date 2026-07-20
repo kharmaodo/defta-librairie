@@ -1,30 +1,16 @@
 // internal/handlers/catalogue.go
-
 package handlers
 
 import (
-	"defta-librairie/internal/config"
 	"defta-librairie/internal/database"
 	"defta-librairie/internal/models"
-	"html/template"
 	"log"
 	"net/http"
 )
 
-
-
-var (
-	tmpl *template.Template // doit être initialisé dans main.go
-	cfg  *config.Config
-)
-
-func InitTemplates() {
-	// À appeler une seule fois dans main.go
-	tmpl = template.Must(template.ParseGlob("templates/*.html"))
-	tmpl = template.Must(tmpl.ParseGlob("templates/partials/*.html"))
-}
-
 func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("CatalogueHandler - globalCfg = %v", globalCfg)
+
 	// Récupérer les 30 premiers livres (premier chargement)
 	books, total, err := database.SearchBooks("", 0, globalCfg.PageSize)
 	if err != nil {
@@ -42,16 +28,15 @@ func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
 		Total     int
 	}{
 		Title:     "كتالوج الكتب",
-		Version:   cfg.Version,
-		BuildDate: cfg.BuildDate,
-		PageSize:  cfg.PageSize,
+		Version:   globalCfg.Version,
+		BuildDate: globalCfg.BuildDate,
+		PageSize:  globalCfg.PageSize,
 		Books:     books,
 		Total:     total,
 	}
 
-	log.Printf("Début CatalogueHandler - cfg: %v, tmpl: %v", cfg, tmpl)
-	// Rendre le template principal
-	if err := tmpl.ExecuteTemplate(w, "catalogue.html", data); err != nil {
+	// Utiliser Tmpl global exporté depuis handlers
+	if err := Tmpl.ExecuteTemplate(w, "catalogue.html", data); err != nil {
 		log.Printf("Erreur rendu template : %v", err)
 		http.Error(w, "Erreur rendu", http.StatusInternalServerError)
 	}

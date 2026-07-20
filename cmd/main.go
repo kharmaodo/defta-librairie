@@ -1,5 +1,4 @@
 // cmd/main.go
-
 package main
 
 import (
@@ -13,7 +12,7 @@ import (
 )
 
 var (
-	tmpl *template.Template
+	Tmpl *template.Template   // ← Exporté (majuscule) pour être visible depuis handlers
 	cfg  *config.Config
 )
 
@@ -25,41 +24,36 @@ func main() {
 		log.Fatalf("Erreur chargement configuration : %v", err)
 	}
 
-	database.Init(cfg.DBPath) // ou ta fonction d'init DB
-    defer database.Close()
-
-	handlers.SetConfig(cfg)
-
-	// Charger les templates AVANT le serveur
-    handlers.InitTemplates()              // ← appelle la fonction qui initialise tmpl
-
 	// Initialiser la connexion SQLite
 	if err := database.Init(cfg.DBPath); err != nil {
 		log.Fatalf("Erreur connexion à la base SQLite : %v", err)
 	}
 	defer database.Close()
 
+	// Passer la config aux handlers
+	handlers.SetConfig(cfg)
+
 	// ────────────────────────────────────────────────
 	// Définir les fonctions personnalisées AVANT ParseGlob
 	// ────────────────────────────────────────────────
-		funcMap := template.FuncMap{
-			"default": func(value, def string) string {
-				if value == "" {
-					return def
-				}
-				return value
-			},
-		}
+	funcMap := template.FuncMap{
+		"GetMsg": getMsg,
+		"default": func(value, def string) string {
+			if value == "" {
+				return def
+			}
+			return value
+		},
+	}
 
 	// Charger les templates AVEC les fonctions
-	tmpl = template.New("").Funcs(funcMap)
-	tmpl = template.Must(tmpl.ParseGlob("templates/*.html"))
-	tmpl = template.Must(tmpl.ParseGlob("templates/partials/*.html"))
+	Tmpl = template.New("").Funcs(funcMap)
+	Tmpl = template.Must(Tmpl.ParseGlob("templates/*.html"))
+	Tmpl = template.Must(Tmpl.ParseGlob("templates/partials/*.html"))
 
 	// Routes de base
 	http.HandleFunc("/", handlers.CatalogueHandler)
 	http.HandleFunc("/api/books", handlers.APIBooksHandler)
-
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	addr := fmt.Sprintf(":%s", cfg.Port)
@@ -72,9 +66,8 @@ func main() {
 }
 
 // ────────────────────────────────────────────────
-// Fonction de traduction minimale (à déplacer plus tard dans internal/i18n)
+// Fonction de traduction minimale
 // ────────────────────────────────────────────────
-
 var translations = map[string]map[string]string{
 	"ar": {
 		"title":              "كتالوج المكتبة",
