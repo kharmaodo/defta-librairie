@@ -1,0 +1,14 @@
+{{define "search-bar"}}
+<div class="search-container">
+    <form id="search-form" class="search-form">
+        <input 
+            type="search" 
+            id="search-input" 
+            placeholder="ابحث عن كتاب، مؤلف، ناشر..." 
+            autocomplete="off"
+            dir="rtl">
+        <button type="submit" id="search-btn">بحث</button>
+        <span class="help-icon" title="أمثلة:\n• خواطر\n• \"أحمد مراد\"\n• رواية*\n• -تاريخ\n• دار النشر:دار الساقي">؟</span>
+    </form>
+</div>
+{{end}}

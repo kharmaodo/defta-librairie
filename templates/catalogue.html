@@ -1,0 +1,25 @@
+{{define "content"}}
+
+    {{template "search-bar" .}}
+
+    {{template "view-toggle" .}}
+
+    <div id="results-container"
+         data-page-size="{{.PageSize}}"
+         data-has-more="true"
+         data-loading="false"
+         data-offset="0">
+
+        <!-- Les résultats seront injectés ici dynamiquement -->
+        <div id="books-list" class="books-grid"></div>
+
+        <div id="loading" class="loading" style="display: none;">
+            جاري التحميل...
+        </div>
+
+        <div id="no-more" class="no-more" style="display: none;">
+            لا توجد نتائج إضافية
+        </div>
+    </div>
+
+{{end}}
