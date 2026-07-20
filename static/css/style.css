@@ -1,189 +1,57 @@
-/* Reset & base */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  font-size: 100%;
-}
-
-body {
-  font-family: 'Noto Sans Arabic', system-ui, sans-serif;
-  line-height: 1.6;
-  color: #222;
-  background: #f9f9f9;
-  direction: rtl;
-  text-align: right;
-}
-
-/* Container */
-.container {
-  max-width: 1400px;
-  margin-inline: auto;
-  padding-inline: 1.5rem;
-}
-
-/* Header */
-header {
-  background: #2c3e50;
-  color: white;
-  padding: 1.5rem 0;
-  text-align: center;
-}
-
-h1 {
-  margin: 0;
-  font-size: 2.2rem;
-}
-
-/* Search bar */
-.search-container {
-  margin: 1.5rem 0;
-  text-align: center;
-}
-
-.search-form {
-  display: flex;
-  gap: 0.5rem;
-  max-width: 600px;
-  margin-inline: auto;
-}
-
-#search-input {
-  flex: 1;
-  padding: 0.8rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 1rem;
-  direction: rtl;
-}
-
-#search-btn {
-  padding: 0.8rem 1.5rem;
-  background: #3498db;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-#search-btn:hover {
-  background: #2980b9;
-}
-
-.help-icon {
-  width: 32px;
-  height: 32px;
-  line-height: 32px;
-  background: #ecf0f1;
-  border-radius: 50%;
-  text-align: center;
-  cursor: help;
-  font-weight: bold;
-}
-
-/* View toggle */
-.view-toggle {
-  margin: 1rem 0;
-  text-align: center;
-}
-
-.view-btn {
-  padding: 0.6rem 1.2rem;
-  margin: 0 0.3rem;
-  border: 1px solid #ccc;
-  background: white;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.view-btn.active {
-  background: #2c3e50;
-  color: white;
-  border-color: #2c3e50;
-}
-
-/* Results container */
-#results-container {
-  min-height: 60vh;
-}
-
-/* Loading & no more */
-.loading, .no-more {
-  text-align: center;
-  padding: 2rem;
-  color: #777;
-  font-style: italic;
-}
-
-/* Cards grid */
 .books-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1.5rem 1.25rem;
-  padding: 1rem 0;
+  gap: 1.5rem;
+  margin: 2rem 0;
 }
 
-/* Card style */
 .book-card {
   background: white;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-  display: flex;
-  flex-direction: column;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .book-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  transform: translateY(-6px);
+  box-shadow: 0 12px 24px rgba(0,0,0,0.12);
 }
 
 .card-cover {
   height: 320px;
-  background: #f1f1f1;
-  position: relative;
-}
-
-.card-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center;
-}
-
-.no-cover {
-  height: 100%;
+  background: #f8f9fa;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.card-cover img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.no-cover {
   color: #aaa;
-  font-size: 0.9rem;
+  font-size: 1rem;
   text-align: center;
   padding: 1rem;
 }
 
 .card-info {
   padding: 1rem;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 
 .title {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 600;
-  margin: 0;
-  line-height: 1.4;
+  margin: 0 0 0.5rem;
 }
 
 .author, .publisher {
   color: #555;
+  margin: 0.3rem 0;
   font-size: 0.95rem;
 }
 
@@ -191,8 +59,7 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: auto;
-  font-size: 0.95rem;
+  margin-top: 0.8rem;
 }
 
 .price {
@@ -201,40 +68,44 @@ h1 {
 }
 
 .category {
-  color: #7f8c8d;
   background: #ecf0f1;
-  padding: 0.2rem 0.6rem;
-  border-radius: 12px;
+  padding: 0.3rem 0.7rem;
+  border-radius: 16px;
+  font-size: 0.85rem;
 }
 
 .status {
   display: inline-block;
-  padding: 0.35rem 0.8rem;
+  margin-top: 0.8rem;
+  padding: 0.4rem 0.9rem;
   border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .available   { background: #d4edda; color: #155724; }
 .unavailable { background: #f8d7da; color: #721c24; }
 
-/* Table view */
+.no-results {
+  text-align: center;
+  padding: 4rem;
+  color: #777;
+  font-size: 1.2rem;
+}
+
 .table-view {
   overflow-x: auto;
-  margin: 1.5rem 0;
+  margin: 2rem 0;
 }
 
 .book-table {
   width: 100%;
   border-collapse: collapse;
   background: white;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
 
-.book-table th,
-.book-table td {
+.book-table th, .book-table td {
   padding: 1rem;
   text-align: right;
   border-bottom: 1px solid #eee;
@@ -243,31 +114,68 @@ h1 {
 .book-table th {
   background: #34495e;
   color: white;
-  font-weight: 600;
 }
 
+
+/* Conteneurs des deux vues */
+#books-table-view,
+#books-cards-view {
+  display: none;
+}
+
+/* Vue active */
+.view-active {
+  display: block !important;
+}
+
+/* Boutons toggle */
+.view-toggle .view-btn {
+  padding: 0.6rem 1.4rem;
+  margin: 0 0.4rem;
+  border: 1px solid #ccc;
+  background: #fff;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.view-toggle .view-btn.active {
+  background: #2c3e50;
+  color: white;
+  border-color: #2c3e50;
+}
+
+/* Table de base (style minimal) */
+.book-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.book-table th,
 .book-table td {
-  vertical-align: middle;
+  padding: 0.9rem 1rem;
+  text-align: right;
+  border-bottom: 1px solid #eee;
+}
+
+.book-table th {
+  background: #34495e;
+  color: white;
 }
 
 .book-table img {
-  width: 64px;
-  height: 90px;
-  object-fit: contain;
+  max-width: 80px;
+  height: auto;
   border-radius: 4px;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .search-form {
-    flex-direction: column;
-  }
-
-  .books-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  }
-
-  .card-cover {
-    height: 260px;
-  }
+/* Cards (déjà présentes, juste rappel) */
+.books-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
 }

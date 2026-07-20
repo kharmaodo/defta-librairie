@@ -1,32 +1,76 @@
 {{define "content"}}
 
-    <div class="search-container">
-        <form id="search-form" class="search-form">
-            <input 
-                type="search" 
-                id="search-input" 
-                placeholder="{{GetMsg .Lang "search_placeholder"}}" 
-                autocomplete="off"
-                dir="rtl">
-            <button type="submit" id="search-btn">{{GetMsg .Lang "search_button"}}</button>
-            <span class="help-icon" title="{{GetMsg .Lang "tooltip_help"}}">؟</span>
-        </form>
+  <!-- Barre de recherche (inchangée) -->
+  <div class="search-container">
+    <form id="search-form" class="search-form">
+      <input type="search" id="search-input" placeholder="{{GetMsg .Lang "search_placeholder"}}" autocomplete="off" dir="rtl">
+      <button type="submit" id="search-btn">{{GetMsg .Lang "search_button"}}</button>
+      <span class="help-icon" title="{{GetMsg .Lang "tooltip_help"}}">؟</span>
+    </form>
+  </div>
+
+  <!-- Toggle -->
+  <div class="view-toggle">
+    <span>{{GetMsg .Lang "view_label"}} :</span>
+    <button type="button" class="view-btn active" data-view="card">{{GetMsg .Lang "view_cards"}}</button>
+    <button type="button" class="view-btn" data-view="table">{{GetMsg .Lang "view_table"}}</button>
+  </div>
+
+  <!-- Conteneur principal -->
+  <div id="results-container" data-page-size="{{.PageSize}}">
+
+    <!-- Vue CARDS (contient les 30 livres initiaux) -->
+    <div id="books-cards-view" class="books-grid view-active">
+      {{range .Books}}
+        <div class="book-card">
+          <div class="card-cover">
+            {{if .CoverURL.Valid}}
+              <img src="{{.CoverURL.String}}" alt="{{.Title}}" loading="lazy">
+            {{else}}
+              <div class="no-cover">لا يوجد غلاف</div>
+            {{end}}
+          </div>
+          <div class="card-info">
+            <h3 class="title">{{.Title}}</h3>
+            <p class="author">{{if .Auteur.Valid}}{{.Auteur.String}}{{else}}غير محدد{{end}}</p>
+            <p class="publisher">{{if .Editeur.Valid}}{{.Editeur.String}}{{else}}غير محدد{{end}}</p>
+            <div class="meta">
+              <span class="price">{{.Price}} دج</span>
+              <span class="category">{{if .Categorie.Valid}}{{.Categorie.String}}{{else}}غير مصنف{{end}}</span>
+            </div>
+            <span class="status {{if eq .Status.String "متوفر"}}available{{else}}unavailable{{end}}">
+              {{if .Status.Valid}}{{.Status.String}}{{else}}غير محدد{{end}}
+            </span>
+          </div>
+        </div>
+      {{else}}
+        <p style="text-align:center; padding:4rem; color:#777;">لا توجد كتب</p>
+      {{end}}
     </div>
 
-    <div class="view-toggle">
-        <span>{{GetMsg .Lang "view_label"}} :</span>
-        <button type="button" class="view-btn active" data-view="table">{{GetMsg .Lang "view_table"}}</button>
-        <button type="button" class="view-btn" data-view="card">{{GetMsg .Lang "view_cards"}}</button>
+    <!-- Vue TABLE (vide au départ, remplie par JS si besoin) -->
+    <div id="books-table-view" class="table-view">
+      <table class="book-table">
+        <thead>
+          <tr>
+            <th>الغلاف</th>
+            <th>العنوان</th>
+            <th>المؤلف</th>
+            <th>الناشر</th>
+            <th>السعر</th>
+            <th>التصنيف</th>
+            <th>الحالة</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+          <!-- JS remplira ici si l'utilisateur bascule vers table -->
+        </tbody>
+      </table>
     </div>
 
-    <div id="results-container" data-page-size="{{.PageSize}}">
-        <div id="books-list" class="books-grid"></div>
-        <div id="loading" style="text-align:center; padding:2rem; display:none;">
-            جاري التحميل...
-        </div>
-        <div id="no-more" style="text-align:center; padding:2rem; display:none;">
-            لا توجد نتائج إضافية
-        </div>
-    </div>
+    <!-- Loader et fin de résultats -->
+    <div id="loading" style="text-align:center; padding:2rem; display:none;">جاري التحميل...</div>
+    <div id="no-more" style="text-align:center; padding:2rem; display:none;">لا توجد نتائج إضافية</div>
+  </div>
 
 {{end}}

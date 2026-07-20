@@ -19,6 +19,8 @@ var translations = map[string]map[string]string{
 		"view_table":         "جدول",
 		"view_cards":         "كروت",
 		"no_results":         "لا توجد نتائج مطابقة",
+        "Version": "الإصدار",
+        "footer_copyright": "جميع الحقوق محفوظة © 2025-2026",
 	},
 	"fr": {
 		"title":              "Catalogue de la librairie",
@@ -28,6 +30,8 @@ var translations = map[string]map[string]string{
 		"view_table":         "Tableau",
 		"view_cards":         "Cartes",
 		"no_results":         "Aucun résultat correspondant",
+        "Version": "© 2025–20206",
+        "footer_copyright": "© 2025-2026",
 	},
 }
 
