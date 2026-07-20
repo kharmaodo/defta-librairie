@@ -11,28 +11,30 @@ import (
 // Traductions (déplacées ici pour être accessibles aux templates)
 // ────────────────────────────────────────────────
 var translations = map[string]map[string]string{
-	"ar": {
-		"title":              "كتالوج المكتبة",
-		"search_placeholder": "ابحث عن كتاب، مؤلف، دار نشر...",
-		"search_button":      "بحث",
-		"view_label":         "عرض",
-		"view_table":         "جدول",
-		"view_cards":         "كروت",
-		"no_results":         "لا توجد نتائج مطابقة",
-        "Version": "الإصدار",
-        "footer_copyright": "جميع الحقوق محفوظة © 2025-2026",
-	},
-	"fr": {
-		"title":              "Catalogue de la librairie",
-		"search_placeholder": "Rechercher un livre, auteur, éditeur...",
-		"search_button":      "Rechercher",
-		"view_label":         "Vue",
-		"view_table":         "Tableau",
-		"view_cards":         "Cartes",
-		"no_results":         "Aucun résultat correspondant",
-        "Version": "© 2025–20206",
-        "footer_copyright": "© 2025-2026",
-	},
+    "ar": {
+        "title":              "كتالوج المكتبة",
+        "search_placeholder": "ابحث عن كتاب، مؤلف، دار نشر...",
+        "search_button":      "بحث",
+        "view_label":         "عرض",
+        "view_table":         "جدول",
+        "view_cards":         "كروت",
+        "no_results":         "لا توجد نتائج مطابقة",
+        "footer_copyright":   "جميع الحقوق محفوظة © 2025-2026",
+        "footer_version":     "الإصدار",
+        "tooltip_help":       "أمثلة على البحث المتقدم:\n• خواطر\n• 'أحمد مراد'\n• رواية*\n• -تاريخ\n• دار النشر:'دار الساقي'",
+    },
+    "fr": {
+        "title":              "Catalogue de la librairie",
+        "search_placeholder": "Rechercher un livre, auteur, éditeur...",
+        "search_button":      "Rechercher",
+        "view_label":         "Vue",
+        "view_table":         "Tableau",
+        "view_cards":         "Cartes",
+        "no_results":         "Aucun résultat correspondant",
+        "footer_copyright":   "Tous droits réservés © 2025-2026",
+        "footer_version":     "Version",
+        "tooltip_help":       "Exemples de recherche avancée :\n• خواطر\n• \"أحمد مراد\"\n• رواية*\n• -تاريخ\n• دار النشر:\"دار الساقي\"",
+    },
 }
 
 func getMsg(lang, key string) string {

@@ -1,74 +1,92 @@
+// static/js/main.js
 document.addEventListener('DOMContentLoaded', () => {
-  const toggleButtons = document.querySelectorAll('.view-btn');
+  // Éléments DOM - avec vérifications
+  const resultsContainer = document.getElementById('results-container');
+  if (!resultsContainer) {
+    console.warn("Conteneur #results-container introuvable");
+    return;
+  }
+
+  const booksList = document.getElementById('books-list');
+  const loadingEl = document.getElementById('loading');
+  const noMoreEl = document.getElementById('no-more');
+  const searchForm = document.getElementById('search-form');
+  const searchInput = document.getElementById('search-input');
+  const viewBtns = document.querySelectorAll('.view-btn');
+
+  if (!booksList || !viewBtns.length) {
+    console.warn("Éléments essentiels introuvables (books-list ou view-btn)");
+    return;
+  }
+
+  // Configuration
+  const API_URL = '/api/books';
+  const PAGE_SIZE = parseInt(resultsContainer.dataset.pageSize || 30);
+  let currentView = localStorage.getItem('viewMode') || 'card';
+  let currentQuery = '';
+
+  // Vues
   const cardsView = document.getElementById('books-cards-view');
   const tableView = document.getElementById('books-table-view');
 
-  // Récupérer la vue sauvegardée (ou 'card' par défaut)
-  let currentView = localStorage.getItem('preferredView') || 'card';
+  if (!cardsView || !tableView) {
+    console.warn("Conteneurs de vue introuvables (#books-cards-view ou #books-table-view)");
+    return;
+  }
 
-  function setView(view) {
-    currentView = view;
-    localStorage.setItem('preferredView', view);
-
-    // Activer le bon bouton
-    toggleButtons.forEach(btn => {
-      btn.classList.toggle('active', btn.dataset.view === view);
-    });
-
-    // Afficher la vue correspondante
-    if (view === 'card') {
-      cardsView.classList.add('view-active');
-      tableView.classList.remove('view-active');
-    } else {
-      tableView.classList.add('view-active');
-      cardsView.classList.remove('view-active');
-
-      // Optionnel : si table vide, copier les données des cards
-      if (tableView.querySelector('tbody').children.length === 0) {
-        copyCardsToTable();
-      }
+  // Fonction pour changer la vue
+  function setView(mode) {
+    if (!['card', 'table'].includes(mode)) {
+      mode = 'card';
     }
-  }
 
-  // Fonction pour copier les cards vers la table (premier basculement)
-  function copyCardsToTable() {
-    const tbody = document.getElementById('table-body');
-    tbody.innerHTML = ''; // vider d'abord
+    currentView = mode;
+    localStorage.setItem('viewMode', mode);
 
-    const cards = document.querySelectorAll('.book-card');
-    cards.forEach(card => {
-      const title = card.querySelector('.title').textContent;
-      const author = card.querySelector('.author').textContent;
-      const publisher = card.querySelector('.publisher').textContent;
-      const price = card.querySelector('.price').textContent;
-      const category = card.querySelector('.category').textContent;
-      const statusEl = card.querySelector('.status');
-      const status = statusEl ? statusEl.textContent.trim() : 'غير محدد';
-      const statusClass = statusEl ? statusEl.className : '';
-
-      const imgSrc = card.querySelector('img') ? card.querySelector('img').src : '';
-
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td>${imgSrc ? `<img src="${imgSrc}" alt="${title}" style="width:80px;">` : 'لا غلاف'}</td>
-        <td>${title}</td>
-        <td>${author}</td>
-        <td>${publisher}</td>
-        <td>${price}</td>
-        <td>${category}</td>
-        <td class="${statusClass}">${status}</td>
-      `;
-      tbody.appendChild(row);
+    // Activer le bouton correspondant
+    viewBtns.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === mode);
     });
+
+    // Afficher la bonne vue
+    cardsView.classList.toggle('view-active', mode === 'card');
+    tableView.classList.toggle('view-active', mode === 'table');
   }
 
-  // Écouteur sur les boutons
-  toggleButtons.forEach(btn => {
+  // Initialisation de la vue sauvegardée
+  setView(currentView);
+
+  // Toggle au clic
+  viewBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      setView(btn.dataset.view);
+      const view = btn.dataset.view;
+      if (view) {
+        setView(view);
+      } else {
+        console.warn("Bouton sans data-view", btn);
+      }
     });
   });
 
-  // Charger la vue sauvegardée au démarrage
-  setView(currentView);
+  // Recherche (recharge la page avec ?q=...)
+  if (searchForm) {
+    searchForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const query = searchInput.value.trim();
+      if (query) {
+        window.location.href = `/?q=${encodeURIComponent(query)}`;
+      } else {
+        window.location.href = '/'; // recherche vide → retour à la liste vide
+      }
+    });
+  }
+
+  // Si tu veux plus tard implémenter infinite scroll / chargement dynamique :
+  // window.addEventListener('scroll', () => {
+  //   if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 400) {
+  //     loadMoreBooks();
+  //   }
+  // });
+
+  console.log("JS initialisé - vue courante :", currentView);
 });
