@@ -20,24 +20,27 @@ func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		Title     string
-		Version   string
-		BuildDate string
-		PageSize  int
-		Books     []models.Book
-		Total     int
-	}{
-		Title:     "كتالوج الكتب",
-		Version:   globalCfg.Version,
-		BuildDate: globalCfg.BuildDate,
-		PageSize:  globalCfg.PageSize,
-		Books:     books,
-		Total:     total,
-	}
+    Title     string
+    Lang      string   // ← AJOUTE ÇA
+    Version   string
+    BuildDate string
+    PageSize  int
+    Books     []models.Book
+    Total     int
+}{
+    Title:     "كتالوج الكتب",
+    Lang:      "ar",   // ← valeur par défaut arabe + RTL
+    Version:   globalCfg.Version,
+    BuildDate: globalCfg.BuildDate,
+    PageSize:  globalCfg.PageSize,
+    Books:     books,
+    Total:     total,
+}
 
 	// Utiliser Tmpl global exporté depuis handlers
-	if err := Tmpl.ExecuteTemplate(w, "catalogue.html", data); err != nil {
-		log.Printf("Erreur rendu template : %v", err)
-		http.Error(w, "Erreur rendu", http.StatusInternalServerError)
-	}
+	if err := Tmpl.ExecuteTemplate(w, "base.html", data); err != nil {
+    log.Printf("ERREUR RENDU BASE : %v", err)
+    http.Error(w, "Erreur rendu base : "+err.Error(), 500)
+    return
+}
 }
