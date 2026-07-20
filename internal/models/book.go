@@ -39,7 +39,7 @@ type Book struct {
 	Price     float64     `json:"price"`
 	Volume    int         `json:"volume"`
 	Status    StringField `json:"status"`
-	Tags      IntField    `json:"tags"`
+	Tags      StringField    `json:"tags"`
 	Categorie sql.NullInt64    `json:"categorie"`
 	CoverURL  StringField `json:"coverUrl"`
 	Score     sql.NullFloat64 `json:"score,omitempty"`
