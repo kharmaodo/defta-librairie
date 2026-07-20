@@ -98,28 +98,28 @@
                 </tr>
             </thead>
             <tbody>
-                {{range .Books}}
-                    <tr>
-                        <td>
-                            {{if .CoverURL.Valid}}
-                                <img src="{{.CoverURL.String}}" alt="{{.Title}}" style="width:80px; height:auto;">
-                            {{else}}
-                                لا غلاف
-                            {{end}}
-                        </td>
-                        <td>{{.Title}}</td>
-                        <td>{{if .Auteur.Valid}}{{.Auteur.String}}{{else}}غير محدد{{end}}</td>
-                        <td>{{if .Editeur.Valid}}{{.Editeur.String}}{{else}}غير محدد{{end}}</td>
-                        <td>{{.Price}} دج</td>
-                        <td>{{if .Categorie.Valid}}{{.Categorie.String}}{{else}}غير مصنف{{end}}</td>
-                        <td class="status {{if eq .Status.String "متوفر"}}available{{else}}unavailable{{end}}">
-                            {{if .Status.Valid}}{{.Status.String}}{{else}}غير محدد{{end}}
-                        </td>
-                    </tr>
+    {{range .Books}}
+        <tr>
+            <td>
+                {{if .CoverURL.Valid}}
+                    <img src="{{.CoverURL.String}}" alt="{{.Title}}" style="width:80px;">
                 {{else}}
-                    <tr><td colspan="7" style="text-align:center; padding:3rem;">لا توجد كتب</td></tr>
+                    لا غلاف
                 {{end}}
-            </tbody>
+            </td>
+            <td>{{.Title}}</td>
+            <td>{{if .Auteur.Valid}}{{.Auteur.String}}{{else}}غير محدد{{end}}</td>
+            <td>{{if .Editeur.Valid}}{{.Editeur.String}}{{else}}غير محدد{{end}}</td>
+            <td>{{.Price}} دج</td>
+            <td>{{if .Categorie.Valid}}{{.Categorie.String}}{{else}}غير مصنف{{end}}</td>
+            <td class="status {{if eq .Status.String "متوفر"}}available{{else}}unavailable{{end}}">
+                {{if .Status.Valid}}{{.Status.String}}{{else}}غير محدد{{end}}
+            </td>
+        </tr>
+    {{else}}
+        <tr><td colspan="7" style="text-align:center;">لا توجد كتب</td></tr>
+    {{end}}
+</tbody>
         </table>
     </div>
 

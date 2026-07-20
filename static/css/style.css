@@ -1,87 +1,68 @@
-/* Par défaut, les deux vues sont cachées */
-#books-cards-view,
-#books-table-view {
-  display: none;
+/* ============================================
+   CONTAINER
+   ============================================ */
+.container {
+  max-width: 1400px;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
 }
 
-/* Vue active : force l’affichage */
-.view-active {
-  display: block !important;
+/* ============================================
+   HEADER
+   ============================================ */
+header {
+  background: #2c3e50;
+  color: white;
+  padding: 1.5rem 0;
+  text-align: center;
 }
 
-/* Spécifique pour la grille cards */
-.books-grid.view-active {
-  display: grid !important;
+h1 {
+  margin: 0;
+  font-size: 2.2rem;
 }
 
-/* Spécifique pour la table */
-.table-view.view-active {
-  display: block !important;
+/* ============================================
+   BARRE DE RECHERCHE
+   ============================================ */
+.search-container {
+  margin: 1.5rem 0;
+  text-align: center;
 }
 
-/* Si tu utilises encore .hidden */
-.hidden {
-  display: none !important;
+.search-form {
+  display: flex;
+  gap: 0.5rem;
+  max-width: 600px;
+  margin-inline: auto;
 }
 
-/* Par défaut : les deux vues sont cachées */
-#books-cards-view,
-#books-table-view {
-  display: none;
+#search-input {
+  flex: 1;
+  padding: 0.8rem 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+  direction: rtl;
 }
 
-/* Quand une vue est active */
-.view-active {
-  display: block !important;
+#search-btn {
+  padding: 0.8rem 1.5rem;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
 }
 
-/* Spécifique cards : force le grid */
-.books-grid.view-active {
-  display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1.5rem;
+#search-btn:hover {
+  background: #2980b9;
 }
 
-/* Spécifique table : force le block */
-.table-view.view-active {
-  display: block !important;
-}
-
-/* Si tu utilises encore .hidden (optionnel) */
-.hidden {
-  display: none !important;
-}
-
-
-.view-active {
-  display: block !important;
-}
-
-#books-cards-view,
-#books-table-view {
-  display: none; /* caché par défaut */
-}
-
-
-.hidden {
-  display: none !important;
-}
-
-.books-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1.5rem;
-}
-
-.table-view {
-  overflow-x: auto;
-}
-
-.view-active {
-  display: block !important;
-}
-
-
+/* ============================================
+   ICÔNE D'AIDE (TOOLTIP)
+   ============================================ */
 .help-icon {
   position: relative;
   cursor: help;
@@ -115,7 +96,7 @@
   pointer-events: none;
   line-height: 1.5;
   text-align: right;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   margin-bottom: 8px;
 }
 
@@ -131,41 +112,76 @@
   z-index: 10;
 }
 
-
-.custom-tooltip {
-  position: fixed;
-  background: #2c3e50;
-  color: white;
-  padding: 10px 14px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  white-space: pre-wrap;
-  max-width: 320px;
-  pointer-events: none;
-  z-index: 1000;
-  transform: translateX(-50%);
-  line-height: 1.5;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+/* ============================================
+   TOGGLE VUE (BOUTONS)
+   ============================================ */
+.view-toggle {
+  margin: 1rem 0;
+  text-align: center;
 }
 
+.view-btn {
+  padding: 0.6rem 1.2rem;
+  margin: 0 0.3rem;
+  border: 1px solid #ccc;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.view-btn.active {
+  background: #2c3e50;
+  color: white;
+  border-color: #2c3e50;
+}
+
+/* ============================================
+   CONTENEUR DE RÉSULTATS
+   ============================================ */
+#results-container {
+  display: block;
+  min-height: 60vh;
+  overflow: visible;
+  padding: 1rem 0;
+}
+
+/* Loading & no more */
+.loading,
+.no-more {
+  text-align: center;
+  padding: 2rem;
+  color: #777;
+  font-style: italic;
+}
+
+.no-results {
+  text-align: center;
+  padding: 4rem;
+  color: #777;
+  font-size: 1.2rem;
+}
+
+/* ============================================
+   VUE CARTES (GRID)
+   ============================================ */
 .books-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 1.5rem;
   margin: 2rem 0;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
 .book-card {
   background: white;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .book-card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.12);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
 
 .card-cover {
@@ -199,7 +215,8 @@
   margin: 0 0 0.5rem;
 }
 
-.author, .publisher {
+.author,
+.publisher {
   color: #555;
   margin: 0.3rem 0;
   font-size: 0.95rem;
@@ -235,97 +252,131 @@
 .available   { background: #d4edda; color: #155724; }
 .unavailable { background: #f8d7da; color: #721c24; }
 
-.no-results {
-  text-align: center;
-  padding: 4rem;
-  color: #777;
-  font-size: 1.2rem;
-}
-
+/* ============================================
+   VUE TABLEAU
+   ============================================ */
 .table-view {
   overflow-x: auto;
-  margin: 2rem 0;
-}
-
-.book-table {
+  margin: 1.5rem 0;
   width: 100%;
-  border-collapse: collapse;
-  background: white;
-  border-radius: 10px;
-  overflow: hidden;
 }
 
-.book-table th, .book-table td {
-  padding: 1rem;
-  text-align: right;
-  border-bottom: 1px solid #eee;
-}
-
-.book-table th {
-  background: #34495e;
-  color: white;
-}
-
-
-/* Conteneurs des deux vues */
-#books-table-view,
-#books-cards-view {
-  display: none;
-}
-
-/* Vue active */
-.view-active {
-  display: block !important;
-}
-
-/* Boutons toggle */
-.view-toggle .view-btn {
-  padding: 0.6rem 1.4rem;
-  margin: 0 0.4rem;
-  border: 1px solid #ccc;
-  background: #fff;
-  cursor: pointer;
-  border-radius: 6px;
-  font-size: 0.95rem;
-}
-
-.view-toggle .view-btn.active {
-  background: #2c3e50;
-  color: white;
-  border-color: #2c3e50;
-}
-
-/* Table de base (style minimal) */
 .book-table {
   width: 100%;
   border-collapse: collapse;
   background: white;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .book-table th,
 .book-table td {
-  padding: 0.9rem 1rem;
+  padding: 1rem;
   text-align: right;
   border-bottom: 1px solid #eee;
+  vertical-align: middle;
 }
 
 .book-table th {
   background: #34495e;
   color: white;
+  font-weight: 600;
 }
 
 .book-table img {
-  max-width: 80px;
-  height: auto;
+  width: 64px;
+  height: 90px;
+  object-fit: contain;
   border-radius: 4px;
 }
 
-/* Cards (déjà présentes, juste rappel) */
-.books-grid {
+.table-view td,
+.table-view th {
+  color: #222;
+}
+
+.table-view .price {
+  color: #e74c3c;
+}
+
+.table-view .status.available {
+  background: #d4edda;
+  color: #155724;
+}
+
+.table-view .status.unavailable {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* ============================================
+   TOGGLE DES VUES — VERSION CORRIGÉE
+   ------------------------------------------
+   Bug initial : deux règles !important de même
+   "poids" (ID+class vs class+class) se battaient
+   sur la même propriété "display". Le sélecteur
+   ID gagnait toujours et forçait "display:block"
+   même sur la vue cartes, empêchant la grille de
+   s'afficher correctement.
+   Correction : une seule règle par vue, appliquée
+   directement sur l'ID actif, qui fixe le bon
+   type d'affichage (grid pour les cartes, block
+   pour le tableau). Plus de conflit de spécificité.
+   ============================================ */
+
+#books-cards-view,
+#books-table-view {
+  display: none;
+}
+
+#books-cards-view.view-active {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 1.5rem;
+}
+
+#books-table-view.view-active {
+  display: block;
+}
+
+/* Classe utilitaire générique (masquage forcé) */
+.hidden {
+  display: none !important;
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+footer {
+  margin-block-start: 3rem;
+  padding-block: 1.5rem;
+  text-align: center;
+  border-top: 1px solid #eee;
+  font-size: 0.9rem;
+  color: #444;
+  font-weight: 700;
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1400px;
+}
+
+footer p {
+  margin: 0.5rem 0;
+  line-height: 1.5;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .search-form {
+    flex-direction: column;
+  }
+
+  .books-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+
+  .card-cover {
+    height: 260px;
+  }
 }
