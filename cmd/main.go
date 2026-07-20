@@ -33,23 +33,8 @@ func main() {
 	// Passer la config aux handlers
 	handlers.SetConfig(cfg)
 
-	// ────────────────────────────────────────────────
-	// Définir les fonctions personnalisées AVANT ParseGlob
-	// ────────────────────────────────────────────────
-	funcMap := template.FuncMap{
-		"GetMsg": getMsg,
-		"default": func(value, def string) string {
-			if value == "" {
-				return def
-			}
-			return value
-		},
-	}
-
-	// Charger les templates AVEC les fonctions
-	Tmpl = template.New("").Funcs(funcMap)
-	Tmpl = template.Must(Tmpl.ParseGlob("templates/*.html"))
-	Tmpl = template.Must(Tmpl.ParseGlob("templates/partials/*.html"))
+	// Chargement des templates (déplacé dans handlers)
+	handlers.InitTemplates()
 
 	// Routes de base
 	http.HandleFunc("/", handlers.CatalogueHandler)
@@ -65,41 +50,3 @@ func main() {
 	}
 }
 
-// ────────────────────────────────────────────────
-// Fonction de traduction minimale
-// ────────────────────────────────────────────────
-var translations = map[string]map[string]string{
-	"ar": {
-		"title":              "كتالوج المكتبة",
-		"search_placeholder": "ابحث عن كتاب، مؤلف، دار نشر...",
-		"search_button":      "بحث",
-		"view_label":         "عرض",
-		"view_table":         "جدول",
-		"view_cards":         "كروت",
-		"no_results":         "لا توجد نتائج مطابقة",
-	},
-	"fr": {
-		"title":              "Catalogue de la librairie",
-		"search_placeholder": "Rechercher un livre, auteur, éditeur...",
-		"search_button":      "Rechercher",
-		"view_label":         "Vue",
-		"view_table":         "Tableau",
-		"view_cards":         "Cartes",
-		"no_results":         "Aucun résultat correspondant",
-	},
-}
-
-func getMsg(lang, key string) string {
-	if m, ok := translations[lang]; ok {
-		if val, ok := m[key]; ok {
-			return val
-		}
-	}
-	// Fallback arabe
-	if m, ok := translations["ar"]; ok {
-		if val, ok := m[key]; ok {
-			return val
-		}
-	}
-	return key // clé brute si introuvable
-}
