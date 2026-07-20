@@ -359,3 +359,25 @@ h1 {
 .hidden {
   display: none !important;
 }
+
+
+/* Footer - Centrage parfait + texte gras un peu plus foncé */
+footer {
+  margin-block-start: 3rem;         /* marge au-dessus */
+  padding-block: 1.5rem;            /* padding haut/bas */
+  text-align: center;
+  border-top: 1px solid #eee;
+  font-size: 0.9rem;
+  color: #444;                      /* gris plus foncé que #666 */
+  font-weight: 700;                 /* gras renforcé */
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1400px;
+  box-sizing: border-box;
+}
+
+/* Pour les paragraphes à l'intérieur du footer */
+footer p {
+  margin: 0.5rem 0;
+  line-height: 1.5;
+}
