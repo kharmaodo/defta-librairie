@@ -25,6 +25,11 @@ func main() {
 		log.Fatalf("Erreur chargement configuration : %v", err)
 	}
 
+
+	// Après chargement cfg
+	handlers.cfg = cfg               // si vous avez une variable globale cfg dans handlers
+	handlers.InitTemplates()
+
 	// Initialiser la connexion SQLite
 	if err := database.Init(cfg.DBPath); err != nil {
 		log.Fatalf("Erreur connexion à la base SQLite : %v", err)

@@ -1,23 +1,55 @@
+// internal/handlers/catalogue.go
+
 package handlers
 
 import (
-	"fmt"
+	"defta-librairie/internal/config"
+	"defta-librairie/internal/database"
+	"defta-librairie/internal/models"
+	"html/template"
+	"log"
 	"net/http"
 )
 
+var (
+	tmpl *template.Template // doit être initialisé dans main.go
+	cfg  *config.Config
+)
+
+func InitTemplates() {
+	// À appeler une seule fois dans main.go
+	tmpl = template.Must(template.ParseGlob("templates/*.html"))
+	tmpl = template.Must(tmpl.ParseGlob("templates/partials/*.html"))
+}
+
 func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, `
-		<!DOCTYPE html>
-		<html lang="ar" dir="rtl">
-		<head>
-			<meta charset="UTF-8">
-			<title>Defta Librairie</title>
-		</head>
-		<body style="font-family: 'Noto Sans Arabic', sans-serif; text-align: center; padding: 4rem;">
-			<h1>مرحباً بك في كتالوج ديفتا</h1>
-			<p>الصفحة الرئيسية تعمل (v0.1)</p>
-			<p><a href="/api/books?limit=5">→ Tester API /api/books</a></p>
-		</body>
-		</html>
-	`)
+	// Récupérer les 30 premiers livres (premier chargement)
+	books, total, err := database.SearchBooks("", 0, cfg.PageSize)
+	if err != nil {
+		log.Printf("Erreur chargement livres initiaux : %v", err)
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		return
+	}
+
+	data := struct {
+		Title     string
+		Version   string
+		BuildDate string
+		PageSize  int
+		Books     []models.Book
+		Total     int
+	}{
+		Title:     "كتالوج الكتب",
+		Version:   cfg.Version,
+		BuildDate: cfg.BuildDate,
+		PageSize:  cfg.PageSize,
+		Books:     books,
+		Total:     total,
+	}
+
+	// Rendre le template principal
+	if err := tmpl.ExecuteTemplate(w, "catalogue.html", data); err != nil {
+		log.Printf("Erreur rendu template : %v", err)
+		http.Error(w, "Erreur rendu", http.StatusInternalServerError)
+	}
 }

@@ -21,40 +21,47 @@ func SetConfig(c *config.Config) {
 
 // cleanBook transforme les champs sql.Null* en valeurs simples ou null
 func cleanBook(b models.Book) map[string]interface{} {
-	return map[string]interface{}{
-		"id":        b.ID,
-		"title":     b.Title,
-		"auteur":    nullableString(b.Auteur),
-		"editeur":   nullableString(b.Editeur),
-		"price":     b.Price,
-		"volume":    b.Volume,
-		"status":    nullableString(b.Status),
-		"tags":      nullableString(b.Tags),      // maintenant string
-		"categorie": nullableInt64(b.Categorie),
-		"coverUrl":  nullableString(b.CoverURL),
-		"score":     nullableFloat(b.Score),
-	}
+    return map[string]interface{}{
+        "id":        b.ID,
+        "title":     b.Title,
+        "auteur":    nullableString(b.Auteur),
+        "editeur":   nullableString(b.Editeur),
+        "price":     b.Price,
+        "volume":    b.Volume,
+        "status":    nullableString(b.Status),
+        "tags":      nullableInt64(b.Tags),
+        "categorie": nullableSQLInt64(b.Categorie),
+        "coverUrl":  nullableString(b.CoverURL),
+        "score":     nullableFloat(b.Score),
+    }
 }
 
-func nullableString(ns sql.NullString) interface{} {
-	if ns.Valid {
-		return ns.String
-	}
-	return nil
+func nullableString(sf models.StringField) interface{} {
+    if sf.Valid {
+        return sf.String
+    }
+    return nil
 }
 
-func nullableInt64(ni sql.NullInt64) interface{} {
-	if ni.Valid {
-		return ni.Int64
-	}
-	return nil
+func nullableInt64(i models.IntField) interface{} {
+    if i.Valid {
+        return i.Int64
+    }
+    return nil
 }
 
-func nullableFloat(nf sql.NullFloat64) interface{} {
-	if nf.Valid {
-		return nf.Float64
-	}
-	return nil
+func nullableSQLInt64(i sql.NullInt64) interface{} {
+    if i.Valid {
+        return i.Int64
+    }
+    return nil
+}
+
+func nullableFloat(f sql.NullFloat64) interface{} {
+    if f.Valid {
+        return f.Float64
+    }
+    return nil
 }
 
 func APIBooksHandler(w http.ResponseWriter, r *http.Request) {
