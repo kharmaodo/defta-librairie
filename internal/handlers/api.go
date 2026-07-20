@@ -31,7 +31,7 @@ func cleanBook(b models.Book) map[string]interface{} {
         "volume":    b.Volume,
         "status":    nullableString(b.Status),
         "tags":      nullableString(b.Tags),
-        "categorie": nullableSQLInt64(b.Categorie),
+        "categorie": nullableString(b.Categorie),
         "coverUrl":  nullableString(b.CoverURL),
         "score":     nullableFloat(b.Score),
     }
