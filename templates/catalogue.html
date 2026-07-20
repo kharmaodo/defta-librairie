@@ -1,78 +1,131 @@
 {{define "content"}}
 
-  {{if .HasResults}}
-    <p style="text-align:center; color:#27ae60;">
+{{if .HasResults}}
+    <p style="text-align:center; color:#27ae60; margin:1rem 0; font-weight:bold;">
         {{len .Books}} نتيجة (من إجمالي {{.Total}})
+    </p>
+{{else if .Query}}
+    <p style="text-align:center; color:#e74c3c; margin:2rem 0; font-size:1.2rem;">
+        لا توجد نتائج مطابقة لـ "{{.Query}}"
+    </p>
+{{else}}
+    <p style="text-align:center; color:#777; margin:2rem 0; font-size:1.2rem;">
+        ابدأ بالبحث أو اضغط على العنوان لعرض الكل
     </p>
 {{end}}
 
-    <div class="header-title">
-        <a href="/" style="text-decoration: none; color: inherit;">
-            <h1>{{.Title}}</h1>
-        </a>
-    </div>
+<div class="header-title">
+    <a href="/" style="text-decoration: none; color: inherit;">
+        <h1>{{.Title}}</h1>
+    </a>
+</div>
 
-    <!-- Barre de recherche -->
-    <div class="search-container">
-        <form id="search-form" class="search-form">
-            <input
-                type="search"
-                name="q"
-                id="search-input"
-                placeholder="{{GetMsg .Lang "search_placeholder"}}"
-                autocomplete="off"
-                dir="rtl"
-                value="{{.Query}}">  <!-- garde la valeur si rechargement -->
-            <button type="submit" id="search-btn">{{GetMsg .Lang "search_button"}}</button>
-            <span class="help-icon" title="{{GetMsg .Lang "tooltip_help"}}">؟</span>
-        </form>
-    </div>
+<div class="search-container">
+    <form id="search-form" class="search-form">
+        <input
+            type="search"
+            name="q"
+            id="search-input"
+            placeholder="{{GetMsg .Lang "search_placeholder"}}"
+            autocomplete="off"
+            dir="rtl"
+            value="{{.Query}}">
+        <button type="submit" id="search-btn">{{GetMsg .Lang "search_button"}}</button>
+        <span class="help-icon" title="{{GetMsg .Lang "tooltip_help"}}">؟</span>
+    </form>
+</div>
 
-    <!-- Toggle vue (table / cards) -->
-    <div class="view-toggle">
-        <span>{{GetMsg .Lang "view_label"}} :</span>
-        <button type="button" class="view-btn {{if eq .View "card"}}active{{end}}" data-view="card">{{GetMsg .Lang "view_cards"}}</button>
-        <button type="button" class="view-btn {{if eq .View "table"}}active{{end}}" data-view="table">{{GetMsg .Lang "view_table"}}</button>
-    </div>
+<div class="view-toggle">
+    <span>{{GetMsg .Lang "view_label"}} :</span>
+    <button type="button" class="view-btn {{if eq .View "card"}}active{{end}}" data-view="card">
+        {{GetMsg .Lang "view_cards"}}
+    </button>
+    <button type="button" class="view-btn {{if eq .View "table"}}active{{end}}" data-view="table">
+        {{GetMsg .Lang "view_table"}}
+    </button>
+</div>
 
-    <!-- Résultats -->
-    <div id="results-container" data-page-size="{{.PageSize}}" data-query="{{.Query}}">
 
-        {{if .HasResults}}
-            <!-- Vue Cards -->
-            <div id="books-cards-view" class="books-grid {{if ne .View "card"}}hidden{{end}}">
-                {{range .Books}}
-                    <div class="book-card">
-                        <!-- ... ton code card existant ... -->
+<div id="results-container" data-page-size="{{.PageSize}}" data-view="{{.View}}">
+
+    <!-- Vue Cards -->
+    <div id="books-cards-view" class="books-grid {{if eq .View "card"}}view-active{{end}} {{if ne .View "card"}}hidden{{end}}">
+        {{range .Books}}
+            <div class="book-card">
+                <div class="card-cover">
+                    {{if .CoverURL.Valid}}
+                        <img src="{{.CoverURL.String}}" alt="{{.Title}}" loading="lazy">
+                    {{else}}
+                        <div class="no-cover">لا يوجد غلاف</div>
+                    {{end}}
+                </div>
+                <div class="card-info">
+                    <h3 class="title">{{.Title}}</h3>
+                    <p class="author">
+                        {{if .Auteur.Valid}}{{.Auteur.String}}{{else}}غير محدد{{end}}
+                    </p>
+                    <p class="publisher">
+                        {{if .Editeur.Valid}}{{.Editeur.String}}{{else}}غير محدد{{end}}
+                    </p>
+                    <div class="meta">
+                        <span class="price">{{.Price}} دج</span>
+                        <span class="category">
+                            {{if .Categorie.Valid}}{{.Categorie.String}}{{else}}غير مصنف{{end}}
+                        </span>
                     </div>
-                {{else}}
-                    <div class="no-results">لا توجد نتائج مطابقة</div>
-                {{end}}
-            </div>
-
-            <!-- Vue Table -->
-            <div id="books-table-view" class="table-view {{if ne .View "table"}}hidden{{end}}">
-                <table class="book-table">
-                    <!-- ... ton thead ... -->
-                    <tbody>
-                        {{range .Books}}
-                            <tr>
-                                <!-- ... tes td ... -->
-                            </tr>
-                        {{else}}
-                            <tr><td colspan="7" class="no-results">لا توجد نتائج مطابقة</td></tr>
-                        {{end}}
-                    </tbody>
-                </table>
+                    <span class="status {{if eq .Status.String "متوفر"}}available{{else}}unavailable{{end}}">
+                        {{if .Status.Valid}}{{.Status.String}}{{else}}غير محدد{{end}}
+                    </span>
+                </div>
             </div>
         {{else}}
-            <div class="no-results initial-empty">
-                ابدأ بالبحث أو اضغط على العنوان لعرض الكل
-            </div>
+            <div class="no-results">لا توجد كتب مطابقة</div>
         {{end}}
-
-        <div id="loading" style="display:none;">جاري التحميل...</div>
-        <div id="no-more" style="display:none;">لا توجد نتائج إضافية</div>
     </div>
 
+    <!-- Vue Table -->
+    <div id="books-table-view" class="table-view {{if eq .View "table"}}view-active{{end}} {{if ne .View "table"}}hidden{{end}}">
+        <table class="book-table">
+            <thead>
+                <tr>
+                    <th>الغلاف</th>
+                    <th>العنوان</th>
+                    <th>المؤلف</th>
+                    <th>الناشر</th>
+                    <th>السعر</th>
+                    <th>التصنيف</th>
+                    <th>الحالة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Books}}
+                    <tr>
+                        <td>
+                            {{if .CoverURL.Valid}}
+                                <img src="{{.CoverURL.String}}" alt="{{.Title}}" style="width:80px; height:auto;">
+                            {{else}}
+                                لا غلاف
+                            {{end}}
+                        </td>
+                        <td>{{.Title}}</td>
+                        <td>{{if .Auteur.Valid}}{{.Auteur.String}}{{else}}غير محدد{{end}}</td>
+                        <td>{{if .Editeur.Valid}}{{.Editeur.String}}{{else}}غير محدد{{end}}</td>
+                        <td>{{.Price}} دج</td>
+                        <td>{{if .Categorie.Valid}}{{.Categorie.String}}{{else}}غير مصنف{{end}}</td>
+                        <td class="status {{if eq .Status.String "متوفر"}}available{{else}}unavailable{{end}}">
+                            {{if .Status.Valid}}{{.Status.String}}{{else}}غير محدد{{end}}
+                        </td>
+                    </tr>
+                {{else}}
+                    <tr><td colspan="7" style="text-align:center; padding:3rem;">لا توجد كتب</td></tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+
+    <div id="loading" style="display:none; text-align:center; padding:2rem;">جاري التحميل...</div>
+    <div id="no-more" style="display:none; text-align:center; padding:2rem;">لا توجد نتائج إضافية</div>
+</div>
+
 {{end}}
+

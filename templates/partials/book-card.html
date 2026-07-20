@@ -9,11 +9,17 @@
     </div>
     <div class="card-info">
         <h3 class="title">{{.Title}}</h3>
-        <p class="author">{{if .Auteur.Valid}}{{.Auteur.String}}{{else}}غير محدد{{end}}</p>
-        <p class="publisher">{{if .Editeur.Valid}}{{.Editeur.String}}{{else}}غير محدد{{end}}</p>
+        <p class="author">
+            {{if .Auteur.Valid}}{{.Auteur.String}}{{else}}غير محدد{{end}}
+        </p>
+        <p class="publisher">
+            {{if .Editeur.Valid}}{{.Editeur.String}}{{else}}غير محدد{{end}}
+        </p>
         <div class="meta">
             <span class="price">{{.Price}} دج</span>
-            <span class="category">{{if .Categorie.Valid}}{{.Categorie.String}}{{else}}غير مصنف{{end}}</span>
+            <span class="category">
+                {{if .Categorie.Valid}}{{.Categorie.String}}{{else}}غير مصنف{{end}}
+            </span>
         </div>
         <span class="status {{if eq .Status.String "متوفر"}}available{{else}}unavailable{{end}}">
             {{if .Status.Valid}}{{.Status.String}}{{else}}غير محدد{{end}}

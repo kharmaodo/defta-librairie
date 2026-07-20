@@ -1,0 +1,8 @@
+<!-- templates/partials/book-cards.html -->
+<div id="books-cards-view" class="books-grid {{if ne $.View "card"}}hidden{{end}}">
+    {{range .Books}}
+        {{template "book-card" .}}
+    {{else}}
+        <div class="no-results">لا توجد كتب مطابقة</div>
+    {{end}}
+</div>

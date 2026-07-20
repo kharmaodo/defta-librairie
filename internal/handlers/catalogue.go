@@ -53,7 +53,7 @@ func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
 		HasResults: q != "" && len(books) > 0,
 		Books:      books,
 		Total:      total,
-		View:       "card", // ou récupéré via cookie/session/localStorage
+		View: "card",
 	}
 
 	log.Printf("Nombre de livres chargés pour affichage initial : %d", len(books))

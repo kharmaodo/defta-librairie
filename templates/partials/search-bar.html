@@ -1,14 +1,14 @@
-{{define "search-bar"}}
 <div class="search-container">
-    <form id="search-form" class="search-form">
-        <input 
-            type="search" 
-            id="search-input" 
-            placeholder="ابحث عن كتاب، مؤلف، ناشر..." 
-            autocomplete="off"
-            dir="rtl">
-        <button type="submit" id="search-btn">بحث</button>
-        <span class="help-icon" title="أمثلة:\n• خواطر\n• \"أحمد مراد\"\n• رواية*\n• -تاريخ\n• دار النشر:دار الساقي">؟</span>
-    </form>
+  <form id="search-form" class="search-form">
+    <input
+      type="search"
+      name="q"
+      id="search-input"
+      placeholder="{{GetMsg .Lang "search_placeholder"}}"
+      autocomplete="off"
+      dir="rtl"
+      value="{{.Query}}">
+    <button type="submit" id="search-btn">{{GetMsg .Lang "search_button"}}</button>
+    <span class="help-icon" title="{{GetMsg .Lang "tooltip_help"}}">؟</span>
+  </form>
 </div>
-{{end}}

@@ -1,7 +1,9 @@
-{{define "view-toggle"}}
 <div class="view-toggle">
-    <span>عرض:</span>
-    <button type="button" class="view-btn active" data-view="table">جدول</button>
-    <button type="button" class="view-btn" data-view="card">كروت</button>
+  <span>{{GetMsg .Lang "view_label"}} :</span>
+  <button type="button" class="view-btn {{if eq .View "card"}}active{{end}}" data-view="card">
+    {{GetMsg .Lang "view_cards"}}
+  </button>
+  <button type="button" class="view-btn {{if eq .View "table"}}active{{end}}" data-view="table">
+    {{GetMsg .Lang "view_table"}}
+  </button>
 </div>
-{{end}}
