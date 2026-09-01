@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -14,6 +15,10 @@ type Config struct {
 	Version   string
 	BuildDate string
 	PageSize  int
+	JWTSecret    string
+	JWTIssuer    string
+	JWTAudience  string
+	JWTAccessTTL time.Duration
 }
 
 func Load() (*Config, error) {
@@ -26,6 +31,10 @@ func Load() (*Config, error) {
 		Version:   getEnv("VERSION", "0.1.0-dev"),
 		BuildDate: getEnv("BUILD_DATE", "unknown"),
 		PageSize:  getEnvInt("PAGE_SIZE", 30),
+		JWTSecret:    getEnv("JWT_SECRET", ""),
+		JWTIssuer:    getEnv("JWT_ISSUER", "defta-librairie"),
+		JWTAudience:  getEnv("JWT_AUDIENCE", "defta-librairie-web"),
+		JWTAccessTTL: time.Duration(getEnvInt("JWT_ACCESS_TTL_SECONDS", 900)) * time.Second,
 	}
 
 	return cfg, nil

@@ -24,4 +24,7 @@ type User struct {
 	Status       UserStatus
 	CreatedAt    string
 	UpdatedAt    string
+	FailedLoginAttempts int
+	LockedUntil         string
+	LibraryID           string
 }

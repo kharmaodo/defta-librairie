@@ -10,11 +10,16 @@ import (
 	"defta-librairie/internal/config"
 	"defta-librairie/internal/database"
 	"defta-librairie/internal/handlers"
+	"defta-librairie/internal/auth"
+	"defta-librairie/internal/middleware"
+	"defta-librairie/internal/repositories"
+	"defta-librairie/internal/services"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 var (
@@ -47,20 +52,39 @@ func main() {
 
 	// Passer la config aux handlers
 	handlers.SetConfig(cfg)
+	tokens, err := auth.NewTokenManager(cfg.JWTSecret, cfg.JWTIssuer, cfg.JWTAudience, cfg.JWTAccessTTL)
+	if err != nil {
+		log.Fatalf("Configuration JWT invalide : %v", err)
+	}
+	loginService, err := services.NewLoginService(repositories.NewUserRepository(database.DB), tokens)
+	if err != nil {
+		log.Fatalf("Initialisation authentification impossible : %v", err)
+	}
+	authHandler := handlers.NewAuthHandler(loginService)
 
 	// Chargement des templates (déplacé dans handlers)
 	handlers.InitTemplates()
 
 	// Routes de base
-	http.HandleFunc("/", handlers.CatalogueHandler)
-	http.HandleFunc("/api/books", handlers.APIBooksHandler)
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handlers.CatalogueHandler)
+	mux.HandleFunc("/api/books", handlers.APIBooksHandler)
+	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
+	mux.Handle("GET /api/auth/me", middleware.Authenticate(tokens, http.HandlerFunc(authHandler.Me)))
+	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	addr := fmt.Sprintf(":%s", cfg.Port)
 	log.Printf("Serveur démarré → http://localhost%s", addr)
 	log.Printf("Version %s | Build %s", cfg.Version, cfg.BuildDate)
 
-	if err := http.ListenAndServe(addr, nil); err != nil {
+	server := &http.Server{
+		Addr: addr, Handler: mux,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout: 15 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout: 60 * time.Second,
+	}
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Échec démarrage serveur : %v", err)
 	}
 }

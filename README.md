@@ -82,6 +82,10 @@ Toutes les variables sont optionnelles :
 | `PAGE_SIZE` | `30` | Nombre de résultats par page |
 | `VERSION` | `0.1.0-dev` | Version affichée dans le pied de page |
 | `BUILD_DATE` | `unknown` | Date de construction affichée |
+| `JWT_SECRET` | aucune | Secret de signature, minimum 32 octets, obligatoire pour démarrer le serveur |
+| `JWT_ISSUER` | `defta-librairie` | Émetteur JWT attendu |
+| `JWT_AUDIENCE` | `defta-librairie-web` | Audience JWT attendue |
+| `JWT_ACCESS_TTL_SECONDS` | `900` | Durée de l'access token, maximum 24 heures |
 
 Exemple `.env` :
 
@@ -91,6 +95,10 @@ DB_PATH=./data/defta.db
 PAGE_SIZE=30
 VERSION=0.2.0-dev
 BUILD_DATE=2026-09-01
+JWT_SECRET=remplacer-par-un-secret-aleatoire-d-au-moins-32-octets
+JWT_ISSUER=defta-librairie
+JWT_AUDIENCE=defta-librairie-web
+JWT_ACCESS_TTL_SECONDS=900
 ```
 
 ## Migrations SQLite
@@ -173,6 +181,7 @@ sqlite3 -header -column data/defta.db \
 La balise `fts5` est obligatoire pour compiler le pilote avec le moteur plein texte :
 
 ```bash
+export JWT_SECRET="$(openssl rand -base64 48)"
 go run -tags fts5 ./cmd/main.go
 ```
 
@@ -197,6 +206,41 @@ curl --get 'http://localhost:8080/api/books' \
 ```
 
 La propriété `total` contient le nombre total de correspondances, indépendamment de la taille de la page retournée.
+
+## Authentification JWT
+
+Obtenir un access token :
+
+```bash
+TOKEN=$(curl -fsS -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"kharmaodo","password":"VOTRE_MOT_DE_PASSE"}' \
+  | jq -r '.accessToken')
+```
+
+Ne pas écrire un véritable mot de passe dans l'historique du terminal. Pour une validation interactive :
+
+```bash
+read -rsp 'Mot de passe : ' DEFTA_LOGIN_PASSWORD
+echo
+TOKEN=$(jq -n --arg username 'kharmaodo' --arg password "$DEFTA_LOGIN_PASSWORD" \
+  '{username:$username,password:$password}' \
+  | curl -fsS -X POST http://localhost:8080/api/auth/login \
+      -H 'Content-Type: application/json' --data-binary @- \
+  | jq -r '.accessToken')
+unset DEFTA_LOGIN_PASSWORD
+```
+
+Consulter les claims de l'utilisateur connecté :
+
+```bash
+curl -fsS http://localhost:8080/api/auth/me \
+  -H "Authorization: Bearer $TOKEN" | jq .
+```
+
+Sans token ou avec un token invalide, l'endpoint retourne `401 Unauthorized` et l'en-tête `WWW-Authenticate: Bearer`.
+
+L'access token contient uniquement les claims nécessaires : `sub`, `role`, `library_id`, `iss`, `aud`, `iat`, `nbf`, `exp` et `jti`. Sa durée par défaut est de 15 minutes.
 
 ## Tester FTS5 directement
 
