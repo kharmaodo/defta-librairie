@@ -120,6 +120,17 @@ Les livres historiques sont rattachés à la librairie système :
 00000000-0000-0000-0000-000000000001
 ```
 
+### Politique d'autorisation
+
+Les routes de lecture du catalogue restent publiques. Les futures routes de gestion appliquent systématiquement l'authentification JWT puis les règles suivantes :
+
+| Profil | Périmètre autorisé |
+|---|---|
+| `SUPER_ADMIN_ROOT` | Toutes les librairies, tous les utilisateurs et tous les livres |
+| `OWNER_LIBRARY` | Uniquement les livres, prix, statuts et tags de la librairie portée par son JWT |
+
+Un propriétaire ne peut jamais choisir son périmètre avec un champ envoyé dans le corps de la requête. Le backend utilise le `library_id` signé dans le JWT et refuse tout accès croisé avec une réponse `403 Forbidden`.
+
 Avant le premier lancement sur une base existante, créer une sauvegarde :
 
 ```bash
