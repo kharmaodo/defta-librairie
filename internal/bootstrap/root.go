@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	ErrRootAlreadyExists = errors.New("a SUPER_ADMIN_ROOT already exists")
-	ErrMissingRootConfig = errors.New("DEFTA_ROOT_USERNAME and DEFTA_ROOT_PASSWORD are required")
+	ErrRootAlreadyExists   = errors.New("a SUPER_ADMIN_ROOT already exists")
+	ErrMissingRootConfig   = errors.New("DEFTA_ROOT_USERNAME and DEFTA_ROOT_PASSWORD are required")
+	ErrMissingResetPassword = errors.New("DEFTA_ROOT_NEW_PASSWORD is required")
 )
 
 var usernamePattern = regexp.MustCompile(`^[a-zA-Z0-9._-]{3,64}$`)
@@ -27,6 +28,36 @@ type RootInput struct {
 	Username string
 	Email    string
 	Password string
+}
+
+func ResetRootPasswordFromEnvironment(ctx context.Context, db *sql.DB) (models.User, error) {
+	password := os.Getenv("DEFTA_ROOT_NEW_PASSWORD")
+	if password == "" {
+		return models.User{}, ErrMissingResetPassword
+	}
+
+	repository := repositories.NewUserRepository(db)
+	user, err := repository.FindByRole(ctx, models.RoleSuperAdminRoot)
+	if err != nil {
+		return models.User{}, err
+	}
+	passwordHash, err := auth.HashPassword(password)
+	if err != nil {
+		return models.User{}, err
+	}
+	auditID, err := identity.NewID()
+	if err != nil {
+		return models.User{}, err
+	}
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	if err = repository.ResetRootPassword(ctx, user.ID, passwordHash, auditID, now); err != nil {
+		return models.User{}, err
+	}
+	user.PasswordHash = ""
+	user.Status = models.UserStatusActive
+	user.FailedLoginAttempts = 0
+	user.LockedUntil = ""
+	return user, nil
 }
 
 func RootFromEnvironment(ctx context.Context, db *sql.DB) (models.User, error) {

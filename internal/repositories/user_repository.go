@@ -22,6 +22,23 @@ func (r *UserRepository) CountByRole(ctx context.Context, role models.UserRole) 
 	return count, nil
 }
 
+func (r *UserRepository) FindByRole(ctx context.Context, role models.UserRole) (models.User, error) {
+	var user models.User
+	err := r.db.QueryRowContext(ctx, `
+		SELECT id, username, COALESCE(email, ''), password_hash, role, status,
+		       created_at, updated_at, failed_login_attempts, COALESCE(locked_until, '')
+		FROM users WHERE role = ? LIMIT 1
+	`, role).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Role,
+		&user.Status, &user.CreatedAt, &user.UpdatedAt, &user.FailedLoginAttempts, &user.LockedUntil)
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.User{}, ErrUserNotFound
+	}
+	if err != nil {
+		return models.User{}, fmt.Errorf("find user by role: %w", err)
+	}
+	return user, nil
+}
+
 func (r *UserRepository) FindByUsername(ctx context.Context, username string) (models.User, error) {
 	var user models.User
 	err := r.db.QueryRowContext(ctx, `
@@ -108,6 +125,44 @@ func (r *UserRepository) CreateRoot(ctx context.Context, user models.User, audit
 	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("commit root creation: %w", err)
+	}
+	return nil
+}
+
+func (r *UserRepository) ResetRootPassword(ctx context.Context, userID, passwordHash, auditID, now string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin root password reset: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.ExecContext(ctx, `
+		UPDATE users SET password_hash = ?, status = 'ACTIVE', failed_login_attempts = 0,
+		locked_until = NULL, password_changed_at = ?, updated_at = ?
+		WHERE id = ? AND role = 'SUPER_ADMIN_ROOT'
+	`, passwordHash, now, now, userID)
+	if err != nil {
+		return fmt.Errorf("update root password: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil || rows != 1 {
+		return fmt.Errorf("update root password: root account not found")
+	}
+
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at = ?
+		WHERE user_id = ? AND revoked_at IS NULL
+	`, now, userID); err != nil {
+		return fmt.Errorf("revoke root sessions: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'RESET_ROOT_PASSWORD', 'USER', ?, '{"sessions_revoked":true}', 1, ?)
+	`, auditID, userID, userID, now); err != nil {
+		return fmt.Errorf("audit root password reset: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit root password reset: %w", err)
 	}
 	return nil
 }

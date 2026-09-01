@@ -41,13 +41,23 @@ func main() {
 	}
 	defer database.Close()
 
-	if len(os.Args) > 1 && os.Args[1] == "bootstrap-admin" {
-		user, err := bootstrap.RootFromEnvironment(context.Background(), database.DB)
-		if err != nil {
-			log.Fatalf("Échec bootstrap SUPER_ADMIN_ROOT : %v", err)
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "bootstrap-admin":
+			user, err := bootstrap.RootFromEnvironment(context.Background(), database.DB)
+			if err != nil {
+				log.Fatalf("Échec bootstrap SUPER_ADMIN_ROOT : %v", err)
+			}
+			log.Printf("SUPER_ADMIN_ROOT créé → username=%s id=%s", user.Username, user.ID)
+			return
+		case "reset-root-password":
+			user, err := bootstrap.ResetRootPasswordFromEnvironment(context.Background(), database.DB)
+			if err != nil {
+				log.Fatalf("Échec réinitialisation SUPER_ADMIN_ROOT : %v", err)
+			}
+			log.Printf("Mot de passe SUPER_ADMIN_ROOT réinitialisé → username=%s id=%s", user.Username, user.ID)
+			return
 		}
-		log.Printf("SUPER_ADMIN_ROOT créé → username=%s id=%s", user.Username, user.ID)
-		return
 	}
 
 	// Passer la config aux handlers

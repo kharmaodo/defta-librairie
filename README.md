@@ -176,6 +176,27 @@ sqlite3 -header -column data/defta.db \
    FROM audit_logs WHERE action = 'BOOTSTRAP_SUPER_ADMIN';"
 ```
 
+### Réinitialiser le mot de passe root
+
+Cette commande locale fonctionne sans `JWT_SECRET`. Elle remplace le hash Argon2id, déverrouille le compte, remet les tentatives à zéro, révoque toutes ses sessions et écrit un audit.
+
+```bash
+read -rsp 'Nouveau mot de passe root : ' DEFTA_ROOT_NEW_PASSWORD
+echo
+export DEFTA_ROOT_NEW_PASSWORD
+go run -tags fts5 ./cmd/main.go reset-root-password
+unset DEFTA_ROOT_NEW_PASSWORD
+```
+
+Contrôler l'opération :
+
+```bash
+sqlite3 -header -column data/defta.db \
+  "SELECT action, resource_id, success, created_at
+   FROM audit_logs WHERE action = 'RESET_ROOT_PASSWORD'
+   ORDER BY created_at DESC LIMIT 1;"
+```
+
 ## Démarrage
 
 La balise `fts5` est obligatoire pour compiler le pilote avec le moteur plein texte :
