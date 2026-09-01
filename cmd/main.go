@@ -5,6 +5,8 @@
 package main
 
 import (
+	"context"
+	"defta-librairie/internal/bootstrap"
 	"defta-librairie/internal/config"
 	"defta-librairie/internal/database"
 	"defta-librairie/internal/handlers"
@@ -12,6 +14,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 )
 
 var (
@@ -32,6 +35,15 @@ func main() {
 		log.Fatalf("Erreur connexion à la base SQLite : %v", err)
 	}
 	defer database.Close()
+
+	if len(os.Args) > 1 && os.Args[1] == "bootstrap-admin" {
+		user, err := bootstrap.RootFromEnvironment(context.Background(), database.DB)
+		if err != nil {
+			log.Fatalf("Échec bootstrap SUPER_ADMIN_ROOT : %v", err)
+		}
+		log.Printf("SUPER_ADMIN_ROOT créé → username=%s id=%s", user.Username, user.ID)
+		return
+	}
 
 	// Passer la config aux handlers
 	handlers.SetConfig(cfg)

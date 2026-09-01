@@ -125,6 +125,49 @@ sqlite3 -header -column data/defta.db \
   "SELECT version, name, applied_at FROM schema_migrations ORDER BY version;"
 ```
 
+## Bootstrap du SUPER_ADMIN_ROOT
+
+Le premier compte racine est créé par une commande locale contrôlée. Aucun endpoint public ne permet de créer ou de promouvoir un `SUPER_ADMIN_ROOT`.
+
+Le mot de passe doit contenir au moins 12 caractères et il est stocké avec Argon2id. Les variables ne doivent pas être ajoutées au fichier `.env` versionné ni écrites dans les journaux.
+
+```bash
+export DEFTA_ROOT_USERNAME='kharmaodo'
+export DEFTA_ROOT_EMAIL='root@example.com'
+export DEFTA_ROOT_PASSWORD='une-valeur-longue-et-unique'
+
+go run -tags fts5 ./cmd/main.go bootstrap-admin
+
+unset DEFTA_ROOT_PASSWORD
+```
+
+Résultat attendu :
+
+```text
+SUPER_ADMIN_ROOT créé → username=kharmaodo id=<uuid>
+```
+
+La commande est volontairement non répétable. Un second lancement échoue avec :
+
+```text
+a SUPER_ADMIN_ROOT already exists
+```
+
+Contrôler le compte sans afficher son hash :
+
+```bash
+sqlite3 -header -column data/defta.db \
+  "SELECT id, username, email, role, status, created_at FROM users;"
+```
+
+Contrôler son audit :
+
+```bash
+sqlite3 -header -column data/defta.db \
+  "SELECT action, resource_type, resource_id, success, created_at
+   FROM audit_logs WHERE action = 'BOOTSTRAP_SUPER_ADMIN';"
+```
+
 ## Démarrage
 
 La balise `fts5` est obligatoire pour compiler le pilote avec le moteur plein texte :
