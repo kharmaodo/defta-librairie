@@ -1,7 +1,9 @@
 package database
 
 import (
+	"context"
 	"database/sql"
+	"defta-librairie/internal/migrations"
 	"defta-librairie/internal/models"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
@@ -13,13 +15,16 @@ var DB *sql.DB
 
 func Init(path string) error {
 	var err error
-	DB, err = sql.Open("sqlite3", path+"?_journal_mode=WAL&mode=rwc")
+	DB, err = sql.Open("sqlite3", path+"?_journal_mode=WAL&_foreign_keys=on&_busy_timeout=5000&mode=rwc")
 	if err != nil {
 		return err
 	}
 
 	if err = DB.Ping(); err != nil {
 		return err
+	}
+	if err = migrations.Run(context.Background(), DB); err != nil {
+		return fmt.Errorf("database migrations: %w", err)
 	}
 
 	log.Printf("Base SQLite connectée → %s", path)

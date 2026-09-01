@@ -93,6 +93,38 @@ VERSION=0.2.0-dev
 BUILD_DATE=2026-09-01
 ```
 
+## Migrations SQLite
+
+Les migrations embarquées sont appliquées automatiquement au démarrage, dans l'ordre et dans une transaction. La table `schema_migrations` conserve leur version et leur checksum.
+
+La première migration de sécurité crée :
+
+- `users` pour les profils `SUPER_ADMIN_ROOT` et `OWNER_LIBRARY` ;
+- `libraries` et la relation avec leur propriétaire ;
+- `refresh_sessions` pour la rotation et la révocation des sessions ;
+- `audit_logs` pour les actions sensibles ;
+- la réparation des triggers FTS5 historiques (`categorie`) ;
+- les colonnes de propriété, d'audit et de versionnement sur `defta`.
+
+Les livres historiques sont rattachés à la librairie système :
+
+```text
+00000000-0000-0000-0000-000000000001
+```
+
+Avant le premier lancement sur une base existante, créer une sauvegarde :
+
+```bash
+cp data/defta.db "data/defta.db.backup-$(date +%Y%m%d-%H%M%S)"
+```
+
+Après le démarrage, contrôler les migrations :
+
+```bash
+sqlite3 -header -column data/defta.db \
+  "SELECT version, name, applied_at FROM schema_migrations ORDER BY version;"
+```
+
 ## Démarrage
 
 La balise `fts5` est obligatoire pour compiler le pilote avec le moteur plein texte :
