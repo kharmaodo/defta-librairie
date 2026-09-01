@@ -19,6 +19,7 @@ type Config struct {
 	JWTIssuer    string
 	JWTAudience  string
 	JWTAccessTTL time.Duration
+	JWTRefreshTTL time.Duration
 }
 
 func Load() (*Config, error) {
@@ -35,6 +36,7 @@ func Load() (*Config, error) {
 		JWTIssuer:    getEnv("JWT_ISSUER", "defta-librairie"),
 		JWTAudience:  getEnv("JWT_AUDIENCE", "defta-librairie-web"),
 		JWTAccessTTL: time.Duration(getEnvInt("JWT_ACCESS_TTL_SECONDS", 900)) * time.Second,
+		JWTRefreshTTL: time.Duration(getEnvInt("JWT_REFRESH_TTL_SECONDS", 604800)) * time.Second,
 	}
 
 	return cfg, nil

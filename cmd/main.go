@@ -71,7 +71,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Initialisation authentification impossible : %v", err)
 	}
-	authHandler := handlers.NewAuthHandler(loginService)
+	sessionService, err := services.NewSessionService(repositories.NewSessionRepository(database.DB), tokens, cfg.JWTRefreshTTL)
+	if err != nil {
+		log.Fatalf("Initialisation sessions impossible : %v", err)
+	}
+	authHandler := handlers.NewAuthHandler(loginService, sessionService)
 	ownerService := services.NewOwnerService(repositories.NewOwnerRepository(database.DB))
 	ownerHandler := handlers.NewOwnerHandler(ownerService)
 	bookService := services.NewBookService(repositories.NewBookRepository(database.DB))
@@ -85,6 +89,8 @@ func main() {
 	mux.HandleFunc("/", handlers.CatalogueHandler)
 	mux.HandleFunc("/api/books", handlers.APIBooksHandler)
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
+	mux.HandleFunc("POST /api/auth/refresh", authHandler.Refresh)
+	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
 	mux.Handle("GET /api/auth/me", middleware.Authenticate(tokens, http.HandlerFunc(authHandler.Me)))
 	rootOnly := func(handler http.Handler) http.Handler {
 		return middleware.Authenticate(tokens,

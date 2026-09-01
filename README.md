@@ -86,6 +86,7 @@ Toutes les variables sont optionnelles :
 | `JWT_ISSUER` | `defta-librairie` | Émetteur JWT attendu |
 | `JWT_AUDIENCE` | `defta-librairie-web` | Audience JWT attendue |
 | `JWT_ACCESS_TTL_SECONDS` | `900` | Durée de l'access token, maximum 24 heures |
+| `JWT_REFRESH_TTL_SECONDS` | `604800` | Durée du refresh token opaque, 7 jours par défaut |
 
 Exemple `.env` :
 
@@ -99,6 +100,7 @@ JWT_SECRET=remplacer-par-un-secret-aleatoire-d-au-moins-32-octets
 JWT_ISSUER=defta-librairie
 JWT_AUDIENCE=defta-librairie-web
 JWT_ACCESS_TTL_SECONDS=900
+JWT_REFRESH_TTL_SECONDS=604800
 ```
 
 ## Migrations SQLite
@@ -328,6 +330,43 @@ curl -fsS http://localhost:8080/api/auth/me \
 Sans token ou avec un token invalide, l'endpoint retourne `401 Unauthorized` et l'en-tête `WWW-Authenticate: Bearer`.
 
 L'access token contient uniquement les claims nécessaires : `sub`, `role`, `library_id`, `iss`, `aud`, `iat`, `nbf`, `exp` et `jti`. Sa durée par défaut est de 15 minutes.
+
+### Rotation et déconnexion
+
+La connexion renvoie également un `refreshToken` opaque. Seul son hash SHA-256 est conservé dans SQLite. Chaque appel à `/api/auth/refresh` révoque le token présenté et en émet un nouveau. La réutilisation d'un ancien token révoque toute sa famille de session et crée un audit `REFRESH_TOKEN_REUSE`.
+
+```bash
+LOGIN_RESPONSE=$(jq -n \
+  --arg username 'kharmaodo' \
+  --arg password "$DEFTA_LOGIN_PASSWORD" \
+  '{username:$username,password:$password}' \
+  | curl -fsS -X POST http://localhost:8080/api/auth/login \
+      -H 'Content-Type: application/json' --data-binary @-)
+
+TOKEN=$(printf '%s\n' "$LOGIN_RESPONSE" | jq -er '.accessToken')
+REFRESH_TOKEN=$(printf '%s\n' "$LOGIN_RESPONSE" | jq -er '.refreshToken')
+```
+
+Renouveler puis remplacer les deux tokens :
+
+```bash
+REFRESH_RESPONSE=$(jq -n --arg token "$REFRESH_TOKEN" '{refreshToken:$token}' \
+  | curl -fsS -X POST http://localhost:8080/api/auth/refresh \
+      -H 'Content-Type: application/json' --data-binary @-)
+
+TOKEN=$(printf '%s\n' "$REFRESH_RESPONSE" | jq -er '.accessToken')
+REFRESH_TOKEN=$(printf '%s\n' "$REFRESH_RESPONSE" | jq -er '.refreshToken')
+```
+
+Déconnecter toute la famille de session :
+
+```bash
+jq -n --arg token "$REFRESH_TOKEN" '{refreshToken:$token}' \
+  | curl -fsS -o /dev/null -X POST http://localhost:8080/api/auth/logout \
+      -H 'Content-Type: application/json' --data-binary @-
+
+unset TOKEN REFRESH_TOKEN LOGIN_RESPONSE REFRESH_RESPONSE
+```
 
 ## Tester FTS5 directement
 

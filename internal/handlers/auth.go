@@ -12,13 +12,22 @@ import (
 	"time"
 )
 
-type AuthHandler struct{ login *services.LoginService }
+type AuthHandler struct {
+	login    *services.LoginService
+	sessions *services.SessionService
+}
 
-func NewAuthHandler(login *services.LoginService) *AuthHandler { return &AuthHandler{login: login} }
+func NewAuthHandler(login *services.LoginService, sessions *services.SessionService) *AuthHandler {
+	return &AuthHandler{login: login, sessions: sessions}
+}
 
 type loginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+type refreshRequest struct {
+	RefreshToken string `json:"refreshToken"`
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -45,16 +54,60 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	session, err := h.sessions.Start(r.Context(), result.User, remoteIP(r), userAgent(r))
+	if err != nil {
+		writeAuthJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Session creation failed"})
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
 	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
-		"accessToken": result.AccessToken,
+		"accessToken": session.AccessToken,
+		"refreshToken": session.RefreshToken,
 		"tokenType":   "Bearer",
-		"expiresIn":   int64(time.Until(result.ExpiresAt).Seconds()),
+		"expiresIn":   int64(time.Until(session.AccessExpiresAt).Seconds()),
+		"refreshExpiresIn": int64(time.Until(session.RefreshExpiresAt).Seconds()),
 		"user": map[string]interface{}{
 			"id": result.User.ID, "username": result.User.Username,
 			"email": result.User.Email, "role": result.User.Role,
 			"libraryId": nullableValue(result.User.LibraryID),
 		},
 	})
+}
+
+func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var request refreshRequest
+	if err := decodeAuthJSON(w, r, &request); err != nil || request.RefreshToken == "" {
+		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request", "message": "Invalid refresh request"})
+		return
+	}
+	result, err := h.sessions.Refresh(r.Context(), request.RefreshToken, remoteIP(r), userAgent(r))
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidRefreshToken) || errors.Is(err, services.ErrRefreshTokenReuse) {
+			writeAuthJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_refresh_token", "message": "Refresh token is invalid or expired"})
+			return
+		}
+		writeAuthJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Token refresh failed"})
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
+		"accessToken": result.AccessToken, "refreshToken": result.RefreshToken,
+		"tokenType": "Bearer", "expiresIn": int64(time.Until(result.AccessExpiresAt).Seconds()),
+		"refreshExpiresIn": int64(time.Until(result.RefreshExpiresAt).Seconds()),
+	})
+}
+
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	var request refreshRequest
+	if err := decodeAuthJSON(w, r, &request); err != nil || request.RefreshToken == "" {
+		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request", "message": "Invalid logout request"})
+		return
+	}
+	if err := h.sessions.Logout(r.Context(), request.RefreshToken); err != nil && !errors.Is(err, services.ErrInvalidRefreshToken) {
+		writeAuthJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Logout failed"})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +132,27 @@ func remoteIP(r *http.Request) string {
 func nullableValue(value string) interface{} {
 	if value == "" {
 		return nil
+	}
+	return value
+}
+
+func decodeAuthJSON(w http.ResponseWriter, r *http.Request, target interface{}) error {
+	r.Body = http.MaxBytesReader(w, r.Body, 256*1024)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(target); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return errors.New("multiple JSON values")
+	}
+	return nil
+}
+
+func userAgent(r *http.Request) string {
+	value := r.UserAgent()
+	if len(value) > 512 {
+		return value[:512]
 	}
 	return value
 }
