@@ -52,7 +52,7 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
 	// 1. Cas sans recherche → tous les livres
 	// ────────────────────────────────────────────────
 	if query == "" {
-		err = DB.QueryRow("SELECT COUNT(*) FROM defta").Scan(&total)
+		err = DB.QueryRow("SELECT COUNT(*) FROM defta WHERE deleted_at IS NULL").Scan(&total)
 		if err != nil {
 			return nil, 0, fmt.Errorf("count all failed: %w", err)
 		}
@@ -61,6 +61,7 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
             SELECT id, title, auteur, editeur, price, volume,
                    status, tags, categorie, coverUrl
             FROM defta
+            WHERE deleted_at IS NULL
             ORDER BY id DESC
             LIMIT ? OFFSET ?
         `, limit, offset)
@@ -80,8 +81,9 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
 
 	err = DB.QueryRow(`
         SELECT COUNT(*)
-        FROM defta_fts
-        WHERE defta_fts MATCH ?
+        FROM defta_fts fts
+        JOIN defta d ON fts.rowid = d.id
+        WHERE defta_fts MATCH ? AND d.deleted_at IS NULL
     `, ftsQuery).Scan(&total)
 
 	if err == nil {
@@ -95,7 +97,7 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
                 rank
             FROM defta_fts fts
             JOIN defta d ON fts.rowid = d.id
-            WHERE defta_fts MATCH ?
+            WHERE defta_fts MATCH ? AND d.deleted_at IS NULL
             ORDER BY fts.rank
             LIMIT ? OFFSET ?
         `, ftsQuery, limit, offset)
@@ -117,9 +119,10 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
 	err = DB.QueryRow(`
         SELECT COUNT(*)
         FROM defta
-        WHERE title LIKE ?
+        WHERE deleted_at IS NULL
+          AND (title LIKE ?
            OR auteur LIKE ?
-           OR editeur LIKE ?
+           OR editeur LIKE ?)
     `, likePattern, likePattern, likePattern).Scan(&total)
 
 	if err != nil {
@@ -131,9 +134,10 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
             id, title, auteur, editeur, price, volume,
             status, tags, categorie, coverUrl
         FROM defta
-        WHERE title LIKE ?
+        WHERE deleted_at IS NULL
+          AND (title LIKE ?
            OR auteur LIKE ?
-           OR editeur LIKE ?
+           OR editeur LIKE ?)
         ORDER BY id DESC
         LIMIT ? OFFSET ?
     `, likePattern, likePattern, likePattern, limit, offset)

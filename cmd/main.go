@@ -74,6 +74,8 @@ func main() {
 	authHandler := handlers.NewAuthHandler(loginService)
 	ownerService := services.NewOwnerService(repositories.NewOwnerRepository(database.DB))
 	ownerHandler := handlers.NewOwnerHandler(ownerService)
+	bookService := services.NewBookService(repositories.NewBookRepository(database.DB))
+	bookHandler := handlers.NewBookManagementHandler(bookService)
 
 	// Chargement des templates (déplacé dans handlers)
 	handlers.InitTemplates()
@@ -93,6 +95,15 @@ func main() {
 	mux.Handle("GET /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Get)))
 	mux.Handle("PATCH /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Update)))
 	mux.Handle("DELETE /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Disable)))
+	bookManagers := func(handler http.Handler) http.Handler {
+		return middleware.Authenticate(tokens, middleware.RequireRoles(handler,
+			models.RoleSuperAdminRoot, models.RoleOwnerLibrary))
+	}
+	mux.Handle("GET /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.List)))
+	mux.Handle("POST /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.Create)))
+	mux.Handle("GET /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Get)))
+	mux.Handle("PUT /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Update)))
+	mux.Handle("DELETE /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Delete)))
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	addr := fmt.Sprintf(":%s", cfg.Port)

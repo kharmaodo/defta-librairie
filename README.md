@@ -157,6 +157,35 @@ curl -fsS -X POST http://localhost:8080/api/admin/owners \
   }' | jq .
 ```
 
+### Gestion des livres
+
+Les mutations de livres exigent un JWT `SUPER_ADMIN_ROOT` ou `OWNER_LIBRARY`. Le root précise `libraryId` lors de la création ; pour un propriétaire, le backend utilise exclusivement la librairie signée dans son JWT.
+
+| Méthode | Route | Action |
+|---|---|---|
+| `GET` | `/api/manage/books?offset=0&limit=30&libraryId=...` | Lister les livres autorisés |
+| `POST` | `/api/manage/books` | Créer un livre |
+| `GET` | `/api/manage/books/{id}` | Consulter un livre autorisé |
+| `PUT` | `/api/manage/books/{id}` | Remplacer les données, prix, tags et statut |
+| `DELETE` | `/api/manage/books/{id}` | Supprimer logiquement un livre |
+
+Les mises à jour utilisent le champ `version`. Une version périmée produit `409 Conflict` afin d'éviter l'écrasement silencieux d'une modification concurrente. Les suppressions logiques disparaissent également du catalogue public et de la recherche FTS5.
+
+```bash
+curl -fsS -X POST http://localhost:8080/api/manage/books \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title":"Nouveau livre",
+    "auteur":"Auteur",
+    "price":2500,
+    "volume":1,
+    "status":"AVAILABLE",
+    "tags":"arabe,fiqh",
+    "categorie":"Sciences islamiques"
+  }' | jq .
+```
+
 Avant le premier lancement sur une base existante, créer une sauvegarde :
 
 ```bash

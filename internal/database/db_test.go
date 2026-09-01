@@ -29,7 +29,8 @@ func TestSearchBooksUsesFTS5AndKeepsTotal(t *testing.T) {
 			status TEXT,
 			tags TEXT,
 			categorie TEXT,
-			coverUrl TEXT
+			coverUrl TEXT,
+			deleted_at TEXT
 		);
 		CREATE VIRTUAL TABLE defta_fts USING fts5(
 			title, editeur, auteur, tags, categorie,
