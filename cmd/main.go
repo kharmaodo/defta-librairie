@@ -12,6 +12,7 @@ import (
 	"defta-librairie/internal/database"
 	"defta-librairie/internal/handlers"
 	"defta-librairie/internal/middleware"
+	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"defta-librairie/internal/services"
 	"fmt"
@@ -71,6 +72,8 @@ func main() {
 		log.Fatalf("Initialisation authentification impossible : %v", err)
 	}
 	authHandler := handlers.NewAuthHandler(loginService)
+	ownerService := services.NewOwnerService(repositories.NewOwnerRepository(database.DB))
+	ownerHandler := handlers.NewOwnerHandler(ownerService)
 
 	// Chargement des templates (déplacé dans handlers)
 	handlers.InitTemplates()
@@ -81,6 +84,15 @@ func main() {
 	mux.HandleFunc("/api/books", handlers.APIBooksHandler)
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
 	mux.Handle("GET /api/auth/me", middleware.Authenticate(tokens, http.HandlerFunc(authHandler.Me)))
+	rootOnly := func(handler http.Handler) http.Handler {
+		return middleware.Authenticate(tokens,
+			middleware.RequireRoles(handler, models.RoleSuperAdminRoot))
+	}
+	mux.Handle("GET /api/admin/owners", rootOnly(http.HandlerFunc(ownerHandler.List)))
+	mux.Handle("POST /api/admin/owners", rootOnly(http.HandlerFunc(ownerHandler.Create)))
+	mux.Handle("GET /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Get)))
+	mux.Handle("PATCH /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Update)))
+	mux.Handle("DELETE /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Disable)))
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	addr := fmt.Sprintf(":%s", cfg.Port)

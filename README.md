@@ -131,6 +131,32 @@ Les routes de lecture du catalogue restent publiques. Les futures routes de gest
 
 Un propriétaire ne peut jamais choisir son périmètre avec un champ envoyé dans le corps de la requête. Le backend utilise le `library_id` signé dans le JWT et refuse tout accès croisé avec une réponse `403 Forbidden`.
 
+### Administration des propriétaires
+
+Ces routes exigent un JWT `SUPER_ADMIN_ROOT` :
+
+| Méthode | Route | Action |
+|---|---|---|
+| `GET` | `/api/admin/owners` | Lister les propriétaires et leurs librairies |
+| `POST` | `/api/admin/owners` | Créer atomiquement un propriétaire et sa librairie |
+| `GET` | `/api/admin/owners/{id}` | Consulter un propriétaire |
+| `PATCH` | `/api/admin/owners/{id}` | Modifier le compte, le mot de passe ou la librairie |
+| `DELETE` | `/api/admin/owners/{id}` | Désactiver le compte et la librairie, puis révoquer ses sessions |
+
+Exemple de création :
+
+```bash
+curl -fsS -X POST http://localhost:8080/api/admin/owners \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username":"owner-one",
+    "email":"owner@example.com",
+    "password":"Correct-Horse-2026",
+    "library":{"name":"Librairie Une","description":"Catalogue du propriétaire"}
+  }' | jq .
+```
+
 Avant le premier lancement sur une base existante, créer une sauvegarde :
 
 ```bash
