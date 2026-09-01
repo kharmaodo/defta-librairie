@@ -32,15 +32,15 @@ func (ifld IntField) MarshalJSON() ([]byte, error) {
 }
 
 type Book struct {
-	ID        int         `json:"id"`
-	Title     string      `json:"title"`
-	Auteur    StringField `json:"auteur"`
-	Editeur   StringField `json:"editeur"`
-	Price     float64     `json:"price"`
-	Volume    int         `json:"volume"`
-	Status    StringField `json:"status"`
-	Tags      StringField    `json:"tags"`
-	Categorie StringField    `json:"categorie"`
-	CoverURL  StringField `json:"coverUrl"`
+	ID        int             `json:"id"`
+	Title     string          `json:"title"`
+	Auteur    StringField     `json:"auteur"`
+	Editeur   StringField     `json:"editeur"`
+	Price     float64         `json:"price"`
+	Volume    int             `json:"volume"`
+	Status    StringField     `json:"status"`
+	Tags      StringField     `json:"tags"`
+	Categorie StringField     `json:"categorie"`
+	CoverURL  StringField     `json:"coverUrl"`
 	Score     sql.NullFloat64 `json:"score,omitempty"`
 }

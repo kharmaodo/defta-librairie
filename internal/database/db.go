@@ -1,12 +1,12 @@
 package database
 
 import (
-    "database/sql"
-    "fmt"
-    "log"
-    "strings"
+	"database/sql"
 	"defta-librairie/internal/models"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
+	"log"
+	"strings"
 )
 
 var DB *sql.DB
@@ -33,58 +33,57 @@ func Close() {
 	}
 }
 
-
 // SearchBooks retourne des livres paginés
 // - si query vide → tous les livres (de la table defta)
 // - sinon → recherche FTS5 avec rank
 // SearchBooks recherche des livres avec ou sans FTS5
 func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
-    query = strings.TrimSpace(query)
-    var total int
-    var rows *sql.Rows
-    var err error
+	query = strings.TrimSpace(query)
+	var total int
+	var rows *sql.Rows
+	var err error
 
-    // ────────────────────────────────────────────────
-    // 1. Cas sans recherche → tous les livres
-    // ────────────────────────────────────────────────
-    if query == "" {
-        err = DB.QueryRow("SELECT COUNT(*) FROM defta").Scan(&total)
-        if err != nil {
-            return nil, 0, fmt.Errorf("count all failed: %w", err)
-        }
+	// ────────────────────────────────────────────────
+	// 1. Cas sans recherche → tous les livres
+	// ────────────────────────────────────────────────
+	if query == "" {
+		err = DB.QueryRow("SELECT COUNT(*) FROM defta").Scan(&total)
+		if err != nil {
+			return nil, 0, fmt.Errorf("count all failed: %w", err)
+		}
 
-        rows, err = DB.Query(`
+		rows, err = DB.Query(`
             SELECT id, title, auteur, editeur, price, volume,
                    status, tags, categorie, coverUrl
             FROM defta
             ORDER BY id DESC
             LIMIT ? OFFSET ?
         `, limit, offset)
-        if err != nil {
-            return nil, 0, fmt.Errorf("query all failed: %w", err)
-        }
-        defer rows.Close()
+		if err != nil {
+			return nil, 0, fmt.Errorf("query all failed: %w", err)
+		}
+		defer rows.Close()
 
-        books, err := scanBooks(rows, false)
-        return books, total, err
-    }
+		books, err := scanBooks(rows, false)
+		return books, total, err
+	}
 
-    // ────────────────────────────────────────────────
-    // 2. Tentative FTS5 (si activé)
-    // ────────────────────────────────────────────────
-    ftsQuery := query // on peut améliorer plus tard (ex: query + "*")
+	// ────────────────────────────────────────────────
+	// 2. Tentative FTS5 (si activé)
+	// ────────────────────────────────────────────────
+	ftsQuery := query // on peut améliorer plus tard (ex: query + "*")
 
-    err = DB.QueryRow(`
+	err = DB.QueryRow(`
         SELECT COUNT(*)
         FROM defta_fts
         WHERE defta_fts MATCH ?
     `, ftsQuery).Scan(&total)
 
-    if err == nil {
-        // FTS5 est disponible → on utilise le rank
-        log.Printf("FTS5 activé → recherche avec MATCH '%s'", ftsQuery)
+	if err == nil {
+		// FTS5 est disponible → on utilise le rank
+		log.Printf("FTS5 activé → recherche avec MATCH '%s'", ftsQuery)
 
-        rows, err = DB.Query(`
+		rows, err = DB.Query(`
             SELECT
                 d.id, d.title, d.auteur, d.editeur, d.price, d.volume,
                 d.status, d.tags, d.categorie, d.coverUrl,
@@ -96,21 +95,21 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
             LIMIT ? OFFSET ?
         `, ftsQuery, limit, offset)
 
-        if err == nil {
-            defer rows.Close()
-            books, scanErr := scanBooks(rows, true)
-            return books, total, scanErr
-        }
-    }
+		if err == nil {
+			defer rows.Close()
+			books, scanErr := scanBooks(rows, true)
+			return books, total, scanErr
+		}
+	}
 
-    // ────────────────────────────────────────────────
-    // 3. Fallback LIKE si FTS5 échoue
-    // ────────────────────────────────────────────────
-    log.Printf("FTS5 non disponible ou erreur → fallback LIKE : %v", err)
+	// ────────────────────────────────────────────────
+	// 3. Fallback LIKE si FTS5 échoue
+	// ────────────────────────────────────────────────
+	log.Printf("FTS5 non disponible ou erreur → fallback LIKE : %v", err)
 
-    likePattern := "%" + query + "%"
+	likePattern := "%" + query + "%"
 
-    err = DB.QueryRow(`
+	err = DB.QueryRow(`
         SELECT COUNT(*)
         FROM defta
         WHERE title LIKE ?
@@ -118,11 +117,11 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
            OR editeur LIKE ?
     `, likePattern, likePattern, likePattern).Scan(&total)
 
-    if err != nil {
-        return nil, 0, fmt.Errorf("count fallback failed: %w", err)
-    }
+	if err != nil {
+		return nil, 0, fmt.Errorf("count fallback failed: %w", err)
+	}
 
-    rows, err = DB.Query(`
+	rows, err = DB.Query(`
         SELECT
             id, title, auteur, editeur, price, volume,
             status, tags, categorie, coverUrl
@@ -134,47 +133,47 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
         LIMIT ? OFFSET ?
     `, likePattern, likePattern, likePattern, limit, offset)
 
-    if err != nil {
-        return nil, 0, fmt.Errorf("query fallback failed: %w", err)
-    }
-    defer rows.Close()
+	if err != nil {
+		return nil, 0, fmt.Errorf("query fallback failed: %w", err)
+	}
+	defer rows.Close()
 
-    books, scanErr := scanBooks(rows, false)
-    return books, total, scanErr
+	books, scanErr := scanBooks(rows, false)
+	return books, total, scanErr
 }
 
 // scanBooks factorise le scan (avec ou sans rank)
 func scanBooks(rows *sql.Rows, withRank bool) ([]models.Book, error) {
-    var books []models.Book
+	var books []models.Book
 
-    for rows.Next() {
-        var b models.Book
-        var score sql.NullFloat64
+	for rows.Next() {
+		var b models.Book
+		var score sql.NullFloat64
 
-        args := []interface{}{
-            &b.ID, &b.Title, &b.Auteur, &b.Editeur, &b.Price,
-            &b.Volume, &b.Status, &b.Tags, &b.Categorie, &b.CoverURL,
-        }
+		args := []interface{}{
+			&b.ID, &b.Title, &b.Auteur, &b.Editeur, &b.Price,
+			&b.Volume, &b.Status, &b.Tags, &b.Categorie, &b.CoverURL,
+		}
 
-        if withRank {
-            args = append(args, &score)
-        }
+		if withRank {
+			args = append(args, &score)
+		}
 
-        err := rows.Scan(args...)
-        if err != nil {
-            return nil, fmt.Errorf("scan failed: %w", err)
-        }
+		err := rows.Scan(args...)
+		if err != nil {
+			return nil, fmt.Errorf("scan failed: %w", err)
+		}
 
-        if withRank && score.Valid {
-            b.Score = score
-        }
+		if withRank && score.Valid {
+			b.Score = score
+		}
 
-        books = append(books, b)
-    }
+		books = append(books, b)
+	}
 
-    if err := rows.Err(); err != nil {
-        return nil, fmt.Errorf("rows error: %w", err)
-    }
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
 
-    return books, nil
+	return books, nil
 }

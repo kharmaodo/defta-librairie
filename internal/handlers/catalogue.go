@@ -6,7 +6,7 @@ import (
 	"defta-librairie/internal/models"
 	"log"
 	"net/http"
-	"strings"   // ← AJOUTE CETTE LIGNE
+	"strings" // ← AJOUTE CETTE LIGNE
 )
 
 func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +53,7 @@ func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
 		HasResults: q != "" && len(books) > 0,
 		Books:      books,
 		Total:      total,
-		View: "card",
+		View:       "card",
 	}
 
 	log.Printf("Nombre de livres chargés pour affichage initial : %d", len(books))
