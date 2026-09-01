@@ -6,30 +6,56 @@ import (
 	"defta-librairie/internal/models"
 	"log"
 	"net/http"
-	"strings" // ← AJOUTE CETTE LIGNE
+	"strconv"
+	"strings"
 )
 
 func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("CatalogueHandler - globalCfg = %v", globalCfg)
 
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	page, err := strconv.Atoi(r.URL.Query().Get("page"))
+	if err != nil || page < 1 {
+		page = 1
+	}
 
 	var books []models.Book
 	var total int
-	var err error
+	var searchErr error
 
 	// Seulement si q n'est PAS vide → on recherche
 	if q != "" {
-		books, total, err = database.SearchBooks(q, 0, globalCfg.PageSize)
-		if err != nil {
-			log.Printf("Erreur recherche : %v", err)
+		offset := (page - 1) * globalCfg.PageSize
+		books, total, searchErr = database.SearchBooks(q, offset, globalCfg.PageSize)
+		if searchErr != nil {
+			log.Printf("Erreur recherche : %v", searchErr)
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
+		}
+
+		// Une URL dont la page dépasse le dernier résultat revient à la
+		// dernière page valide au lieu d'afficher un faux état vide.
+		totalPages := (total + globalCfg.PageSize - 1) / globalCfg.PageSize
+		if totalPages > 0 && page > totalPages {
+			page = totalPages
+			offset = (page - 1) * globalCfg.PageSize
+			books, total, searchErr = database.SearchBooks(q, offset, globalCfg.PageSize)
+			if searchErr != nil {
+				log.Printf("Erreur recherche après correction de page : %v", searchErr)
+				http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+				return
+			}
 		}
 	} else {
 		// q vide → pas de liste (comportement demandé)
 		books = []models.Book{}
 		total = 0
+		page = 1
+	}
+
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + globalCfg.PageSize - 1) / globalCfg.PageSize
 	}
 
 	data := struct {
@@ -43,6 +69,12 @@ func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
 		Books      []models.Book
 		Total      int
 		View       string
+		Page       int
+		TotalPages int
+		HasPrev    bool
+		HasNext    bool
+		PrevPage   int
+		NextPage   int
 	}{
 		Title:      "كتالوج الكتب",
 		Lang:       "ar",
@@ -54,6 +86,12 @@ func CatalogueHandler(w http.ResponseWriter, r *http.Request) {
 		Books:      books,
 		Total:      total,
 		View:       "card",
+		Page:       page,
+		TotalPages: totalPages,
+		HasPrev:    page > 1,
+		HasNext:    page < totalPages,
+		PrevPage:   page - 1,
+		NextPage:   page + 1,
 	}
 
 	log.Printf("Nombre de livres chargés pour affichage initial : %d", len(books))

@@ -56,6 +56,21 @@
                 </table>
             </div>
         </div>
+        {{if gt .TotalPages 1}}
+            <nav class="pagination" aria-label="التنقل بين صفحات النتائج">
+                {{if .HasPrev}}
+                    <a class="page-link" rel="prev" href="/?q={{.Query | urlquery}}&amp;page={{.PrevPage}}">السابق</a>
+                {{else}}
+                    <span class="page-link disabled" aria-disabled="true">السابق</span>
+                {{end}}
+                <span class="page-status">الصفحة <strong>{{.Page}}</strong> من <strong>{{.TotalPages}}</strong></span>
+                {{if .HasNext}}
+                    <a class="page-link" rel="next" href="/?q={{.Query | urlquery}}&amp;page={{.NextPage}}">التالي</a>
+                {{else}}
+                    <span class="page-link disabled" aria-disabled="true">التالي</span>
+                {{end}}
+            </nav>
+        {{end}}
     {{else if .Query}}
         <div class="empty-state"><span class="empty-icon" aria-hidden="true">⌕</span><h2>لا توجد نتائج لـ «{{.Query}}»</h2><p>تحقق من الكتابة أو جرّب عنواناً، مؤلفاً أو تصنيفاً آخر.</p><a class="secondary-button" href="/">مسح البحث</a></div>
     {{else}}

@@ -12,6 +12,7 @@ L’application propose une recherche classée par pertinence sur les titres, au
 - vues grille et tableau, avec préférence conservée dans le navigateur ;
 - interface RTL responsive et accessible ;
 - API JSON avec pagination par `offset` et `limit` ;
+- pagination serveur de l'interface avec URLs partageables (`page`) ;
 - configuration par variables d’environnement.
 
 ## Stack technique
@@ -105,6 +106,12 @@ Puis ouvrir :
 - interface : <http://localhost:8080> ;
 - API : <http://localhost:8080/api/books?q=ديوان&offset=0&limit=10>.
 
+La page de résultats accepte aussi `page` :
+
+```text
+http://localhost:8080/?q=Anonyme&page=2
+```
+
 Test HTTP :
 
 ```bash
@@ -176,7 +183,7 @@ go test -race -tags fts5 ./...
 |---|---|---|
 | `q` | Non | Expression de recherche FTS5 ; vide pour obtenir tous les livres |
 | `offset` | Non | Position de départ, minimum `0` |
-| `limit` | Non | Taille de page ; utilise `PAGE_SIZE` si absent ou invalide |
+| `limit` | Non | Taille de page ; utilise `PAGE_SIZE` si absent ou invalide, maximum `100` |
 
 Exemple de réponse :
 

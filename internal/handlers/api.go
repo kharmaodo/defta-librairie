@@ -16,6 +16,8 @@ import (
 
 var globalCfg *config.Config
 
+const maxAPIBooksLimit = 100
+
 func SetConfig(c *config.Config) {
 	globalCfg = c
 }
@@ -65,6 +67,23 @@ func nullableFloat(f sql.NullFloat64) interface{} {
 	return nil
 }
 
+func normalizeAPIPagination(offsetStr, limitStr string, defaultLimit int) (int, int) {
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = defaultLimit
+	}
+	if limit > maxAPIBooksLimit {
+		limit = maxAPIBooksLimit
+	}
+
+	return offset, limit
+}
+
 func APIBooksHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -73,19 +92,11 @@ func APIBooksHandler(w http.ResponseWriter, r *http.Request) {
 	offsetStr := r.URL.Query().Get("offset")
 	limitStr := r.URL.Query().Get("limit")
 
-	offset, _ := strconv.Atoi(offsetStr)
-	if offset < 0 {
-		offset = 0
+	defaultLimit := 30
+	if globalCfg != nil && globalCfg.PageSize > 0 {
+		defaultLimit = globalCfg.PageSize
 	}
-
-	limit, _ := strconv.Atoi(limitStr)
-	if limit < 1 {
-		if globalCfg != nil && globalCfg.PageSize > 0 {
-			limit = globalCfg.PageSize
-		} else {
-			limit = 30
-		}
-	}
+	offset, limit := normalizeAPIPagination(offsetStr, limitStr, defaultLimit)
 
 	books, total, err := database.SearchBooks(q, offset, limit)
 	if err != nil {
