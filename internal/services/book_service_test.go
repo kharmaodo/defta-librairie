@@ -98,6 +98,12 @@ func TestBookLifecycleAndLibraryIsolation(t *testing.T) {
 	if err = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE resource_type='BOOK'`).Scan(&audits); err != nil || audits != 3 {
 		t.Fatalf("audits=%d err=%v", audits, err)
 	}
+	if _, err = db.Exec(`UPDATE libraries SET status='DISABLED' WHERE id='library-1'`); err != nil {
+		t.Fatalf("disable library: %v", err)
+	}
+	if _, _, err = service.List(context.Background(), ownerOne, "", 0, 30); !errors.Is(err, ErrBookForbidden) {
+		t.Fatalf("disabled library must be forbidden, got %v", err)
+	}
 }
 
 func TestRootMustChooseLibraryWhenCreatingBook(t *testing.T) {

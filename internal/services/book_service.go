@@ -31,6 +31,9 @@ func (s *BookService) List(ctx context.Context, claims *auth.Claims, requestedLi
 	if err != nil {
 		return nil, 0, err
 	}
+	if err = s.ensureOwnerLibraryActive(ctx, claims, libraryID); err != nil {
+		return nil, 0, err
+	}
 	if offset < 0 {
 		offset = 0
 	}
@@ -46,6 +49,9 @@ func (s *BookService) List(ctx context.Context, claims *auth.Claims, requestedLi
 func (s *BookService) Find(ctx context.Context, claims *auth.Claims, id int) (models.Book, error) {
 	libraryID, err := resolveBookScope(claims, "", false)
 	if err != nil {
+		return models.Book{}, err
+	}
+	if err = s.ensureOwnerLibraryActive(ctx, claims, libraryID); err != nil {
 		return models.Book{}, err
 	}
 	return s.repository.Find(ctx, id, libraryID)
@@ -80,6 +86,9 @@ func (s *BookService) Update(ctx context.Context, claims *auth.Claims, id int, i
 	if err != nil {
 		return models.Book{}, err
 	}
+	if err = s.ensureOwnerLibraryActive(ctx, claims, scope); err != nil {
+		return models.Book{}, err
+	}
 	existing, err := s.repository.Find(ctx, id, scope)
 	if err != nil {
 		return models.Book{}, err
@@ -104,6 +113,9 @@ func (s *BookService) Delete(ctx context.Context, claims *auth.Claims, id int) e
 	if err != nil {
 		return err
 	}
+	if err = s.ensureOwnerLibraryActive(ctx, claims, scope); err != nil {
+		return err
+	}
 	book, err := s.repository.Find(ctx, id, scope)
 	if err != nil {
 		return err
@@ -113,6 +125,20 @@ func (s *BookService) Delete(ctx context.Context, claims *auth.Claims, id int) e
 		return err
 	}
 	return s.repository.Delete(ctx, id, book.LibraryID, claims.Subject, auditID, s.now().UTC().Format(time.RFC3339Nano))
+}
+
+func (s *BookService) ensureOwnerLibraryActive(ctx context.Context, claims *auth.Claims, libraryID string) error {
+	if claims.Role != models.RoleOwnerLibrary {
+		return nil
+	}
+	active, err := s.repository.LibraryActive(ctx, libraryID)
+	if err != nil {
+		return err
+	}
+	if !active {
+		return ErrBookForbidden
+	}
+	return nil
 }
 
 func resolveBookScope(claims *auth.Claims, requestedLibrary string, required bool) (string, error) {

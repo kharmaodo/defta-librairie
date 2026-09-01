@@ -76,6 +76,9 @@ func (s *OwnerService) Update(ctx context.Context, id string, input models.Owner
 		return models.OwnerAccount{}, err
 	}
 	applyOwnerUpdate(&owner, input)
+	if owner.Status == models.UserStatusDisabled {
+		owner.Library.Status = models.LibraryStatusDisabled
+	}
 	if err = validateOwner(owner.Username, owner.Email, owner.Library.Name, owner.Library.Description); err != nil {
 		return models.OwnerAccount{}, err
 	}
