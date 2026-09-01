@@ -1,5 +1,7 @@
-// cmd/main.go
+//go:build fts5
 // +build fts5
+
+// cmd/main.go
 package main
 
 import (
@@ -13,7 +15,7 @@ import (
 )
 
 var (
-	Tmpl *template.Template   // ← Exporté (majuscule) pour être visible depuis handlers
+	Tmpl *template.Template // ← Exporté (majuscule) pour être visible depuis handlers
 	cfg  *config.Config
 )
 
@@ -50,4 +52,3 @@ func main() {
 		log.Fatalf("Échec démarrage serveur : %v", err)
 	}
 }
-
