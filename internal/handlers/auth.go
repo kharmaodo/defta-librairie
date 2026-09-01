@@ -47,8 +47,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
 		"accessToken": result.AccessToken,
-		"tokenType": "Bearer",
-		"expiresIn": int64(time.Until(result.ExpiresAt).Seconds()),
+		"tokenType":   "Bearer",
+		"expiresIn":   int64(time.Until(result.ExpiresAt).Seconds()),
 		"user": map[string]interface{}{
 			"id": result.User.ID, "username": result.User.Username,
 			"email": result.User.Email, "role": result.User.Role,
@@ -70,12 +70,16 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 func remoteIP(r *http.Request) string {
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err == nil { return host }
+	if err == nil {
+		return host
+	}
 	return r.RemoteAddr
 }
 
 func nullableValue(value string) interface{} {
-	if value == "" { return nil }
+	if value == "" {
+		return nil
+	}
 	return value
 }
 

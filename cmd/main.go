@@ -6,11 +6,11 @@ package main
 
 import (
 	"context"
+	"defta-librairie/internal/auth"
 	"defta-librairie/internal/bootstrap"
 	"defta-librairie/internal/config"
 	"defta-librairie/internal/database"
 	"defta-librairie/internal/handlers"
-	"defta-librairie/internal/auth"
 	"defta-librairie/internal/middleware"
 	"defta-librairie/internal/repositories"
 	"defta-librairie/internal/services"
@@ -90,9 +90,9 @@ func main() {
 	server := &http.Server{
 		Addr: addr, Handler: mux,
 		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout: 15 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout: 60 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 	if err := server.ListenAndServe(); err != nil {
 		log.Fatalf("Échec démarrage serveur : %v", err)

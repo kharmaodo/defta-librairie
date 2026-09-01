@@ -17,8 +17,8 @@ import (
 )
 
 var (
-	ErrRootAlreadyExists   = errors.New("a SUPER_ADMIN_ROOT already exists")
-	ErrMissingRootConfig   = errors.New("DEFTA_ROOT_USERNAME and DEFTA_ROOT_PASSWORD are required")
+	ErrRootAlreadyExists    = errors.New("a SUPER_ADMIN_ROOT already exists")
+	ErrMissingRootConfig    = errors.New("DEFTA_ROOT_USERNAME and DEFTA_ROOT_PASSWORD are required")
 	ErrMissingResetPassword = errors.New("DEFTA_ROOT_NEW_PASSWORD is required")
 )
 

@@ -16,14 +16,14 @@ const (
 )
 
 type User struct {
-	ID           string
-	Username     string
-	Email        string
-	PasswordHash string
-	Role         UserRole
-	Status       UserStatus
-	CreatedAt    string
-	UpdatedAt    string
+	ID                  string
+	Username            string
+	Email               string
+	PasswordHash        string
+	Role                UserRole
+	Status              UserStatus
+	CreatedAt           string
+	UpdatedAt           string
 	FailedLoginAttempts int
 	LockedUntil         string
 	LibraryID           string

@@ -9,13 +9,19 @@ import (
 
 func TestTokenManagerIssueAndParse(t *testing.T) {
 	manager, err := NewTokenManager("0123456789abcdef0123456789abcdef", "issuer", "audience", 15*time.Minute)
-	if err != nil { t.Fatalf("new token manager: %v", err) }
+	if err != nil {
+		t.Fatalf("new token manager: %v", err)
+	}
 	manager.now = func() time.Time { return time.Unix(1700000000, 0) }
 
 	raw, _, err := manager.Issue(models.User{ID: "user-1", Role: models.RoleOwnerLibrary, LibraryID: "library-1"})
-	if err != nil { t.Fatalf("issue token: %v", err) }
+	if err != nil {
+		t.Fatalf("issue token: %v", err)
+	}
 	claims, err := manager.Parse(raw)
-	if err != nil { t.Fatalf("parse token: %v", err) }
+	if err != nil {
+		t.Fatalf("parse token: %v", err)
+	}
 	if claims.Subject != "user-1" || claims.Role != models.RoleOwnerLibrary || claims.LibraryID != "library-1" {
 		t.Fatalf("unexpected claims: %+v", claims)
 	}

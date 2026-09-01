@@ -53,9 +53,9 @@ func (m *TokenManager) Issue(user models.User) (string, time.Time, error) {
 		Role: user.Role, LibraryID: user.LibraryID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer: m.issuer, Subject: user.ID,
-			Audience: jwt.ClaimStrings{m.audience},
+			Audience:  jwt.ClaimStrings{m.audience},
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
-			IssuedAt: jwt.NewNumericDate(now),
+			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now), ID: jti,
 		},
 	}

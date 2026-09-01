@@ -41,7 +41,9 @@ type LoginService struct {
 
 func NewLoginService(users loginUserStore, tokens *auth.TokenManager) (*LoginService, error) {
 	dummyHash, err := auth.HashPassword("Dummy-Password-For-Timing-Only")
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	return &LoginService{users: users, tokens: tokens, dummyHash: dummyHash, now: time.Now}, nil
 }
 
@@ -53,7 +55,9 @@ func (s *LoginService) Login(ctx context.Context, username, password, ipAddress 
 		s.auditUnknown(ctx, ipAddress)
 		return LoginResult{}, ErrInvalidCredentials
 	}
-	if err != nil { return LoginResult{}, err }
+	if err != nil {
+		return LoginResult{}, err
+	}
 	if user.Status == models.UserStatusDisabled {
 		_, _ = auth.VerifyPassword(password, s.dummyHash)
 		return LoginResult{}, ErrAccountDisabled
@@ -69,10 +73,14 @@ func (s *LoginService) Login(ctx context.Context, username, password, ipAddress 
 	}
 
 	valid, err := auth.VerifyPassword(password, user.PasswordHash)
-	if err != nil { return LoginResult{}, ErrInvalidCredentials }
+	if err != nil {
+		return LoginResult{}, ErrInvalidCredentials
+	}
 	if !valid {
 		auditID, idErr := identity.NewID()
-		if idErr != nil { return LoginResult{}, idErr }
+		if idErr != nil {
+			return LoginResult{}, idErr
+		}
 		stamp := now.Format(time.RFC3339Nano)
 		if err = s.users.RecordFailedLogin(ctx, user.ID, auditID, ipAddress, stamp, now.Add(lockDuration).Format(time.RFC3339Nano)); err != nil {
 			return LoginResult{}, err
@@ -81,18 +89,24 @@ func (s *LoginService) Login(ctx context.Context, username, password, ipAddress 
 	}
 
 	auditID, err := identity.NewID()
-	if err != nil { return LoginResult{}, err }
+	if err != nil {
+		return LoginResult{}, err
+	}
 	if err = s.users.RecordSuccessfulLogin(ctx, user.ID, auditID, ipAddress, now.Format(time.RFC3339Nano)); err != nil {
 		return LoginResult{}, err
 	}
 	raw, expiresAt, err := s.tokens.Issue(user)
-	if err != nil { return LoginResult{}, err }
+	if err != nil {
+		return LoginResult{}, err
+	}
 	user.PasswordHash = ""
 	return LoginResult{AccessToken: raw, ExpiresAt: expiresAt, User: user}, nil
 }
 
 func (s *LoginService) auditUnknown(ctx context.Context, ipAddress string) {
 	auditID, err := identity.NewID()
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	_ = s.users.RecordUnknownLogin(ctx, auditID, ipAddress, s.now().UTC().Format(time.RFC3339Nano))
 }

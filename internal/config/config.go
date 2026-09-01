@@ -10,11 +10,11 @@ import (
 )
 
 type Config struct {
-	Port      string
-	DBPath    string
-	Version   string
-	BuildDate string
-	PageSize  int
+	Port         string
+	DBPath       string
+	Version      string
+	BuildDate    string
+	PageSize     int
 	JWTSecret    string
 	JWTIssuer    string
 	JWTAudience  string
@@ -26,11 +26,11 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		Port:      getEnv("PORT", "8080"),
-		DBPath:    getEnv("DB_PATH", "./data/defta.db"),
-		Version:   getEnv("VERSION", "0.1.0-dev"),
-		BuildDate: getEnv("BUILD_DATE", "unknown"),
-		PageSize:  getEnvInt("PAGE_SIZE", 30),
+		Port:         getEnv("PORT", "8080"),
+		DBPath:       getEnv("DB_PATH", "./data/defta.db"),
+		Version:      getEnv("VERSION", "0.1.0-dev"),
+		BuildDate:    getEnv("BUILD_DATE", "unknown"),
+		PageSize:     getEnvInt("PAGE_SIZE", 30),
 		JWTSecret:    getEnv("JWT_SECRET", ""),
 		JWTIssuer:    getEnv("JWT_ISSUER", "defta-librairie"),
 		JWTAudience:  getEnv("JWT_AUDIENCE", "defta-librairie-web"),
