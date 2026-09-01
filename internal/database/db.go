@@ -54,7 +54,7 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
         }
 
         rows, err = DB.Query(`
-            SELECT id, title, auteur, editeur, price, volume, 
+            SELECT id, title, auteur, editeur, price, volume,
                    status, tags, categorie, coverUrl
             FROM defta
             ORDER BY id DESC
@@ -65,7 +65,8 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
         }
         defer rows.Close()
 
-        return scanBooks(rows, false)
+        books, err := scanBooks(rows, false)
+        return books, total, err
     }
 
     // ────────────────────────────────────────────────
@@ -74,8 +75,8 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
     ftsQuery := query // on peut améliorer plus tard (ex: query + "*")
 
     err = DB.QueryRow(`
-        SELECT COUNT(*) 
-        FROM defta_fts 
+        SELECT COUNT(*)
+        FROM defta_fts
         WHERE defta_fts MATCH ?
     `, ftsQuery).Scan(&total)
 
@@ -84,20 +85,21 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
         log.Printf("FTS5 activé → recherche avec MATCH '%s'", ftsQuery)
 
         rows, err = DB.Query(`
-            SELECT 
-                d.id, d.title, d.auteur, d.editeur, d.price, d.volume, 
+            SELECT
+                d.id, d.title, d.auteur, d.editeur, d.price, d.volume,
                 d.status, d.tags, d.categorie, d.coverUrl,
                 rank
             FROM defta_fts fts
             JOIN defta d ON fts.rowid = d.id
-            WHERE fts MATCH ?
-            ORDER BY rank
+            WHERE defta_fts MATCH ?
+            ORDER BY fts.rank
             LIMIT ? OFFSET ?
         `, ftsQuery, limit, offset)
 
         if err == nil {
             defer rows.Close()
-            return scanBooks(rows, true) // true = avec rank
+            books, scanErr := scanBooks(rows, true)
+            return books, total, scanErr
         }
     }
 
@@ -109,10 +111,10 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
     likePattern := "%" + query + "%"
 
     err = DB.QueryRow(`
-        SELECT COUNT(*) 
-        FROM defta 
-        WHERE title LIKE ? 
-           OR auteur LIKE ? 
+        SELECT COUNT(*)
+        FROM defta
+        WHERE title LIKE ?
+           OR auteur LIKE ?
            OR editeur LIKE ?
     `, likePattern, likePattern, likePattern).Scan(&total)
 
@@ -121,12 +123,12 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
     }
 
     rows, err = DB.Query(`
-        SELECT 
-            id, title, auteur, editeur, price, volume, 
+        SELECT
+            id, title, auteur, editeur, price, volume,
             status, tags, categorie, coverUrl
         FROM defta
-        WHERE title LIKE ? 
-           OR auteur LIKE ? 
+        WHERE title LIKE ?
+           OR auteur LIKE ?
            OR editeur LIKE ?
         ORDER BY id DESC
         LIMIT ? OFFSET ?
@@ -137,11 +139,12 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
     }
     defer rows.Close()
 
-    return scanBooks(rows, false)
+    books, scanErr := scanBooks(rows, false)
+    return books, total, scanErr
 }
 
 // scanBooks factorise le scan (avec ou sans rank)
-func scanBooks(rows *sql.Rows, withRank bool) ([]models.Book, int, error) {
+func scanBooks(rows *sql.Rows, withRank bool) ([]models.Book, error) {
     var books []models.Book
 
     for rows.Next() {
@@ -159,7 +162,7 @@ func scanBooks(rows *sql.Rows, withRank bool) ([]models.Book, int, error) {
 
         err := rows.Scan(args...)
         if err != nil {
-            return nil, 0, fmt.Errorf("scan failed: %w", err)
+            return nil, fmt.Errorf("scan failed: %w", err)
         }
 
         if withRank && score.Valid {
@@ -170,8 +173,8 @@ func scanBooks(rows *sql.Rows, withRank bool) ([]models.Book, int, error) {
     }
 
     if err := rows.Err(); err != nil {
-        return nil, 0, fmt.Errorf("rows error: %w", err)
+        return nil, fmt.Errorf("rows error: %w", err)
     }
 
-    return books, len(books), nil
+    return books, nil
 }
