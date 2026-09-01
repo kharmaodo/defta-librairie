@@ -4,12 +4,12 @@ import "testing"
 
 func TestNormalizeAPIPagination(t *testing.T) {
 	tests := []struct {
-		name          string
-		offset        string
-		limit         string
-		defaultLimit  int
-		wantOffset    int
-		wantLimit     int
+		name         string
+		offset       string
+		limit        string
+		defaultLimit int
+		wantOffset   int
+		wantLimit    int
 	}{
 		{name: "valid", offset: "20", limit: "10", defaultLimit: 30, wantOffset: 20, wantLimit: 10},
 		{name: "defaults", offset: "", limit: "", defaultLimit: 30, wantOffset: 0, wantLimit: 30},
