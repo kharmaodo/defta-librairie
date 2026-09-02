@@ -37,23 +37,61 @@
     </section>
 
     <section id="owners-section" class="panel root-only" hidden>
-      <div class="panel-heading"><div><p class="eyebrow">Administration globale</p><h2>Propriétaires et librairies</h2></div></div>
+      <div class="panel-heading"><div><p class="eyebrow">Administration globale</p><h2>Propriétaires et librairies</h2></div><button id="add-owner-button" class="button primary" type="button">Nouveau propriétaire</button></div>
       <div class="table-wrap">
-        <table><thead><tr><th>Propriétaire</th><th>Librairie</th><th>Compte</th><th>Librairie</th></tr></thead>
-          <tbody id="owners-body"><tr><td colspan="4" class="empty">Chargement…</td></tr></tbody>
+        <table><thead><tr><th>Propriétaire</th><th>Librairie</th><th>Compte</th><th>Librairie</th><th>Actions</th></tr></thead>
+          <tbody id="owners-body"><tr><td colspan="5" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
     </section>
 
     <section class="panel">
-      <div class="panel-heading"><div><p class="eyebrow">Catalogue privé</p><h2>Livres</h2></div><span class="hint">30 premiers résultats</span></div>
+      <div class="panel-heading"><div><p class="eyebrow">Catalogue privé</p><h2>Livres</h2></div><div class="heading-actions"><span class="hint">30 premiers résultats</span><button id="add-book-button" class="button primary" type="button">Nouveau livre</button></div></div>
       <div class="table-wrap">
-        <table><thead><tr><th>Titre</th><th>Auteur</th><th>Prix</th><th>Tags</th><th>Statut</th></tr></thead>
-          <tbody id="books-body"><tr><td colspan="5" class="empty">Chargement…</td></tr></tbody>
+        <table><thead><tr><th>Titre</th><th>Auteur</th><th>Prix</th><th>Tags</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody id="books-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
     </section>
   </main>
+
+  <dialog id="owner-dialog" class="modal">
+    <form id="owner-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Compte propriétaire</p><h2 id="owner-form-title">Nouveau propriétaire</h2></div><button class="icon-button" type="button" data-close="owner-dialog" aria-label="Fermer">×</button></div>
+      <input name="id" type="hidden">
+      <div class="form-grid">
+        <label>Nom d’utilisateur<input name="username" minlength="3" maxlength="64" pattern="[a-zA-Z0-9._-]+" required></label>
+        <label>E-mail<input name="email" type="email"></label>
+        <label class="full">Mot de passe <small id="owner-password-help">12 caractères minimum</small><input name="password" type="password" minlength="12" autocomplete="new-password"></label>
+        <label class="full">Nom de la librairie<input name="libraryName" minlength="2" maxlength="120" required></label>
+        <label class="full">Description<textarea name="libraryDescription" maxlength="1000" rows="3"></textarea></label>
+        <label class="edit-only">État du compte<select name="status"><option value="ACTIVE">Actif</option><option value="DISABLED">Désactivé</option></select></label>
+        <label class="edit-only">État de la librairie<select name="libraryStatus"><option value="ACTIVE">Active</option><option value="DISABLED">Désactivée</option></select></label>
+      </div>
+      <p id="owner-form-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="owner-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="book-dialog" class="modal">
+    <form id="book-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Catalogue</p><h2 id="book-form-title">Nouveau livre</h2></div><button class="icon-button" type="button" data-close="book-dialog" aria-label="Fermer">×</button></div>
+      <input name="id" type="hidden"><input name="version" type="hidden">
+      <div class="form-grid">
+        <label class="full root-only-field" hidden>Librairie<select name="libraryId"></select></label>
+        <label class="full">Titre<input name="title" maxlength="300" required></label>
+        <label>Auteur<input name="auteur"></label><label>Éditeur<input name="editeur"></label>
+        <label>Prix<input name="price" type="number" min="0" step="0.01" value="0" required></label>
+        <label>Volume<input name="volume" type="number" min="0" step="1" value="0" required></label>
+        <label>Statut<select name="status"><option value="AVAILABLE">Disponible</option><option value="UNAVAILABLE">Indisponible</option><option value="OUT_OF_STOCK">Rupture</option></select></label>
+        <label>Catégorie<input name="categorie" maxlength="120"></label>
+        <label class="full">Tags<input name="tags" maxlength="500" placeholder="arabe, fiqh, promotion"></label>
+        <label class="full">URL de couverture<input name="coverUrl" type="url" maxlength="2048"></label>
+      </div>
+      <p id="book-form-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="book-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
 
   <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
   <script src="/static/js/admin-auth.js" defer></script>

@@ -357,6 +357,14 @@ Le navigateur conserve les jetons dans `sessionStorage`, renouvelle automatiquem
 - `SUPER_ADMIN_ROOT` voit la liste des propriétaires, des librairies et le catalogue global.
 - `OWNER_LIBRARY` ne voit que les livres de la librairie portée par son JWT.
 
+Le tableau de bord permet également :
+
+- au root de créer, modifier et désactiver un propriétaire avec sa librairie ;
+- au root de choisir la librairie destinataire lors de la création d'un livre ;
+- aux deux rôles de créer, modifier et supprimer les livres autorisés ;
+- de gérer le prix, le volume, le statut, la catégorie, les tags et la couverture ;
+- de transmettre la version courante lors d'une modification afin de détecter les écritures concurrentes.
+
 L'interface ne constitue pas une frontière de sécurité : les contrôles d'autorisation restent appliqués par le middleware et les services backend. Une évolution ultérieure pourra déplacer le refresh token vers un cookie `HttpOnly` afin de réduire son exposition au JavaScript.
 
 ```bash
