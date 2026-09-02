@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tableau de bord Defta Librairie">
+  <title>{{.Title}} · Defta Librairie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body class="dashboard-page" data-page="dashboard">
+  <header class="topbar">
+    <a class="brand compact" href="/">
+      <span class="brand-mark" aria-hidden="true">د</span>
+      <span><strong>Defta</strong><small>Administration</small></span>
+    </a>
+    <div class="account">
+      <span id="role-badge" class="badge">Chargement…</span>
+      <button id="logout-button" class="button ghost" type="button">Se déconnecter</button>
+    </div>
+  </header>
+
+  <main class="dashboard">
+    <section class="welcome">
+      <div><p class="eyebrow">Tableau de bord</p><h1>Bonjour, <span id="user-name">utilisateur</span></h1></div>
+      <p id="scope-text" class="muted">Vérification de vos droits…</p>
+    </section>
+
+    <p id="dashboard-error" class="alert" role="alert" hidden></p>
+
+    <section class="metrics" aria-label="Indicateurs">
+      <article class="metric"><span>Livres visibles</span><strong id="book-total">—</strong></article>
+      <article class="metric root-only" hidden><span>Propriétaires</span><strong id="owner-total">—</strong></article>
+      <article class="metric"><span>État de session</span><strong class="status-good">Active</strong></article>
+    </section>
+
+    <section id="owners-section" class="panel root-only" hidden>
+      <div class="panel-heading"><div><p class="eyebrow">Administration globale</p><h2>Propriétaires et librairies</h2></div></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Propriétaire</th><th>Librairie</th><th>Compte</th><th>Librairie</th></tr></thead>
+          <tbody id="owners-body"><tr><td colspan="4" class="empty">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading"><div><p class="eyebrow">Catalogue privé</p><h2>Livres</h2></div><span class="hint">30 premiers résultats</span></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Titre</th><th>Auteur</th><th>Prix</th><th>Tags</th><th>Statut</th></tr></thead>
+          <tbody id="books-body"><tr><td colspan="5" class="empty">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
+  <script src="/static/js/admin-auth.js" defer></script>
+</body>
+</html>

@@ -343,6 +343,22 @@ L'access token contient uniquement les claims nécessaires : `sub`, `role`, `lib
 
 La connexion renvoie également un `refreshToken` opaque. Seul son hash SHA-256 est conservé dans SQLite. Chaque appel à `/api/auth/refresh` révoque le token présenté et en émet un nouveau. La réutilisation d'un ancien token révoque toute sa famille de session et crée un audit `REFRESH_TOKEN_REUSE`.
 
+### Interface d'administration
+
+Le serveur propose une interface responsive qui s'appuie exclusivement sur les API protégées :
+
+| URL | Accès | Fonction |
+|---|---|---|
+| `/login` | Public | Connexion d'un `SUPER_ADMIN_ROOT` ou `OWNER_LIBRARY` |
+| `/admin` | Session JWT | Tableau de bord adapté au rôle authentifié |
+
+Le navigateur conserve les jetons dans `sessionStorage`, renouvelle automatiquement la session après un `401` et remplace les deux jetons lors de chaque rotation. La déconnexion révoque le refresh token côté serveur et vide la session du navigateur.
+
+- `SUPER_ADMIN_ROOT` voit la liste des propriétaires, des librairies et le catalogue global.
+- `OWNER_LIBRARY` ne voit que les livres de la librairie portée par son JWT.
+
+L'interface ne constitue pas une frontière de sécurité : les contrôles d'autorisation restent appliqués par le middleware et les services backend. Une évolution ultérieure pourra déplacer le refresh token vers un cookie `HttpOnly` afin de réduire son exposition au JavaScript.
+
 ```bash
 LOGIN_RESPONSE=$(jq -n \
   --arg username 'kharmaodo' \

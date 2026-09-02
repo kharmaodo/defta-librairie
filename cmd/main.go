@@ -84,6 +84,7 @@ func main() {
 	ownerHandler := handlers.NewOwnerHandler(ownerService)
 	bookService := services.NewBookService(repositories.NewBookRepository(database.DB))
 	bookHandler := handlers.NewBookManagementHandler(bookService)
+	adminUIHandler := handlers.NewAdminUIHandler(cfg)
 	authRateLimiter, err := middleware.NewRateLimiter(cfg.AuthRateLimit, cfg.AuthRateWindow)
 	if err != nil {
 		log.Fatalf("Configuration rate limit invalide : %v", err)
@@ -95,6 +96,8 @@ func main() {
 	// Routes de base
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handlers.CatalogueHandler)
+	mux.HandleFunc("GET /login", adminUIHandler.Login)
+	mux.HandleFunc("GET /admin", adminUIHandler.Dashboard)
 	mux.HandleFunc("/api/books", handlers.APIBooksHandler)
 	mux.Handle("POST /api/auth/login", authRateLimiter.Limit(http.HandlerFunc(authHandler.Login)))
 	mux.Handle("POST /api/auth/refresh", authRateLimiter.Limit(http.HandlerFunc(authHandler.Refresh)))
