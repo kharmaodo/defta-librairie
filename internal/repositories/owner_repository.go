@@ -76,6 +76,49 @@ func (r *OwnerRepository) List(ctx context.Context) ([]models.OwnerAccount, erro
 	return owners, nil
 }
 
+func (r *OwnerRepository) Search(ctx context.Context, query, userStatus, libraryStatus string, offset, limit int) ([]models.OwnerAccount, int, error) {
+	where := ""
+	args := make([]interface{}, 0, 8)
+	if query != "" {
+		pattern := "%" + query + "%"
+		where += ` AND (u.username LIKE ? OR COALESCE(u.email, '') LIKE ? OR l.name LIKE ? OR COALESCE(l.description, '') LIKE ?)`
+		args = append(args, pattern, pattern, pattern, pattern)
+	}
+	if userStatus != "" {
+		where += " AND u.status = ?"
+		args = append(args, userStatus)
+	}
+	if libraryStatus != "" {
+		where += " AND l.status = ?"
+		args = append(args, libraryStatus)
+	}
+
+	var total int
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM users u JOIN libraries l ON l.owner_user_id = u.id
+		WHERE u.role = 'OWNER_LIBRARY'`+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count owners: %w", err)
+	}
+	queryArgs := append(append([]interface{}{}, args...), limit, offset)
+	rows, err := r.db.QueryContext(ctx, ownerSelect+where+` ORDER BY u.created_at DESC LIMIT ? OFFSET ?`, queryArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("search owners: %w", err)
+	}
+	defer rows.Close()
+	owners := make([]models.OwnerAccount, 0)
+	for rows.Next() {
+		owner, scanErr := scanOwner(rows)
+		if scanErr != nil {
+			return nil, 0, fmt.Errorf("scan searched owner: %w", scanErr)
+		}
+		owners = append(owners, owner)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate searched owners: %w", err)
+	}
+	return owners, total, nil
+}
+
 func (r *OwnerRepository) FindByID(ctx context.Context, id string) (models.OwnerAccount, error) {
 	owner, err := scanOwner(r.db.QueryRowContext(ctx, ownerSelect+` AND u.id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {

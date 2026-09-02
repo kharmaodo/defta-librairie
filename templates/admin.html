@@ -40,12 +40,13 @@
     </section>
 
     <section id="owners-section" class="panel root-only" hidden>
-      <div class="panel-heading"><div><p class="eyebrow">Administration globale</p><h2>Propriétaires et librairies</h2></div><button id="add-owner-button" class="button primary" type="button">Nouveau propriétaire</button></div>
+      <div class="panel-heading owner-heading"><div><p class="eyebrow">Administration globale</p><h2>Propriétaires et librairies</h2></div><div class="heading-actions"><form id="owner-filters" class="filters"><label>Recherche<input name="q" maxlength="200" placeholder="Compte ou librairie"></label><label>Compte<select name="status"><option value="">Tous</option><option value="ACTIVE">Actif</option><option value="LOCKED">Verrouillé</option><option value="DISABLED">Désactivé</option></select></label><label>Librairie<select name="libraryStatus"><option value="">Toutes</option><option value="ACTIVE">Active</option><option value="DISABLED">Désactivée</option></select></label><button class="button ghost" type="submit">Filtrer</button></form><button id="add-owner-button" class="button primary" type="button">Nouveau propriétaire</button></div></div>
       <div class="table-wrap">
         <table><thead><tr><th>Propriétaire</th><th>Librairie</th><th>Compte</th><th>Librairie</th><th>Actions</th></tr></thead>
           <tbody id="owners-body"><tr><td colspan="5" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
+      <div class="pagination"><button id="owners-previous" class="button ghost" type="button">Précédent</button><span id="owners-page-label" class="hint">Page 1</span><button id="owners-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
     <section class="panel">

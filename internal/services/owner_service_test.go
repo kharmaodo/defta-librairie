@@ -100,6 +100,17 @@ func TestOwnerLifecycle(t *testing.T) {
 	if err != nil || len(owners) != 1 {
 		t.Fatalf("list owners: len=%d err=%v", len(owners), err)
 	}
+	filtered, total, err := service.Search(context.Background(), "modifiée", "disabled", "disabled", 0, 10)
+	if err != nil || total != 1 || len(filtered) != 1 || filtered[0].ID != owner.ID {
+		t.Fatalf("filtered owners: total=%d owners=%+v err=%v", total, filtered, err)
+	}
+	empty, total, err := service.Search(context.Background(), "introuvable", "", "", 0, 10)
+	if err != nil || total != 0 || len(empty) != 0 {
+		t.Fatalf("empty owner search: total=%d owners=%+v err=%v", total, empty, err)
+	}
+	if _, _, err = service.Search(context.Background(), "", "unknown", "", 0, 10); err != ErrInvalidOwner {
+		t.Fatalf("expected invalid filter, got %v", err)
+	}
 	if err = service.Disable(context.Background(), owner.ID, "root"); err != nil {
 		t.Fatalf("disable owner: %v", err)
 	}

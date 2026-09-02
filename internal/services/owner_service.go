@@ -66,6 +66,26 @@ func (s *OwnerService) List(ctx context.Context) ([]models.OwnerAccount, error) 
 	return s.repository.List(ctx)
 }
 
+func (s *OwnerService) Search(ctx context.Context, query, userStatus, libraryStatus string, offset, limit int) ([]models.OwnerAccount, int, error) {
+	query = strings.TrimSpace(query)
+	userStatus = strings.ToUpper(strings.TrimSpace(userStatus))
+	libraryStatus = strings.ToUpper(strings.TrimSpace(libraryStatus))
+	if len([]rune(query)) > 200 || (userStatus != "" && !validOwnerSearchStatus(userStatus)) ||
+		(libraryStatus != "" && !validLibrarySearchStatus(libraryStatus)) {
+		return nil, 0, ErrInvalidOwner
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if limit < 1 {
+		limit = 30
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repository.Search(ctx, query, userStatus, libraryStatus, offset, limit)
+}
+
 func (s *OwnerService) Find(ctx context.Context, id string) (models.OwnerAccount, error) {
 	return s.repository.FindByID(ctx, id)
 }
@@ -169,4 +189,13 @@ func validUserStatus(status models.UserStatus) bool {
 
 func validLibraryStatus(status models.LibraryStatus) bool {
 	return status == models.LibraryStatusActive || status == models.LibraryStatusDisabled
+}
+
+func validOwnerSearchStatus(status string) bool {
+	return status == string(models.UserStatusActive) || status == string(models.UserStatusDisabled) ||
+		status == string(models.UserStatusLocked)
+}
+
+func validLibrarySearchStatus(status string) bool {
+	return status == string(models.LibraryStatusActive) || status == string(models.LibraryStatusDisabled)
 }

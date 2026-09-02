@@ -151,7 +151,7 @@ Ces routes exigent un JWT `SUPER_ADMIN_ROOT` :
 
 | Méthode | Route | Action |
 |---|---|---|
-| `GET` | `/api/admin/owners` | Lister les propriétaires et leurs librairies |
+| `GET` | `/api/admin/owners?q=...&status=...&libraryStatus=...&offset=0&limit=30` | Rechercher et paginer les propriétaires et leurs librairies |
 | `POST` | `/api/admin/owners` | Créer atomiquement un propriétaire et sa librairie |
 | `GET` | `/api/admin/owners/{id}` | Consulter un propriétaire |
 | `PATCH` | `/api/admin/owners/{id}` | Modifier le compte, le mot de passe ou la librairie |

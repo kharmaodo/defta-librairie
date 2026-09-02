@@ -4,7 +4,7 @@
   const ACCESS_KEY = "defta.accessToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
-  const state = {isRoot: false, owners: [], books: [], currentSessionId: "", bookOffset: 0, bookLimit: 10, bookQuery: ""};
+  const state = {isRoot: false, owners: [], ownerOptions: [], books: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: ""};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
@@ -110,9 +110,8 @@
     const body = document.querySelector("#owners-body");
     body.replaceChildren();
     if (!payload.results.length) {
-      const row = body.insertRow(); textCell(row, "Aucun propriétaire", "empty").colSpan = 5; return;
-    }
-    payload.results.forEach((owner) => {
+      const row = body.insertRow(); textCell(row, "Aucun propriétaire", "empty").colSpan = 5;
+    } else payload.results.forEach((owner) => {
       const row = body.insertRow();
       textCell(row, owner.username);
       textCell(row, owner.library && owner.library.name);
@@ -126,7 +125,11 @@
         actions.replaceChildren(actionButton("Modifier", "edit-owner", owner.id), actionButton("Désactiver", "disable-owner", owner.id, true));
       }
     });
-    updateLibraryOptions();
+    const page = Math.floor(payload.offset / payload.limit) + 1;
+    const pages = Math.max(1, Math.ceil(payload.total / payload.limit));
+    document.querySelector("#owners-page-label").textContent = `Page ${page} sur ${pages}`;
+    document.querySelector("#owners-previous").disabled = payload.offset === 0;
+    document.querySelector("#owners-next").disabled = payload.offset + payload.results.length >= payload.total;
   }
 
   function renderBooks(payload) {
@@ -209,7 +212,7 @@
     const placeholder = document.createElement("option");
     placeholder.value = ""; placeholder.textContent = "Choisir une librairie";
     select.append(placeholder);
-    state.owners.filter((owner) => owner.library && owner.library.status === "ACTIVE").forEach((owner) => {
+    state.ownerOptions.forEach((owner) => {
       const option = document.createElement("option");
       option.value = owner.library.id;
       option.textContent = `${owner.library.name} · ${owner.username}`;
@@ -277,7 +280,32 @@
   }
 
   async function reloadOwners() {
-    renderOwners(await apiFetch("/api/admin/owners"));
+    const form = document.querySelector("#owner-filters");
+    const query = new URLSearchParams({offset: String(state.ownerOffset), limit: String(state.ownerLimit)});
+    ["q", "status", "libraryStatus"].forEach((name) => {
+      const value = form.elements[name].value.trim();
+      if (value) query.set(name, value);
+    });
+    const payload = await apiFetch(`/api/admin/owners?${query}`);
+    if (!payload.results.length && state.ownerOffset > 0) {
+      state.ownerOffset = Math.max(0, state.ownerOffset - state.ownerLimit);
+      return reloadOwners();
+    }
+    renderOwners(payload);
+  }
+
+  async function reloadOwnerOptions() {
+    const owners = [];
+    let offset = 0;
+    let total = 0;
+    do {
+      const payload = await apiFetch(`/api/admin/owners?status=ACTIVE&libraryStatus=ACTIVE&offset=${offset}&limit=100`);
+      owners.push(...payload.results);
+      offset += payload.results.length;
+      total = payload.total;
+    } while (offset < total);
+    state.ownerOptions = owners;
+    updateLibraryOptions();
   }
 
   async function reloadBooks() {
@@ -320,6 +348,20 @@
       errorBox.hidden = true;
       try { await reloadAudit(); }
       catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#owner-filters").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      state.ownerOffset = 0;
+      errorBox.hidden = true;
+      try { await reloadOwners(); } catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#owners-previous").addEventListener("click", async () => {
+      state.ownerOffset = Math.max(0, state.ownerOffset - state.ownerLimit);
+      try { await reloadOwners(); } catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#owners-next").addEventListener("click", async () => {
+      state.ownerOffset += state.ownerLimit;
+      try { await reloadOwners(); } catch (error) { showError(errorBox, error); }
     });
     document.querySelector("#book-search-form").addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -395,7 +437,8 @@
           method: id ? "PATCH" : "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)
         });
         document.querySelector("#owner-dialog").close();
-        await reloadOwners();
+        if (!id) state.ownerOffset = 0;
+        await Promise.all([reloadOwners(), reloadOwnerOptions()]);
       } catch (error) { showError(formError, error); }
     });
 
@@ -424,13 +467,13 @@
       const owner = state.owners.find((item) => item.id === button.dataset.id);
       if (button.dataset.action === "edit-owner") openOwnerForm(owner);
       if (button.dataset.action === "disable-owner" && window.confirm(`Désactiver ${owner.username} et sa librairie ?`)) {
-        try { await apiFetch(`/api/admin/owners/${owner.id}`, {method: "DELETE"}); await reloadOwners(); }
+        try { await apiFetch(`/api/admin/owners/${owner.id}`, {method: "DELETE"}); await Promise.all([reloadOwners(), reloadOwnerOptions()]); }
         catch (error) { showError(errorBox, error); }
       }
       if (button.dataset.action === "unlock-owner" && window.confirm(`Déverrouiller le compte ${owner.username} ?`)) {
         try {
           await apiFetch(`/api/admin/owners/${owner.id}/unlock`, {method: "POST"});
-          await Promise.all([reloadOwners(), reloadAudit(), reloadSessions()]);
+          await Promise.all([reloadOwners(), reloadOwnerOptions(), reloadAudit(), reloadSessions()]);
         } catch (error) { showError(errorBox, error); }
       }
     });
@@ -486,7 +529,7 @@
         apiFetch("/api/audit-logs?offset=0&limit=30").then(renderAudit),
         apiFetch("/api/auth/sessions?offset=0&limit=30").then(renderSessions)
       ];
-      if (isRoot) requests.push(apiFetch("/api/admin/owners").then(renderOwners));
+      if (isRoot) requests.push(reloadOwners(), reloadOwnerOptions());
       await Promise.all(requests);
     } catch (error) {
       if (error.status === 401 || error.message === "Session expirée") {

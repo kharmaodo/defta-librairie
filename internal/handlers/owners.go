@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type OwnerHandler struct{ service *services.OwnerService }
@@ -40,12 +41,16 @@ type updateOwnerRequest struct {
 }
 
 func (h *OwnerHandler) List(w http.ResponseWriter, r *http.Request) {
-	owners, err := h.service.List(r.Context())
+	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
+	owners, total, err := h.service.Search(r.Context(), r.URL.Query().Get("q"),
+		strings.TrimSpace(r.URL.Query().Get("status")), strings.TrimSpace(r.URL.Query().Get("libraryStatus")), offset, limit)
 	if err != nil {
 		writeOwnerError(w, err)
 		return
 	}
-	writeAuthJSON(w, http.StatusOK, map[string]interface{}{"results": owners, "total": len(owners)})
+	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
+		"results": owners, "total": total, "offset": offset, "limit": limit,
+	})
 }
 
 func (h *OwnerHandler) Get(w http.ResponseWriter, r *http.Request) {
