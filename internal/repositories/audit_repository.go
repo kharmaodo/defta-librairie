@@ -11,23 +11,43 @@ type AuditRepository struct{ db *sql.DB }
 
 func NewAuditRepository(db *sql.DB) *AuditRepository { return &AuditRepository{db: db} }
 
-func (r *AuditRepository) List(ctx context.Context, actorID, action string, success *bool, offset, limit int) ([]models.AuditLog, int, error) {
+func (r *AuditRepository) List(ctx context.Context, actorID string, filter models.AuditFilter, offset, limit int) ([]models.AuditLog, int, error) {
 	where := " WHERE 1=1"
-	args := make([]interface{}, 0, 5)
+	args := make([]interface{}, 0, 10)
 	if actorID != "" {
 		where += " AND a.actor_user_id=?"
 		args = append(args, actorID)
 	}
-	if action != "" {
-		where += " AND a.action=?"
-		args = append(args, action)
+	if filter.ActorUsername != "" {
+		where += " AND u.username LIKE ?"
+		args = append(args, "%"+filter.ActorUsername+"%")
 	}
-	if success != nil {
+	if filter.Action != "" {
+		where += " AND a.action=?"
+		args = append(args, filter.Action)
+	}
+	if filter.ResourceType != "" {
+		where += " AND a.resource_type=?"
+		args = append(args, filter.ResourceType)
+	}
+	if filter.ResourceID != "" {
+		where += " AND a.resource_id=?"
+		args = append(args, filter.ResourceID)
+	}
+	if filter.Success != nil {
 		where += " AND a.success=?"
-		args = append(args, *success)
+		args = append(args, *filter.Success)
+	}
+	if filter.From != "" {
+		where += " AND a.created_at>=?"
+		args = append(args, filter.From)
+	}
+	if filter.To != "" {
+		where += " AND a.created_at<=?"
+		args = append(args, filter.To)
 	}
 	var total int
-	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM audit_logs a"+where, args...).Scan(&total); err != nil {
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_user_id"+where, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count audit logs: %w", err)
 	}
 	args = append(args, limit, offset)

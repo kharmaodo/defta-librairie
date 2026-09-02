@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"defta-librairie/internal/auth"
+	"defta-librairie/internal/models"
 	"defta-librairie/internal/services"
 	"net/http"
 	"strings"
@@ -21,7 +22,12 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	claims, _ := auth.ClaimsFromContext(r.Context())
-	logs, total, err := h.service.List(r.Context(), claims, r.URL.Query().Get("action"), success, offset, limit)
+	filter := models.AuditFilter{
+		ActorUsername: r.URL.Query().Get("actor"), Action: r.URL.Query().Get("action"),
+		ResourceType: r.URL.Query().Get("resourceType"), ResourceID: r.URL.Query().Get("resourceId"),
+		Success: success, From: r.URL.Query().Get("from"), To: r.URL.Query().Get("to"),
+	}
+	logs, total, err := h.service.List(r.Context(), claims, filter, offset, limit)
 	if err != nil {
 		if err == services.ErrInvalidAuditFilter {
 			writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_filter", "message": err.Error()})

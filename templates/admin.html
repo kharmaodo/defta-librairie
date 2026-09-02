@@ -69,8 +69,13 @@
       <div class="panel-heading audit-heading">
         <div><p class="eyebrow">Traçabilité</p><h2>Journal d’audit</h2></div>
         <form id="audit-filters" class="filters">
+          <label class="root-only-field" hidden>Acteur<input name="actor" maxlength="64" placeholder="Utilisateur"></label>
           <label>Action<input name="action" maxlength="64" placeholder="ex. LOGIN_FAILED"></label>
+          <label>Ressource<input name="resourceType" maxlength="32" placeholder="BOOK, TAG…"></label>
+          <label>Identifiant<input name="resourceId" maxlength="100" placeholder="ID exact"></label>
           <label>Résultat<select name="success"><option value="">Tous</option><option value="true">Succès</option><option value="false">Échec</option></select></label>
+          <label>Du<input name="from" type="datetime-local"></label>
+          <label>Au<input name="to" type="datetime-local"></label>
           <button class="button ghost" type="submit">Filtrer</button>
         </form>
       </div>
@@ -80,6 +85,7 @@
           <tbody id="audit-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
+      <div class="pagination"><button id="audit-previous" class="button ghost" type="button">Précédent</button><span id="audit-page-label" class="hint">Page 1</span><button id="audit-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
     <section class="panel">

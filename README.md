@@ -419,7 +419,7 @@ L'interface ne constitue pas une frontière de sécurité : les contrôles d'aut
 
 ### Journal d'audit
 
-`GET /api/audit-logs` fournit une lecture paginée des événements avec les paramètres `offset`, `limit`, `action` et `success`. Le root voit tous les événements ; un propriétaire ne voit que ceux dont `actor_user_id` correspond au sujet signé de son JWT.
+`GET /api/audit-logs` fournit une lecture paginée des événements avec les paramètres `offset`, `limit`, `actor`, `action`, `resourceType`, `resourceId`, `success`, `from` et `to`. Les dates utilisent RFC 3339. Le root voit tous les événements et peut filtrer par acteur ; un propriétaire ne voit que ceux dont `actor_user_id` correspond au sujet signé de son JWT et ne peut pas contourner ce périmètre avec `actor`.
 
 ```bash
 curl -fsS 'http://localhost:8080/api/audit-logs?action=LOGIN_FAILED&success=false&limit=30' \

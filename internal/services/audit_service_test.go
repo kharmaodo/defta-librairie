@@ -37,17 +37,28 @@ func TestAuditVisibilityAndFilters(t *testing.T) {
 	}
 	service := NewAuditService(repositories.NewAuditRepository(db))
 	ownerClaims := &auth.Claims{Role: models.RoleOwnerLibrary, RegisteredClaims: jwt.RegisteredClaims{Subject: "owner-1"}}
-	logs, total, err := service.List(context.Background(), ownerClaims, "", nil, 0, 30)
+	logs, total, err := service.List(context.Background(), ownerClaims, models.AuditFilter{}, 0, 30)
 	if err != nil || total != 1 || len(logs) != 1 || logs[0].ActorUserID != "owner-1" {
 		t.Fatalf("owner logs=%+v total=%d err=%v", logs, total, err)
 	}
 	rootClaims := &auth.Claims{Role: models.RoleSuperAdminRoot, RegisteredClaims: jwt.RegisteredClaims{Subject: "root"}}
 	failed := false
-	logs, total, err = service.List(context.Background(), rootClaims, "LOGIN_FAILED", &failed, 0, 30)
+	logs, total, err = service.List(context.Background(), rootClaims, models.AuditFilter{
+		Action: "LOGIN_FAILED", Success: &failed, ActorUsername: "owner-two",
+		ResourceType: "SESSION", From: "2026-09-02T10:30:00Z", To: "2026-09-02T12:00:00Z",
+	}, 0, 30)
 	if err != nil || total != 1 || len(logs) != 1 || logs[0].ActorUsername != "owner-two" {
 		t.Fatalf("root filtered logs=%+v total=%d err=%v", logs, total, err)
 	}
-	if _, _, err = service.List(context.Background(), rootClaims, "bad action!", nil, 0, 30); err != ErrInvalidAuditFilter {
+	if _, _, err = service.List(context.Background(), rootClaims, models.AuditFilter{Action: "bad action!"}, 0, 30); err != ErrInvalidAuditFilter {
 		t.Fatalf("invalid action error=%v", err)
+	}
+	if _, _, err = service.List(context.Background(), ownerClaims, models.AuditFilter{ActorUsername: "owner-one"}, 0, 30); err != ErrInvalidAuditFilter {
+		t.Fatalf("owner actor filter error=%v", err)
+	}
+	if _, _, err = service.List(context.Background(), rootClaims, models.AuditFilter{
+		From: "2026-09-03T00:00:00Z", To: "2026-09-02T00:00:00Z",
+	}, 0, 30); err != ErrInvalidAuditFilter {
+		t.Fatalf("invalid date range error=%v", err)
 	}
 }

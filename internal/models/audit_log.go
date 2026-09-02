@@ -13,3 +13,13 @@ type AuditLog struct {
 	Success       bool   `json:"success"`
 	CreatedAt     string `json:"createdAt"`
 }
+
+type AuditFilter struct {
+	ActorUsername string
+	Action        string
+	ResourceType  string
+	ResourceID    string
+	Success       *bool
+	From          string
+	To            string
+}
