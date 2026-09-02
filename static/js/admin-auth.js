@@ -147,7 +147,7 @@
         textCell(row, book.tags); textCell(row, book.status, "pill");
         const actions = textCell(row, "");
         actions.className = "row-actions";
-        actions.replaceChildren(actionButton("Modifier", "edit-book", book.id), actionButton("Supprimer", "delete-book", book.id, true));
+        actions.replaceChildren(actionButton("Historique", "history-book", book.id), actionButton("Modifier", "edit-book", book.id), actionButton("Supprimer", "delete-book", book.id, true));
       });
     }
     const page = Math.floor(payload.offset / payload.limit) + 1;
@@ -277,6 +277,24 @@
     if (state.isRoot && form.elements.libraryId.value) payload.libraryId = form.elements.libraryId.value;
     if (form.elements.id.value) payload.version = Number(form.elements.version.value);
     return payload;
+  }
+
+  async function openBookHistory(book) {
+    const payload = await apiFetch(`/api/manage/books/${book.id}/history?offset=0&limit=100`);
+    document.querySelector("#book-history-title").textContent = `Historique · ${book.title}`;
+    const body = document.querySelector("#book-history-body");
+    body.replaceChildren();
+    if (!payload.results.length) {
+      const row = body.insertRow(); textCell(row, "Aucune évolution enregistrée", "empty").colSpan = 5;
+    } else payload.results.forEach((entry) => {
+      const row = body.insertRow();
+      textCell(row, formatDate(entry.createdAt));
+      textCell(row, entry.actorUsername || entry.actorUserId || "Système");
+      textCell(row, entry.action, "pill");
+      textCell(row, entry.oldValues || "—", "audit-json");
+      textCell(row, entry.newValues || "—", "audit-json");
+    });
+    document.querySelector("#book-history-dialog").showModal();
   }
 
   async function reloadOwners() {
@@ -483,6 +501,9 @@
       if (!button) return;
       const id = Number(button.dataset.id);
       const book = state.books.find((item) => item.id === id);
+      if (button.dataset.action === "history-book") {
+        try { await openBookHistory(book); } catch (error) { showError(errorBox, error); }
+      }
       if (button.dataset.action === "edit-book") openBookForm(book);
       if (button.dataset.action === "delete-book" && window.confirm(`Supprimer « ${book.title} » ?`)) {
         try { await apiFetch(`/api/manage/books/${id}`, {method: "DELETE"}); await reloadBooks(); }

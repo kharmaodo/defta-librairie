@@ -131,7 +131,19 @@ func (r *BookRepository) Find(ctx context.Context, id int, libraryID string) (mo
 	return book, nil
 }
 
-func (r *BookRepository) Create(ctx context.Context, book models.BookInput, actorID, auditID, now string) (models.Book, error) {
+func (r *BookRepository) FindLibraryID(ctx context.Context, id int) (string, error) {
+	var libraryID string
+	err := r.db.QueryRowContext(ctx, `SELECT library_id FROM defta WHERE id=?`, id).Scan(&libraryID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrBookNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("find book library: %w", err)
+	}
+	return libraryID, nil
+}
+
+func (r *BookRepository) Create(ctx context.Context, book models.BookInput, actorID, auditID, newValues, now string) (models.Book, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return models.Book{}, fmt.Errorf("begin book creation: %w", err)
@@ -153,8 +165,8 @@ func (r *BookRepository) Create(ctx context.Context, book models.BookInput, acto
 	}
 	if _, err = tx.ExecContext(ctx, `
 		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
-		VALUES (?, ?, 'CREATE_BOOK', 'BOOK', ?, '{"created":true}', 1, ?)
-	`, auditID, actorID, id, now); err != nil {
+		VALUES (?, ?, 'CREATE_BOOK', 'BOOK', ?, ?, 1, ?)
+	`, auditID, actorID, id, newValues, now); err != nil {
 		return models.Book{}, fmt.Errorf("audit book creation: %w", err)
 	}
 	if err = tx.Commit(); err != nil {
@@ -163,7 +175,7 @@ func (r *BookRepository) Create(ctx context.Context, book models.BookInput, acto
 	return r.Find(ctx, int(id), book.LibraryID)
 }
 
-func (r *BookRepository) Update(ctx context.Context, id int, book models.BookInput, actorID, auditID, now string) (models.Book, error) {
+func (r *BookRepository) Update(ctx context.Context, id int, book models.BookInput, actorID, auditID, oldValues, newValues, now string) (models.Book, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return models.Book{}, fmt.Errorf("begin book update: %w", err)
@@ -187,9 +199,9 @@ func (r *BookRepository) Update(ctx context.Context, id int, book models.BookInp
 		return models.Book{}, ErrBookConflict
 	}
 	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
-		VALUES (?, ?, 'UPDATE_BOOK', 'BOOK', ?, '{"updated":true}', 1, ?)
-	`, auditID, actorID, id, now); err != nil {
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, old_values, new_values, success, created_at)
+		VALUES (?, ?, 'UPDATE_BOOK', 'BOOK', ?, ?, ?, 1, ?)
+	`, auditID, actorID, id, oldValues, newValues, now); err != nil {
 		return models.Book{}, fmt.Errorf("audit book update: %w", err)
 	}
 	if err = tx.Commit(); err != nil {
@@ -198,7 +210,7 @@ func (r *BookRepository) Update(ctx context.Context, id int, book models.BookInp
 	return r.Find(ctx, id, book.LibraryID)
 }
 
-func (r *BookRepository) Delete(ctx context.Context, id int, libraryID, actorID, auditID, now string) error {
+func (r *BookRepository) Delete(ctx context.Context, id int, libraryID, actorID, auditID, oldValues, now string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin book deletion: %w", err)
@@ -216,15 +228,48 @@ func (r *BookRepository) Delete(ctx context.Context, id int, libraryID, actorID,
 		return ErrBookNotFound
 	}
 	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
-		VALUES (?, ?, 'DELETE_BOOK', 'BOOK', ?, '{"deleted":true}', 1, ?)
-	`, auditID, actorID, id, now); err != nil {
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, old_values, new_values, success, created_at)
+		VALUES (?, ?, 'DELETE_BOOK', 'BOOK', ?, ?, '{"deleted":true}', 1, ?)
+	`, auditID, actorID, id, oldValues, now); err != nil {
 		return fmt.Errorf("audit book deletion: %w", err)
 	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("commit book deletion: %w", err)
 	}
 	return nil
+}
+
+func (r *BookRepository) History(ctx context.Context, id int, offset, limit int) ([]models.AuditLog, int, error) {
+	resourceID := fmt.Sprintf("%d", id)
+	var total int
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM audit_logs WHERE resource_type='BOOK' AND resource_id=?
+	`, resourceID).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count book history: %w", err)
+	}
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT a.id, COALESCE(a.actor_user_id, ''), COALESCE(u.username, ''), a.action,
+		       a.resource_type, COALESCE(a.resource_id, ''), COALESCE(a.old_values, ''),
+		       COALESCE(a.new_values, ''), COALESCE(a.ip_address, ''), a.success, a.created_at
+		FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_user_id
+		WHERE a.resource_type='BOOK' AND a.resource_id=?
+		ORDER BY a.created_at DESC, a.id DESC LIMIT ? OFFSET ?
+	`, resourceID, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list book history: %w", err)
+	}
+	defer rows.Close()
+	logs := make([]models.AuditLog, 0)
+	for rows.Next() {
+		var log models.AuditLog
+		if err = rows.Scan(&log.ID, &log.ActorUserID, &log.ActorUsername, &log.Action,
+			&log.ResourceType, &log.ResourceID, &log.OldValues, &log.NewValues,
+			&log.IPAddress, &log.Success, &log.CreatedAt); err != nil {
+			return nil, 0, fmt.Errorf("scan book history: %w", err)
+		}
+		logs = append(logs, log)
+	}
+	return logs, total, rows.Err()
 }
 
 const bookSelect = `

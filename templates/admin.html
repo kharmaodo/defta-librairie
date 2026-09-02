@@ -125,6 +125,16 @@
     </form>
   </dialog>
 
+  <dialog id="book-history-dialog" class="modal history-modal">
+    <div class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Prix, statut et tags</p><h2 id="book-history-title">Historique du livre</h2></div><button class="icon-button" type="button" data-close="book-history-dialog" aria-label="Fermer">×</button></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Date</th><th>Acteur</th><th>Action</th><th>Avant</th><th>Après</th></tr></thead><tbody id="book-history-body"></tbody></table>
+      </div>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="book-history-dialog">Fermer</button></div>
+    </div>
+  </dialog>
+
   <dialog id="password-dialog" class="modal narrow">
     <form id="password-form" class="entity-form">
       <div class="modal-heading"><div><p class="eyebrow">Sécurité du compte</p><h2>Changer le mot de passe</h2></div><button class="icon-button" type="button" data-close="password-dialog" aria-label="Fermer">×</button></div>

@@ -8,6 +8,7 @@ import (
 	"defta-librairie/internal/repositories"
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -90,6 +91,24 @@ func TestBookLifecycleAndLibraryIsolation(t *testing.T) {
 	if updated.Version != 2 || updated.Price != 3000 {
 		t.Fatalf("unexpected updated book: %+v", updated)
 	}
+	history, historyTotal, err := service.History(context.Background(), ownerOne, book.ID, 0, 30)
+	if err != nil || historyTotal != 2 || len(history) != 2 {
+		t.Fatalf("book history: total=%d history=%+v err=%v", historyTotal, history, err)
+	}
+	var updateAudit models.AuditLog
+	for _, entry := range history {
+		if entry.Action == "UPDATE_BOOK" {
+			updateAudit = entry
+		}
+	}
+	if !strings.Contains(updateAudit.OldValues, `"price":2500`) ||
+		!strings.Contains(updateAudit.NewValues, `"price":3000`) ||
+		!strings.Contains(updateAudit.NewValues, `"tags":"fiqh,édition"`) {
+		t.Fatalf("commercial snapshots missing: old=%s new=%s", updateAudit.OldValues, updateAudit.NewValues)
+	}
+	if _, _, err = service.History(context.Background(), ownerTwo, book.ID, 0, 30); !errors.Is(err, repositories.ErrBookNotFound) {
+		t.Fatalf("cross-library history must be hidden, got %v", err)
+	}
 	if _, err = service.Create(context.Background(), ownerTwo, models.BookInput{
 		Title: "Livre Un modifié", Price: 1500, Tags: "autre librairie",
 	}); err != nil {
@@ -119,6 +138,10 @@ func TestBookLifecycleAndLibraryIsolation(t *testing.T) {
 	}
 	if _, err = service.Find(context.Background(), root, book.ID); !errors.Is(err, repositories.ErrBookNotFound) {
 		t.Fatalf("deleted book must be hidden, got %v", err)
+	}
+	history, historyTotal, err = service.History(context.Background(), ownerOne, book.ID, 0, 30)
+	if err != nil || historyTotal != 3 || len(history) != 3 || history[0].Action != "DELETE_BOOK" {
+		t.Fatalf("deleted book history: total=%d history=%+v err=%v", historyTotal, history, err)
 	}
 	var audits int
 	if err = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE resource_type='BOOK'`).Scan(&audits); err != nil || audits != 4 {

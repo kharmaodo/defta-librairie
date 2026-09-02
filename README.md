@@ -189,10 +189,13 @@ curl -fsS 'http://localhost:8080/api/manage/books?q=fiqh&offset=0&limit=10' \
 | `GET` | `/api/manage/books?offset=0&limit=30&libraryId=...` | Lister les livres autorisés |
 | `POST` | `/api/manage/books` | Créer un livre |
 | `GET` | `/api/manage/books/{id}` | Consulter un livre autorisé |
+| `GET` | `/api/manage/books/{id}/history?offset=0&limit=30` | Consulter l'historique commercial autorisé du livre |
 | `PUT` | `/api/manage/books/{id}` | Remplacer les données, prix, tags et statut |
 | `DELETE` | `/api/manage/books/{id}` | Supprimer logiquement un livre |
 
 Les mises à jour utilisent le champ `version`. Une version périmée produit `409 Conflict` afin d'éviter l'écrasement silencieux d'une modification concurrente. Les suppressions logiques disparaissent également du catalogue public et de la recherche FTS5.
+
+Chaque création, modification ou suppression conserve un instantané JSON du prix, du statut, des tags et de la version. L'historique reste consultable après une suppression logique ; un propriétaire ne peut toutefois consulter que les livres rattachés à sa propre librairie.
 
 ```bash
 curl -fsS -X POST http://localhost:8080/api/manage/books \

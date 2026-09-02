@@ -127,6 +127,7 @@ func main() {
 	mux.Handle("GET /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.List)))
 	mux.Handle("POST /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.Create)))
 	mux.Handle("GET /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Get)))
+	mux.Handle("GET /api/manage/books/{id}/history", bookManagers(http.HandlerFunc(bookHandler.History)))
 	mux.Handle("PUT /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Update)))
 	mux.Handle("DELETE /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Delete)))
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))

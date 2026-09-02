@@ -46,6 +46,24 @@ func (h *BookManagementHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeAuthJSON(w, http.StatusOK, book)
 }
 
+func (h *BookManagementHandler) History(w http.ResponseWriter, r *http.Request) {
+	id, err := bookID(r)
+	if err != nil {
+		writeBookError(w, services.ErrInvalidBook)
+		return
+	}
+	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	logs, total, err := h.service.History(r.Context(), claims, id, offset, limit)
+	if err != nil {
+		writeBookError(w, err)
+		return
+	}
+	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
+		"results": logs, "total": total, "offset": offset, "limit": limit,
+	})
+}
+
 func (h *BookManagementHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var input models.BookInput
 	if err := decodeOwnerJSON(w, r, &input); err != nil {

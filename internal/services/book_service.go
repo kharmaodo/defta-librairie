@@ -6,6 +6,7 @@ import (
 	"defta-librairie/internal/identity"
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
+	"encoding/json"
 	"errors"
 	"math"
 	"strings"
@@ -105,7 +106,11 @@ func (s *BookService) Create(ctx context.Context, claims *auth.Claims, input mod
 	if err != nil {
 		return models.Book{}, err
 	}
-	return s.repository.Create(ctx, input, claims.Subject, auditID, s.now().UTC().Format(time.RFC3339Nano))
+	newValues, err := commercialSnapshotJSON(input.Price, input.Status, input.Tags, 1)
+	if err != nil {
+		return models.Book{}, err
+	}
+	return s.repository.Create(ctx, input, claims.Subject, auditID, newValues, s.now().UTC().Format(time.RFC3339Nano))
 }
 
 func (s *BookService) Update(ctx context.Context, claims *auth.Claims, id int, input models.BookInput) (models.Book, error) {
@@ -132,7 +137,15 @@ func (s *BookService) Update(ctx context.Context, claims *auth.Claims, id int, i
 	if err != nil {
 		return models.Book{}, err
 	}
-	return s.repository.Update(ctx, id, input, claims.Subject, auditID, s.now().UTC().Format(time.RFC3339Nano))
+	oldValues, err := commercialSnapshotJSON(existing.Price, existing.Status.String, existing.Tags.String, existing.Version)
+	if err != nil {
+		return models.Book{}, err
+	}
+	newValues, err := commercialSnapshotJSON(input.Price, input.Status, input.Tags, existing.Version+1)
+	if err != nil {
+		return models.Book{}, err
+	}
+	return s.repository.Update(ctx, id, input, claims.Subject, auditID, oldValues, newValues, s.now().UTC().Format(time.RFC3339Nano))
 }
 
 func (s *BookService) Delete(ctx context.Context, claims *auth.Claims, id int) error {
@@ -151,7 +164,51 @@ func (s *BookService) Delete(ctx context.Context, claims *auth.Claims, id int) e
 	if err != nil {
 		return err
 	}
-	return s.repository.Delete(ctx, id, book.LibraryID, claims.Subject, auditID, s.now().UTC().Format(time.RFC3339Nano))
+	oldValues, err := commercialSnapshotJSON(book.Price, book.Status.String, book.Tags.String, book.Version)
+	if err != nil {
+		return err
+	}
+	return s.repository.Delete(ctx, id, book.LibraryID, claims.Subject, auditID, oldValues, s.now().UTC().Format(time.RFC3339Nano))
+}
+
+func (s *BookService) History(ctx context.Context, claims *auth.Claims, id, offset, limit int) ([]models.AuditLog, int, error) {
+	libraryID, err := resolveBookScope(claims, "", false)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err = s.ensureOwnerLibraryActive(ctx, claims, libraryID); err != nil {
+		return nil, 0, err
+	}
+	bookLibraryID, err := s.repository.FindLibraryID(ctx, id)
+	if err != nil {
+		return nil, 0, err
+	}
+	if libraryID != "" && bookLibraryID != libraryID {
+		return nil, 0, repositories.ErrBookNotFound
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if limit < 1 {
+		limit = 30
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repository.History(ctx, id, offset, limit)
+}
+
+func commercialSnapshotJSON(price float64, status, tags string, version int) (string, error) {
+	payload, err := json.Marshal(struct {
+		Price   float64 `json:"price"`
+		Status  string  `json:"status"`
+		Tags    string  `json:"tags"`
+		Version int     `json:"version"`
+	}{Price: price, Status: status, Tags: tags, Version: version})
+	if err != nil {
+		return "", err
+	}
+	return string(payload), nil
 }
 
 func (s *BookService) ensureOwnerLibraryActive(ctx context.Context, claims *auth.Claims, libraryID string) error {
