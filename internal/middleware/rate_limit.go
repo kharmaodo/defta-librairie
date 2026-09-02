@@ -18,11 +18,11 @@ type rateBucket struct {
 }
 
 type RateLimiter struct {
-	mu       sync.Mutex
-	clients  map[string]rateBucket
-	limit    int
-	window   time.Duration
-	now      func() time.Time
+	mu      sync.Mutex
+	clients map[string]rateBucket
+	limit   int
+	window  time.Duration
+	now     func() time.Time
 }
 
 func NewRateLimiter(limit int, window time.Duration) (*RateLimiter, error) {
