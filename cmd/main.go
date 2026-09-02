@@ -86,6 +86,8 @@ func main() {
 	ownerHandler := handlers.NewOwnerHandler(ownerService)
 	bookService := services.NewBookService(repositories.NewBookRepository(database.DB))
 	bookHandler := handlers.NewBookManagementHandler(bookService)
+	auditService := services.NewAuditService(repositories.NewAuditRepository(database.DB))
+	auditHandler := handlers.NewAuditHandler(auditService)
 	adminUIHandler := handlers.NewAdminUIHandler(cfg)
 	authRateLimiter, err := middleware.NewRateLimiter(cfg.AuthRateLimit, cfg.AuthRateWindow)
 	if err != nil {
@@ -109,6 +111,7 @@ func main() {
 	}
 	mux.Handle("GET /api/auth/me", authenticated(http.HandlerFunc(authHandler.Me)))
 	mux.Handle("POST /api/auth/change-password", authenticated(http.HandlerFunc(authHandler.ChangePassword)))
+	mux.Handle("GET /api/audit-logs", authenticated(http.HandlerFunc(auditHandler.List)))
 	rootOnly := func(handler http.Handler) http.Handler {
 		return authenticated(middleware.RequireRoles(handler, models.RoleSuperAdminRoot))
 	}

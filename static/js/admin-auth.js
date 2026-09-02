@@ -144,6 +144,25 @@
     });
   }
 
+  function renderAudit(payload) {
+    document.querySelector("#audit-total").textContent = payload.total;
+    const body = document.querySelector("#audit-body");
+    body.replaceChildren();
+    if (!payload.results.length) {
+      const row = body.insertRow(); textCell(row, "Aucun événement correspondant", "empty").colSpan = 6; return;
+    }
+    payload.results.forEach((entry) => {
+      const row = body.insertRow();
+      const parsedDate = new Date(entry.createdAt);
+      textCell(row, Number.isNaN(parsedDate.getTime()) ? entry.createdAt : parsedDate.toLocaleString("fr-FR"));
+      textCell(row, entry.action);
+      textCell(row, entry.actorUsername || entry.actorUserId || "Système");
+      textCell(row, `${entry.resourceType}${entry.resourceId ? ` · ${entry.resourceId}` : ""}`);
+      textCell(row, entry.success ? "Succès" : "Échec", entry.success ? "pill" : "pill failure");
+      textCell(row, entry.ipAddress);
+    });
+  }
+
   function updateLibraryOptions() {
     const select = document.querySelector("#book-form [name=libraryId]");
     if (!select) return;
@@ -227,6 +246,16 @@
     renderBooks(await apiFetch("/api/manage/books?offset=0&limit=30"));
   }
 
+  async function reloadAudit() {
+    const form = document.querySelector("#audit-filters");
+    const query = new URLSearchParams({offset: "0", limit: "30"});
+    const action = form.elements.action.value.trim();
+    const success = form.elements.success.value;
+    if (action) query.set("action", action);
+    if (success) query.set("success", success);
+    renderAudit(await apiFetch(`/api/audit-logs?${query}`));
+  }
+
   function initEntityForms(errorBox) {
     document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.querySelector(`#${button.dataset.close}`).close()));
     document.querySelector("#add-book-button").addEventListener("click", () => openBookForm());
@@ -236,6 +265,12 @@
       form.reset();
       document.querySelector("#password-form-error").hidden = true;
       document.querySelector("#password-dialog").showModal();
+    });
+    document.querySelector("#audit-filters").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      errorBox.hidden = true;
+      try { await reloadAudit(); }
+      catch (error) { showError(errorBox, error); }
     });
 
     document.querySelector("#password-form").addEventListener("submit", async (event) => {
@@ -353,7 +388,11 @@
         : "Vous gérez exclusivement les livres de votre librairie.";
       if (isRoot) document.querySelectorAll(".root-only").forEach((element) => { element.hidden = false; });
       if (isRoot) document.querySelectorAll(".root-only-field").forEach((element) => { element.hidden = false; });
-      const requests = [apiFetch("/api/manage/books?offset=0&limit=30").then(renderBooks)];
+      if (!isRoot) document.querySelector(".owner-audit-note").hidden = false;
+      const requests = [
+        apiFetch("/api/manage/books?offset=0&limit=30").then(renderBooks),
+        apiFetch("/api/audit-logs?offset=0&limit=30").then(renderAudit)
+      ];
       if (isRoot) requests.push(apiFetch("/api/admin/owners").then(renderOwners));
       await Promise.all(requests);
     } catch (error) {

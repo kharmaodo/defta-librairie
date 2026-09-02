@@ -382,6 +382,17 @@ Le tableau de bord permet également :
 
 L'interface ne constitue pas une frontière de sécurité : les contrôles d'autorisation restent appliqués par le middleware et les services backend.
 
+### Journal d'audit
+
+`GET /api/audit-logs` fournit une lecture paginée des événements avec les paramètres `offset`, `limit`, `action` et `success`. Le root voit tous les événements ; un propriétaire ne voit que ceux dont `actor_user_id` correspond au sujet signé de son JWT.
+
+```bash
+curl -fsS 'http://localhost:8080/api/audit-logs?action=LOGIN_FAILED&success=false&limit=30' \
+  -H "Authorization: Bearer $TOKEN" | jq .
+```
+
+Le tableau de bord expose les mêmes filtres et affiche les 30 événements les plus récents. Cette API est en lecture seule et ne permet pas au client de fournir un identifiant d'acteur.
+
 ```bash
 LOGIN_RESPONSE=$(jq -n \
   --arg username 'kharmaodo' \
