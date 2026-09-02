@@ -13,13 +13,13 @@ import (
 )
 
 type AuthHandler struct {
-	login    *services.LoginService
-	sessions *services.SessionService
+	login        *services.LoginService
+	sessions     *services.SessionService
 	cookieSecure bool
 }
 
 const (
-	refreshCookieName = "defta_refresh"
+	refreshCookieName   = "defta_refresh"
 	cookieSessionHeader = "X-Defta-Session"
 )
 
@@ -109,7 +109,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	payload := map[string]interface{}{
 		"accessToken": result.AccessToken,
-		"tokenType": "Bearer", "expiresIn": int64(time.Until(result.AccessExpiresAt).Seconds()),
+		"tokenType":   "Bearer", "expiresIn": int64(time.Until(result.AccessExpiresAt).Seconds()),
 		"refreshExpiresIn": int64(time.Until(result.RefreshExpiresAt).Seconds()),
 	}
 	if cookieSession {
