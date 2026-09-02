@@ -7,6 +7,7 @@ import (
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -14,6 +15,7 @@ var (
 	ErrInvalidRefreshToken = errors.New("invalid refresh token")
 	ErrRefreshTokenReuse   = errors.New("refresh token reuse detected")
 	ErrSessionNotFound     = errors.New("active session not found")
+	ErrInvalidSessionFilter = errors.New("invalid session filter")
 )
 
 type SessionResult struct {
@@ -24,9 +26,17 @@ type SessionResult struct {
 	User             models.User
 }
 
-func (s *SessionService) ListActive(ctx context.Context, claims *auth.Claims, offset, limit int) ([]models.ActiveSession, int, error) {
+func (s *SessionService) ListActive(ctx context.Context, claims *auth.Claims, filter models.SessionFilter, offset, limit int) ([]models.ActiveSession, int, error) {
 	if claims == nil || claims.Role != models.RoleSuperAdminRoot && claims.Role != models.RoleOwnerLibrary {
 		return nil, 0, ErrSessionNotFound
+	}
+	filter.Username = strings.TrimSpace(filter.Username)
+	filter.Role = strings.ToUpper(strings.TrimSpace(filter.Role))
+	filter.IPAddress = strings.TrimSpace(filter.IPAddress)
+	filter.UserAgent = strings.TrimSpace(filter.UserAgent)
+	if len([]rune(filter.Username)) > 64 || len([]rune(filter.IPAddress)) > 64 || len([]rune(filter.UserAgent)) > 200 ||
+		filter.Role != "" && filter.Role != string(models.RoleSuperAdminRoot) && filter.Role != string(models.RoleOwnerLibrary) {
+		return nil, 0, ErrInvalidSessionFilter
 	}
 	if offset < 0 {
 		offset = 0
@@ -40,8 +50,11 @@ func (s *SessionService) ListActive(ctx context.Context, claims *auth.Claims, of
 	scopedUserID := ""
 	if claims.Role == models.RoleOwnerLibrary {
 		scopedUserID = claims.Subject
+		if filter.Username != "" || filter.Role != "" {
+			return nil, 0, ErrInvalidSessionFilter
+		}
 	}
-	return s.repository.ListActive(ctx, scopedUserID, s.now().UTC().Format(time.RFC3339Nano), offset, limit)
+	return s.repository.ListActive(ctx, scopedUserID, s.now().UTC().Format(time.RFC3339Nano), filter, offset, limit)
 }
 
 func (s *SessionService) RevokeActive(ctx context.Context, claims *auth.Claims, sessionID string) error {

@@ -22,7 +22,7 @@ func TestActiveSessionScopeAndRevocation(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 	_, err = db.Exec(`
-		CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT NOT NULL);
+		CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT NOT NULL, role TEXT NOT NULL);
 		CREATE TABLE refresh_sessions (
 			id TEXT PRIMARY KEY, user_id TEXT NOT NULL, token_hash TEXT NOT NULL, token_family TEXT NOT NULL,
 			expires_at TEXT NOT NULL, revoked_at TEXT, replaced_by_id TEXT, ip_address TEXT,
@@ -32,7 +32,8 @@ func TestActiveSessionScopeAndRevocation(t *testing.T) {
 			id TEXT PRIMARY KEY, actor_user_id TEXT, action TEXT NOT NULL, resource_type TEXT NOT NULL,
 			resource_id TEXT, new_values TEXT, success INTEGER NOT NULL, created_at TEXT NOT NULL
 		);
-		INSERT INTO users(id, username) VALUES('owner-1', 'owner-one'), ('owner-2', 'owner-two'), ('root', 'root-admin');
+		INSERT INTO users(id, username, role) VALUES
+		('owner-1', 'owner-one', 'OWNER_LIBRARY'), ('owner-2', 'owner-two', 'OWNER_LIBRARY'), ('root', 'root-admin', 'SUPER_ADMIN_ROOT');
 		INSERT INTO refresh_sessions(id, user_id, token_hash, token_family, expires_at, ip_address, user_agent, created_at)
 		VALUES
 			('session-1', 'owner-1', 'hash-1', 'family-1', '2099-01-01T00:00:00Z', '192.0.2.1', 'Browser One', '2026-09-02T10:00:00Z'),
@@ -51,7 +52,7 @@ func TestActiveSessionScopeAndRevocation(t *testing.T) {
 	}
 	service.now = func() time.Time { return time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC) }
 	owner := &auth.Claims{Role: models.RoleOwnerLibrary, RegisteredClaims: jwt.RegisteredClaims{Subject: "owner-1"}}
-	sessions, total, err := service.ListActive(context.Background(), owner, 0, 30)
+	sessions, total, err := service.ListActive(context.Background(), owner, models.SessionFilter{IPAddress: "192.0.2.1"}, 0, 30)
 	if err != nil || total != 1 || len(sessions) != 1 || sessions[0].ID != "session-1" {
 		t.Fatalf("owner sessions=%+v total=%d err=%v", sessions, total, err)
 	}
@@ -59,6 +60,15 @@ func TestActiveSessionScopeAndRevocation(t *testing.T) {
 		t.Fatalf("cross-account revocation error=%v", err)
 	}
 	root := &auth.Claims{Role: models.RoleSuperAdminRoot, RegisteredClaims: jwt.RegisteredClaims{Subject: "root"}}
+	sessions, total, err = service.ListActive(context.Background(), root, models.SessionFilter{
+		Username: "owner-two", Role: "owner_library", UserAgent: "Browser Two",
+	}, 0, 30)
+	if err != nil || total != 1 || len(sessions) != 1 || sessions[0].ID != "session-2" {
+		t.Fatalf("root filtered sessions=%+v total=%d err=%v", sessions, total, err)
+	}
+	if _, _, err = service.ListActive(context.Background(), owner, models.SessionFilter{Username: "owner-two"}, 0, 30); !errors.Is(err, ErrInvalidSessionFilter) {
+		t.Fatalf("owner username filter error=%v", err)
+	}
 	if err = service.RevokeActive(context.Background(), root, "session-2"); err != nil {
 		t.Fatalf("root revocation: %v", err)
 	}

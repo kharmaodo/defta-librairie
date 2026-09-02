@@ -59,20 +59,36 @@ func (r *SessionRepository) Create(ctx context.Context, session models.RefreshSe
 	return nil
 }
 
-func (r *SessionRepository) ListActive(ctx context.Context, userID, now string, offset, limit int) ([]models.ActiveSession, int, error) {
+func (r *SessionRepository) ListActive(ctx context.Context, userID, now string, filter models.SessionFilter, offset, limit int) ([]models.ActiveSession, int, error) {
 	where := " WHERE s.revoked_at IS NULL AND s.expires_at>?"
 	args := []interface{}{now}
 	if userID != "" {
 		where += " AND s.user_id=?"
 		args = append(args, userID)
 	}
+	if filter.Username != "" {
+		where += " AND u.username LIKE ?"
+		args = append(args, "%"+filter.Username+"%")
+	}
+	if filter.Role != "" {
+		where += " AND u.role=?"
+		args = append(args, filter.Role)
+	}
+	if filter.IPAddress != "" {
+		where += " AND COALESCE(s.ip_address, '') LIKE ?"
+		args = append(args, "%"+filter.IPAddress+"%")
+	}
+	if filter.UserAgent != "" {
+		where += " AND COALESCE(s.user_agent, '') LIKE ?"
+		args = append(args, "%"+filter.UserAgent+"%")
+	}
 	var total int
-	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM refresh_sessions s"+where, args...).Scan(&total); err != nil {
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM refresh_sessions s JOIN users u ON u.id=s.user_id"+where, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count active sessions: %w", err)
 	}
 	args = append(args, limit, offset)
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT s.id, s.user_id, u.username, COALESCE(s.ip_address, ''), COALESCE(s.user_agent, ''),
+		SELECT s.id, s.user_id, u.username, u.role, COALESCE(s.ip_address, ''), COALESCE(s.user_agent, ''),
 		       s.created_at, COALESCE(s.last_used_at, ''), s.expires_at
 		FROM refresh_sessions s JOIN users u ON u.id=s.user_id
 	`+where+" ORDER BY s.created_at DESC LIMIT ? OFFSET ?", args...)
@@ -83,7 +99,7 @@ func (r *SessionRepository) ListActive(ctx context.Context, userID, now string, 
 	sessions := make([]models.ActiveSession, 0)
 	for rows.Next() {
 		var session models.ActiveSession
-		if err = rows.Scan(&session.ID, &session.UserID, &session.Username, &session.IPAddress,
+		if err = rows.Scan(&session.ID, &session.UserID, &session.Username, &session.Role, &session.IPAddress,
 			&session.UserAgent, &session.CreatedAt, &session.LastUsedAt, &session.ExpiresAt); err != nil {
 			return nil, 0, fmt.Errorf("scan active session: %w", err)
 		}

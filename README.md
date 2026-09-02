@@ -426,11 +426,11 @@ curl -fsS 'http://localhost:8080/api/audit-logs?action=LOGIN_FAILED&success=fals
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
-Le tableau de bord expose les mêmes filtres et affiche les 30 événements les plus récents. Cette API est en lecture seule et ne permet pas au client de fournir un identifiant d'acteur.
+Le tableau de bord expose les mêmes filtres avec une pagination de 20 événements. L'API reste en lecture seule ; seul le root peut rechercher un nom d'acteur.
 
 ### Sessions actives
 
-`GET /api/auth/sessions` liste les sessions actives et `DELETE /api/auth/sessions/{id}` révoque toute la famille correspondant à un appareil. Le root dispose d'une vue globale ; un propriétaire ne peut ni voir ni révoquer les sessions d'un autre compte.
+`GET /api/auth/sessions` liste les sessions actives et accepte `offset`, `limit`, `username`, `role`, `ipAddress` et `userAgent`. Le root dispose d'une vue globale et de tous les filtres. Un propriétaire reste limité à ses sessions, peut filtrer par IP ou appareil, mais ne peut pas utiliser `username` ou `role`. `DELETE /api/auth/sessions/{id}` révoque toute la famille correspondant à un appareil et masque les sessions d'un autre compte avec `404 Not Found`.
 
 La réponse indique `currentSessionId` pour identifier la session utilisée par la requête. Révoquer cette session supprime également le cookie web et impose une nouvelle connexion. Chaque révocation crée un audit `SESSION_REVOKED`.
 

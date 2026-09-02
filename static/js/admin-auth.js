@@ -4,7 +4,7 @@
   const ACCESS_KEY = "defta.accessToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
-  const state = {isRoot: false, owners: [], ownerOptions: [], books: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", auditOffset: 0, auditLimit: 20};
+  const state = {isRoot: false, owners: [], ownerOptions: [], books: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", auditOffset: 0, auditLimit: 20, sessionOffset: 0, sessionLimit: 20};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
@@ -186,11 +186,11 @@
     const body = document.querySelector("#sessions-body");
     body.replaceChildren();
     if (!payload.results.length) {
-      const row = body.insertRow(); textCell(row, "Aucune session active", "empty").colSpan = 7; return;
-    }
-    payload.results.forEach((session) => {
+      const row = body.insertRow(); textCell(row, "Aucune session active", "empty").colSpan = 8;
+    } else payload.results.forEach((session) => {
       const row = body.insertRow();
       textCell(row, session.username);
+      textCell(row, session.role, "pill");
       textCell(row, session.userAgent, "device");
       textCell(row, session.ipAddress);
       textCell(row, formatDate(session.createdAt));
@@ -201,6 +201,11 @@
       actions.className = "row-actions";
       actions.replaceChildren(actionButton(current ? "Révoquer et quitter" : "Révoquer", "revoke-session", session.id, true));
     });
+    const page = Math.floor(payload.offset / payload.limit) + 1;
+    const pages = Math.max(1, Math.ceil(payload.total / payload.limit));
+    document.querySelector("#sessions-page-label").textContent = `Page ${page} sur ${pages}`;
+    document.querySelector("#sessions-previous").disabled = payload.offset === 0;
+    document.querySelector("#sessions-next").disabled = payload.offset + payload.results.length >= payload.total;
   }
 
   function formatDate(value) {
@@ -392,7 +397,18 @@
   }
 
   async function reloadSessions() {
-    renderSessions(await apiFetch("/api/auth/sessions?offset=0&limit=30"));
+    const form = document.querySelector("#session-filters");
+    const query = new URLSearchParams({offset: String(state.sessionOffset), limit: String(state.sessionLimit)});
+    ["username", "role", "ipAddress", "userAgent"].forEach((name) => {
+      const value = form.elements[name].value.trim();
+      if (value) query.set(name, value);
+    });
+    const payload = await apiFetch(`/api/auth/sessions?${query}`);
+    if (!payload.results.length && state.sessionOffset > 0) {
+      state.sessionOffset = Math.max(0, state.sessionOffset - state.sessionLimit);
+      return reloadSessions();
+    }
+    renderSessions(payload);
   }
 
   function initEntityForms(errorBox) {
@@ -482,6 +498,19 @@
       errorBox.hidden = true;
       try { await reloadSessions(); }
       catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#session-filters").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      state.sessionOffset = 0;
+      try { await reloadSessions(); } catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#sessions-previous").addEventListener("click", async () => {
+      state.sessionOffset = Math.max(0, state.sessionOffset - state.sessionLimit);
+      try { await reloadSessions(); } catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#sessions-next").addEventListener("click", async () => {
+      state.sessionOffset += state.sessionLimit;
+      try { await reloadSessions(); } catch (error) { showError(errorBox, error); }
     });
     document.querySelector("#sessions-body").addEventListener("click", async (event) => {
       const button = event.target.closest("button[data-action=revoke-session]");
@@ -630,7 +659,7 @@
         reloadBooks(),
         reloadTags(),
         reloadAudit(),
-        apiFetch("/api/auth/sessions?offset=0&limit=30").then(renderSessions)
+        reloadSessions()
       ];
       if (isRoot) requests.push(reloadOwners(), reloadOwnerOptions());
       await Promise.all(requests);

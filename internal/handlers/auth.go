@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"defta-librairie/internal/auth"
+	"defta-librairie/internal/models"
 	"defta-librairie/internal/services"
 	"encoding/json"
 	"errors"
@@ -172,8 +173,16 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) ActiveSessions(w http.ResponseWriter, r *http.Request) {
 	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
 	claims, _ := auth.ClaimsFromContext(r.Context())
-	sessions, total, err := h.sessions.ListActive(r.Context(), claims, offset, limit)
+	filter := models.SessionFilter{
+		Username: r.URL.Query().Get("username"), Role: r.URL.Query().Get("role"),
+		IPAddress: r.URL.Query().Get("ipAddress"), UserAgent: r.URL.Query().Get("userAgent"),
+	}
+	sessions, total, err := h.sessions.ListActive(r.Context(), claims, filter, offset, limit)
 	if err != nil {
+		if errors.Is(err, services.ErrInvalidSessionFilter) {
+			writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_filter", "message": err.Error()})
+			return
+		}
 		writeAuthJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Session query failed"})
 		return
 	}
