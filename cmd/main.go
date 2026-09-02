@@ -99,10 +99,7 @@ func main() {
 
 	// Routes de base
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handlers.CatalogueHandler)
-	mux.HandleFunc("GET /login", adminUIHandler.Login)
-	mux.HandleFunc("GET /admin", adminUIHandler.Dashboard)
-	mux.HandleFunc("/api/books", handlers.APIBooksHandler)
+	registerPublicRoutes(mux, adminUIHandler)
 	mux.Handle("POST /api/auth/login", authRateLimiter.Limit(http.HandlerFunc(authHandler.Login)))
 	mux.Handle("POST /api/auth/refresh", authRateLimiter.Limit(http.HandlerFunc(authHandler.Refresh)))
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
@@ -164,4 +161,11 @@ func main() {
 			log.Printf("Arrêt forcé après échec du shutdown : %v", err)
 		}
 	}
+}
+
+func registerPublicRoutes(mux *http.ServeMux, adminUIHandler *handlers.AdminUIHandler) {
+	mux.HandleFunc("GET /{$}", handlers.CatalogueHandler)
+	mux.HandleFunc("GET /login", adminUIHandler.Login)
+	mux.HandleFunc("GET /admin", adminUIHandler.Dashboard)
+	mux.HandleFunc("GET /api/books", handlers.APIBooksHandler)
 }
