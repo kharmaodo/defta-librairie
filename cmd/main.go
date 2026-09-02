@@ -15,11 +15,14 @@ import (
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"defta-librairie/internal/services"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -81,6 +84,10 @@ func main() {
 	ownerHandler := handlers.NewOwnerHandler(ownerService)
 	bookService := services.NewBookService(repositories.NewBookRepository(database.DB))
 	bookHandler := handlers.NewBookManagementHandler(bookService)
+	authRateLimiter, err := middleware.NewRateLimiter(cfg.AuthRateLimit, cfg.AuthRateWindow)
+	if err != nil {
+		log.Fatalf("Configuration rate limit invalide : %v", err)
+	}
 
 	// Chargement des templates (déplacé dans handlers)
 	handlers.InitTemplates()
@@ -89,8 +96,8 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handlers.CatalogueHandler)
 	mux.HandleFunc("/api/books", handlers.APIBooksHandler)
-	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
-	mux.HandleFunc("POST /api/auth/refresh", authHandler.Refresh)
+	mux.Handle("POST /api/auth/login", authRateLimiter.Limit(http.HandlerFunc(authHandler.Login)))
+	mux.Handle("POST /api/auth/refresh", authRateLimiter.Limit(http.HandlerFunc(authHandler.Refresh)))
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
 	authenticated := func(handler http.Handler) http.Handler {
 		return middleware.AuthenticateSession(tokens, sessionRepository, handler)
@@ -120,13 +127,30 @@ func main() {
 	log.Printf("Version %s | Build %s", cfg.Version, cfg.BuildDate)
 
 	server := &http.Server{
-		Addr: addr, Handler: mux,
+		Addr: addr, Handler: middleware.SecureHTTP(mux),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("Échec démarrage serveur : %v", err)
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- server.ListenAndServe()
+	}()
+
+	signalContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	select {
+	case err = <-serverErrors:
+		if !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("Échec serveur : %v", err)
+		}
+	case <-signalContext.Done():
+		log.Println("Arrêt gracieux du serveur...")
+		shutdownContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err = server.Shutdown(shutdownContext); err != nil {
+			log.Printf("Arrêt forcé après échec du shutdown : %v", err)
+		}
 	}
 }
