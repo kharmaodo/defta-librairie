@@ -1,9 +1,9 @@
 package middleware
 
 import (
+	"context"
 	"defta-librairie/internal/auth"
 	"defta-librairie/internal/models"
-	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
