@@ -18,6 +18,33 @@ type SessionRepository struct{ db *sql.DB }
 
 func NewSessionRepository(db *sql.DB) *SessionRepository { return &SessionRepository{db: db} }
 
+func (r *SessionRepository) IsActive(ctx context.Context, sessionID, userID string,
+	role models.UserRole, libraryID string, now time.Time) (bool, error) {
+	var expiresAt, userStatus, storedRole, storedLibraryID, libraryStatus string
+	err := r.db.QueryRowContext(ctx, `
+		SELECT s.expires_at, u.status, u.role, COALESCE(l.id, ''), COALESCE(l.status, '')
+		FROM refresh_sessions s
+		JOIN users u ON u.id=s.user_id
+		LEFT JOIN libraries l ON l.owner_user_id=u.id
+		WHERE s.id=? AND s.user_id=? AND s.revoked_at IS NULL
+	`, sessionID, userID).Scan(&expiresAt, &userStatus, &storedRole, &storedLibraryID, &libraryStatus)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("validate access session: %w", err)
+	}
+	expiry, err := time.Parse(time.RFC3339Nano, expiresAt)
+	if err != nil || !expiry.After(now.UTC()) || userStatus != string(models.UserStatusActive) ||
+		storedRole != string(role) {
+		return false, nil
+	}
+	if role == models.RoleOwnerLibrary {
+		return libraryID != "" && storedLibraryID == libraryID && libraryStatus == "ACTIVE", nil
+	}
+	return role == models.RoleSuperAdminRoot && libraryID == "", nil
+}
+
 func (r *SessionRepository) Create(ctx context.Context, session models.RefreshSession) error {
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO refresh_sessions(id, user_id, token_hash, token_family, expires_at,

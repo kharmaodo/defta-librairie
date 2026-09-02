@@ -16,6 +16,7 @@ var ErrInvalidToken = errors.New("invalid access token")
 type Claims struct {
 	Role      models.UserRole `json:"role"`
 	LibraryID string          `json:"library_id,omitempty"`
+	SessionID string          `json:"sid,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -43,6 +44,17 @@ func NewTokenManager(secret, issuer, audience string, ttl time.Duration) (*Token
 }
 
 func (m *TokenManager) Issue(user models.User) (string, time.Time, error) {
+	return m.issue(user, "")
+}
+
+func (m *TokenManager) IssueForSession(user models.User, sessionID string) (string, time.Time, error) {
+	if sessionID == "" {
+		return "", time.Time{}, ErrInvalidToken
+	}
+	return m.issue(user, sessionID)
+}
+
+func (m *TokenManager) issue(user models.User, sessionID string) (string, time.Time, error) {
 	now := m.now().UTC()
 	expiresAt := now.Add(m.ttl)
 	jti, err := identity.NewID()
@@ -50,7 +62,7 @@ func (m *TokenManager) Issue(user models.User) (string, time.Time, error) {
 		return "", time.Time{}, err
 	}
 	claims := Claims{
-		Role: user.Role, LibraryID: user.LibraryID,
+		Role: user.Role, LibraryID: user.LibraryID, SessionID: sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer: m.issuer, Subject: user.ID,
 			Audience:  jwt.ClaimStrings{m.audience},

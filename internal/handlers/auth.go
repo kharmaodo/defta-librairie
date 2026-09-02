@@ -118,6 +118,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
 		"id": claims.Subject, "role": claims.Role, "libraryId": nullableValue(claims.LibraryID),
+		"sessionId": claims.SessionID,
 	})
 }
 

@@ -59,6 +59,15 @@ func TestRefreshRotationReuseDetectionAndLogout(t *testing.T) {
 	if started.AccessToken == "" || started.RefreshToken == "" {
 		t.Fatal("expected access and refresh tokens")
 	}
+	claims, err := tokens.Parse(started.AccessToken)
+	if err != nil || claims.SessionID == "" {
+		t.Fatalf("access token session claim: claims=%+v err=%v", claims, err)
+	}
+	active, err := repositories.NewSessionRepository(db).IsActive(context.Background(), claims.SessionID,
+		claims.Subject, claims.Role, claims.LibraryID, time.Now())
+	if err != nil || !active {
+		t.Fatalf("started session must be active: active=%v err=%v", active, err)
+	}
 	var storedHash string
 	if err = db.QueryRow(`SELECT token_hash FROM refresh_sessions`).Scan(&storedHash); err != nil {
 		t.Fatalf("read token hash: %v", err)
@@ -74,6 +83,20 @@ func TestRefreshRotationReuseDetectionAndLogout(t *testing.T) {
 	if rotated.RefreshToken == started.RefreshToken {
 		t.Fatal("refresh token must rotate")
 	}
+	active, err = repositories.NewSessionRepository(db).IsActive(context.Background(), claims.SessionID,
+		claims.Subject, claims.Role, claims.LibraryID, time.Now())
+	if err != nil || active {
+		t.Fatalf("rotated access session must be inactive: active=%v err=%v", active, err)
+	}
+	rotatedClaims, err := tokens.Parse(rotated.AccessToken)
+	if err != nil {
+		t.Fatalf("parse rotated access token: %v", err)
+	}
+	active, err = repositories.NewSessionRepository(db).IsActive(context.Background(), rotatedClaims.SessionID,
+		rotatedClaims.Subject, rotatedClaims.Role, rotatedClaims.LibraryID, time.Now())
+	if err != nil || !active {
+		t.Fatalf("replacement access session must be active: active=%v err=%v", active, err)
+	}
 	if _, err = service.Refresh(context.Background(), started.RefreshToken, "127.0.0.1", "test"); !errors.Is(err, ErrRefreshTokenReuse) {
 		t.Fatalf("expected reuse detection, got %v", err)
 	}
@@ -87,6 +110,12 @@ func TestRefreshRotationReuseDetectionAndLogout(t *testing.T) {
 	}
 	if err = service.Logout(context.Background(), second.RefreshToken); err != nil {
 		t.Fatalf("logout: %v", err)
+	}
+	secondClaims, _ := tokens.Parse(second.AccessToken)
+	active, err = repositories.NewSessionRepository(db).IsActive(context.Background(), secondClaims.SessionID,
+		secondClaims.Subject, secondClaims.Role, secondClaims.LibraryID, time.Now())
+	if err != nil || active {
+		t.Fatalf("logged-out access session must be inactive: active=%v err=%v", active, err)
 	}
 	if _, err = service.Refresh(context.Background(), second.RefreshToken, "127.0.0.1", "test"); !errors.Is(err, ErrRefreshTokenReuse) {
 		t.Fatalf("logged-out token must be rejected, got %v", err)

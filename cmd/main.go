@@ -71,7 +71,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Initialisation authentification impossible : %v", err)
 	}
-	sessionService, err := services.NewSessionService(repositories.NewSessionRepository(database.DB), tokens, cfg.JWTRefreshTTL)
+	sessionRepository := repositories.NewSessionRepository(database.DB)
+	sessionService, err := services.NewSessionService(sessionRepository, tokens, cfg.JWTRefreshTTL)
 	if err != nil {
 		log.Fatalf("Initialisation sessions impossible : %v", err)
 	}
@@ -91,10 +92,12 @@ func main() {
 	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
 	mux.HandleFunc("POST /api/auth/refresh", authHandler.Refresh)
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
-	mux.Handle("GET /api/auth/me", middleware.Authenticate(tokens, http.HandlerFunc(authHandler.Me)))
+	authenticated := func(handler http.Handler) http.Handler {
+		return middleware.AuthenticateSession(tokens, sessionRepository, handler)
+	}
+	mux.Handle("GET /api/auth/me", authenticated(http.HandlerFunc(authHandler.Me)))
 	rootOnly := func(handler http.Handler) http.Handler {
-		return middleware.Authenticate(tokens,
-			middleware.RequireRoles(handler, models.RoleSuperAdminRoot))
+		return authenticated(middleware.RequireRoles(handler, models.RoleSuperAdminRoot))
 	}
 	mux.Handle("GET /api/admin/owners", rootOnly(http.HandlerFunc(ownerHandler.List)))
 	mux.Handle("POST /api/admin/owners", rootOnly(http.HandlerFunc(ownerHandler.Create)))
@@ -102,7 +105,7 @@ func main() {
 	mux.Handle("PATCH /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Update)))
 	mux.Handle("DELETE /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Disable)))
 	bookManagers := func(handler http.Handler) http.Handler {
-		return middleware.Authenticate(tokens, middleware.RequireRoles(handler,
+		return authenticated(middleware.RequireRoles(handler,
 			models.RoleSuperAdminRoot, models.RoleOwnerLibrary))
 	}
 	mux.Handle("GET /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.List)))

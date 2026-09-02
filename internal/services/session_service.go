@@ -56,7 +56,7 @@ func (s *SessionService) Start(ctx context.Context, user models.User, ipAddress,
 	if err = s.repository.Create(ctx, session); err != nil {
 		return SessionResult{}, err
 	}
-	accessToken, accessExpiresAt, err := s.tokens.Issue(user)
+	accessToken, accessExpiresAt, err := s.tokens.IssueForSession(user, sessionID)
 	if err != nil {
 		return SessionResult{}, err
 	}
@@ -97,7 +97,7 @@ func (s *SessionService) Refresh(ctx context.Context, rawToken, ipAddress, userA
 	if err != nil {
 		return SessionResult{}, err
 	}
-	accessToken, accessExpiresAt, err := s.tokens.Issue(user)
+	accessToken, accessExpiresAt, err := s.tokens.IssueForSession(user, newID)
 	if err != nil {
 		return SessionResult{}, err
 	}
