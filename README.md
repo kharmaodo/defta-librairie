@@ -381,6 +381,9 @@ Le tableau de bord permet également :
 - aux deux rôles de créer, modifier et supprimer les livres autorisés ;
 - de gérer le prix, le volume, le statut, la catégorie, les tags et la couverture ;
 - de transmettre la version courante lors d'une modification afin de détecter les écritures concurrentes.
+- au root de déverrouiller explicitement un propriétaire bloqué après plusieurs échecs de connexion.
+
+`POST /api/admin/owners/{id}/unlock` remet le compte `LOCKED` à `ACTIVE`, réinitialise `failed_login_attempts`, efface `locked_until`, révoque ses anciennes sessions et crée un audit `UNLOCK_LIBRARY_OWNER`. L'opération retourne `409 Conflict` si le compte n'est pas verrouillé.
 
 L'interface ne constitue pas une frontière de sécurité : les contrôles d'autorisation restent appliqués par le middleware et les services backend.
 

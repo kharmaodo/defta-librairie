@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -57,6 +58,31 @@ func TestOwnerLifecycle(t *testing.T) {
 	if owner.Library.ID == "" || owner.Status != models.UserStatusActive {
 		t.Fatalf("unexpected owner: %+v", owner)
 	}
+	_, err = db.Exec(`
+		UPDATE users SET status='LOCKED', failed_login_attempts=5, locked_until='2099-01-01T00:00:00Z' WHERE id=?;
+		INSERT INTO refresh_sessions(id, user_id, token_hash, token_family, expires_at, created_at)
+		VALUES('locked-session', ?, 'locked-hash', 'locked-family', '2099-01-01T00:00:00Z', 'now');
+	`, owner.ID, owner.ID)
+	if err != nil {
+		t.Fatalf("lock owner: %v", err)
+	}
+	if err = service.Unlock(context.Background(), owner.ID, "root"); err != nil {
+		t.Fatalf("unlock owner: %v", err)
+	}
+	var attempts int
+	var lockedUntil, revokedAt sql.NullString
+	if err = db.QueryRow(`
+		SELECT u.failed_login_attempts, u.locked_until, s.revoked_at
+		FROM users u JOIN refresh_sessions s ON s.user_id=u.id WHERE u.id=?
+	`, owner.ID).Scan(&attempts, &lockedUntil, &revokedAt); err != nil {
+		t.Fatalf("read unlocked owner: %v", err)
+	}
+	if attempts != 0 || lockedUntil.Valid || !revokedAt.Valid {
+		t.Fatalf("attempts=%d lockedUntil=%v revokedAt=%v", attempts, lockedUntil, revokedAt)
+	}
+	if err = service.Unlock(context.Background(), owner.ID, "root"); !errors.Is(err, repositories.ErrOwnerNotLocked) {
+		t.Fatalf("unlock active owner error=%v", err)
+	}
 
 	newName := "Librairie Modifiée"
 	disabled := models.UserStatusDisabled
@@ -88,7 +114,7 @@ func TestOwnerLifecycle(t *testing.T) {
 		t.Fatalf("user=%s library=%s", userStatus, libraryStatus)
 	}
 	var audits int
-	if err = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE actor_user_id='root'`).Scan(&audits); err != nil || audits != 3 {
+	if err = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE actor_user_id='root'`).Scan(&audits); err != nil || audits != 4 {
 		t.Fatalf("audits=%d err=%v", audits, err)
 	}
 }

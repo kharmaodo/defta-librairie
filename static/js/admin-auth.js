@@ -120,7 +120,11 @@
       textCell(row, owner.library && owner.library.status, "pill");
       const actions = textCell(row, "");
       actions.className = "row-actions";
-      actions.replaceChildren(actionButton("Modifier", "edit-owner", owner.id), actionButton("Désactiver", "disable-owner", owner.id, true));
+      if (owner.status === "LOCKED") {
+        actions.replaceChildren(actionButton("Déverrouiller", "unlock-owner", owner.id));
+      } else {
+        actions.replaceChildren(actionButton("Modifier", "edit-owner", owner.id), actionButton("Désactiver", "disable-owner", owner.id, true));
+      }
     });
     updateLibraryOptions();
   }
@@ -392,6 +396,12 @@
       if (button.dataset.action === "disable-owner" && window.confirm(`Désactiver ${owner.username} et sa librairie ?`)) {
         try { await apiFetch(`/api/admin/owners/${owner.id}`, {method: "DELETE"}); await reloadOwners(); }
         catch (error) { showError(errorBox, error); }
+      }
+      if (button.dataset.action === "unlock-owner" && window.confirm(`Déverrouiller le compte ${owner.username} ?`)) {
+        try {
+          await apiFetch(`/api/admin/owners/${owner.id}/unlock`, {method: "POST"});
+          await Promise.all([reloadOwners(), reloadAudit(), reloadSessions()]);
+        } catch (error) { showError(errorBox, error); }
       }
     });
 

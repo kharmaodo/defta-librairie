@@ -12,6 +12,7 @@ import (
 var (
 	ErrOwnerNotFound = errors.New("owner not found")
 	ErrOwnerConflict = errors.New("owner username or email already exists")
+	ErrOwnerNotLocked = errors.New("owner is not locked")
 )
 
 type OwnerRepository struct{ db *sql.DB }
@@ -165,6 +166,50 @@ func (r *OwnerRepository) Disable(ctx context.Context, ownerID, actorID, auditID
 	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("commit owner disable: %w", err)
+	}
+	return nil
+}
+
+func (r *OwnerRepository) Unlock(ctx context.Context, ownerID, actorID, auditID, now string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin owner unlock: %w", err)
+	}
+	defer tx.Rollback()
+	result, err := tx.ExecContext(ctx, `
+		UPDATE users SET status='ACTIVE', failed_login_attempts=0, locked_until=NULL, updated_at=?
+		WHERE id=? AND role='OWNER_LIBRARY' AND status='LOCKED'
+	`, now, ownerID)
+	if err != nil {
+		return fmt.Errorf("unlock owner: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("unlock owner rows: %w", err)
+	}
+	if rows != 1 {
+		var exists int
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM users WHERE id=? AND role='OWNER_LIBRARY'`, ownerID).Scan(&exists); err != nil {
+			return fmt.Errorf("check owner before unlock: %w", err)
+		}
+		if exists == 0 {
+			return ErrOwnerNotFound
+		}
+		return ErrOwnerNotLocked
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?) WHERE user_id=?
+	`, now, ownerID); err != nil {
+		return fmt.Errorf("revoke unlocked owner sessions: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'UNLOCK_LIBRARY_OWNER', 'USER', ?, '{"status":"ACTIVE","failed_login_attempts":0}', 1, ?)
+	`, auditID, actorID, ownerID, now); err != nil {
+		return fmt.Errorf("audit owner unlock: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit owner unlock: %w", err)
 	}
 	return nil
 }

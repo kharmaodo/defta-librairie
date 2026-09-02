@@ -119,6 +119,7 @@ func main() {
 	mux.Handle("GET /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Get)))
 	mux.Handle("PATCH /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Update)))
 	mux.Handle("DELETE /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Disable)))
+	mux.Handle("POST /api/admin/owners/{id}/unlock", rootOnly(http.HandlerFunc(ownerHandler.Unlock)))
 	bookManagers := func(handler http.Handler) http.Handler {
 		return authenticated(middleware.RequireRoles(handler,
 			models.RoleSuperAdminRoot, models.RoleOwnerLibrary))
