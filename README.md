@@ -89,6 +89,7 @@ Toutes les variables sont optionnelles :
 | `JWT_REFRESH_TTL_SECONDS` | `604800` | Durée du refresh token opaque, 7 jours par défaut |
 | `AUTH_RATE_LIMIT_REQUESTS` | `10` | Nombre de requêtes login/refresh autorisées par IP et par fenêtre |
 | `AUTH_RATE_LIMIT_WINDOW_SECONDS` | `60` | Fenêtre du rate limit d'authentification |
+| `AUTH_COOKIE_SECURE` | `false` | Mettre à `true` derrière HTTPS pour le cookie de refresh du navigateur |
 
 Exemple `.env` :
 
@@ -105,6 +106,7 @@ JWT_ACCESS_TTL_SECONDS=900
 JWT_REFRESH_TTL_SECONDS=604800
 AUTH_RATE_LIMIT_REQUESTS=10
 AUTH_RATE_LIMIT_WINDOW_SECONDS=60
+AUTH_COOKIE_SECURE=false
 ```
 
 ### Durcissement HTTP
@@ -341,7 +343,9 @@ L'access token contient uniquement les claims nécessaires : `sub`, `role`, `lib
 
 ### Rotation et déconnexion
 
-La connexion renvoie également un `refreshToken` opaque. Seul son hash SHA-256 est conservé dans SQLite. Chaque appel à `/api/auth/refresh` révoque le token présenté et en émet un nouveau. La réutilisation d'un ancien token révoque toute sa famille de session et crée un audit `REFRESH_TOKEN_REUSE`.
+La connexion renvoie également un `refreshToken` opaque aux clients API. Seul son hash SHA-256 est conservé dans SQLite. Chaque appel à `/api/auth/refresh` révoque le token présenté et en émet un nouveau. La réutilisation d'un ancien token révoque toute sa famille de session et crée un audit `REFRESH_TOKEN_REUSE`.
+
+L'interface web envoie `X-Defta-Session: cookie` afin de recevoir le refresh token dans un cookie `HttpOnly`, `SameSite=Strict`, limité au chemin `/api/auth`. Le token n'est alors jamais retourné dans le JSON ni stocké dans `sessionStorage`. Les clients externes sans cet en-tête conservent le contrat JSON existant.
 
 ### Interface d'administration
 
@@ -352,7 +356,7 @@ Le serveur propose une interface responsive qui s'appuie exclusivement sur les A
 | `/login` | Public | Connexion d'un `SUPER_ADMIN_ROOT` ou `OWNER_LIBRARY` |
 | `/admin` | Session JWT | Tableau de bord adapté au rôle authentifié |
 
-Le navigateur conserve les jetons dans `sessionStorage`, renouvelle automatiquement la session après un `401` et remplace les deux jetons lors de chaque rotation. La déconnexion révoque le refresh token côté serveur et vide la session du navigateur.
+Le navigateur conserve uniquement l'access token dans `sessionStorage`. Il renouvelle automatiquement la session après un `401` grâce au cookie `HttpOnly`; chaque rotation remplace ce cookie. La déconnexion révoque le refresh token côté serveur, supprime le cookie et vide la session du navigateur.
 
 - `SUPER_ADMIN_ROOT` voit la liste des propriétaires, des librairies et le catalogue global.
 - `OWNER_LIBRARY` ne voit que les livres de la librairie portée par son JWT.
@@ -365,7 +369,7 @@ Le tableau de bord permet également :
 - de gérer le prix, le volume, le statut, la catégorie, les tags et la couverture ;
 - de transmettre la version courante lors d'une modification afin de détecter les écritures concurrentes.
 
-L'interface ne constitue pas une frontière de sécurité : les contrôles d'autorisation restent appliqués par le middleware et les services backend. Une évolution ultérieure pourra déplacer le refresh token vers un cookie `HttpOnly` afin de réduire son exposition au JavaScript.
+L'interface ne constitue pas une frontière de sécurité : les contrôles d'autorisation restent appliqués par le middleware et les services backend.
 
 ```bash
 LOGIN_RESPONSE=$(jq -n \

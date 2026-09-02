@@ -22,6 +22,7 @@ type Config struct {
 	JWTRefreshTTL  time.Duration
 	AuthRateLimit  int
 	AuthRateWindow time.Duration
+	AuthCookieSecure bool
 }
 
 func Load() (*Config, error) {
@@ -41,9 +42,23 @@ func Load() (*Config, error) {
 		JWTRefreshTTL:  time.Duration(getEnvInt("JWT_REFRESH_TTL_SECONDS", 604800)) * time.Second,
 		AuthRateLimit:  getEnvInt("AUTH_RATE_LIMIT_REQUESTS", 10),
 		AuthRateWindow: time.Duration(getEnvInt("AUTH_RATE_LIMIT_WINDOW_SECONDS", 60)) * time.Second,
+		AuthCookieSecure: getEnvBool("AUTH_COOKIE_SECURE", false),
 	}
 
 	return cfg, nil
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	value := getEnv(key, "")
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		log.Printf("Valeur invalide pour %s → utilisation de %t", key, fallback)
+		return fallback
+	}
+	return parsed
 }
 
 func getEnv(key, fallback string) string {

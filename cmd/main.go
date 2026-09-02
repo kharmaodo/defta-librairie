@@ -79,7 +79,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Initialisation sessions impossible : %v", err)
 	}
-	authHandler := handlers.NewAuthHandler(loginService, sessionService)
+	authHandler := handlers.NewAuthHandler(loginService, sessionService, cfg.AuthCookieSecure)
 	ownerService := services.NewOwnerService(repositories.NewOwnerRepository(database.DB))
 	ownerHandler := handlers.NewOwnerHandler(ownerService)
 	bookService := services.NewBookService(repositories.NewBookRepository(database.DB))

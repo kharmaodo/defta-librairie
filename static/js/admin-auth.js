@@ -2,21 +2,17 @@
   "use strict";
 
   const ACCESS_KEY = "defta.accessToken";
-  const REFRESH_KEY = "defta.refreshToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
   const state = {isRoot: false, owners: [], books: []};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
-    refresh: () => sessionStorage.getItem(REFRESH_KEY),
     save: (payload) => {
       sessionStorage.setItem(ACCESS_KEY, payload.accessToken);
-      sessionStorage.setItem(REFRESH_KEY, payload.refreshToken);
     },
     clear: () => {
       sessionStorage.removeItem(ACCESS_KEY);
-      sessionStorage.removeItem(REFRESH_KEY);
       sessionStorage.removeItem(USERNAME_KEY);
     }
   };
@@ -34,11 +30,8 @@
   }
 
   async function refreshSession() {
-    const refreshToken = tokens.refresh();
-    if (!refreshToken) throw new Error("Session expirée");
     const response = await fetch("/api/auth/refresh", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({refreshToken})
+      method: "POST", headers: {"X-Defta-Session": "cookie"}
     });
     const payload = await json(response);
     tokens.save(payload);
@@ -90,7 +83,7 @@
       try {
         const data = new FormData(form);
         const response = await fetch("/api/auth/login", {
-          method: "POST", headers: {"Content-Type": "application/json"},
+          method: "POST", headers: {"Content-Type": "application/json", "X-Defta-Session": "cookie"},
           body: JSON.stringify({username: data.get("username"), password: data.get("password")})
         });
         const payload = await json(response);
@@ -301,11 +294,9 @@
   }
 
   async function logout() {
-    const refreshToken = tokens.refresh();
     try {
-      if (refreshToken) await fetch("/api/auth/logout", {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({refreshToken})
+      await fetch("/api/auth/logout", {
+        method: "POST", headers: {"X-Defta-Session": "cookie"}
       });
     } finally {
       tokens.clear(); window.location.replace("/login");
@@ -313,7 +304,10 @@
   }
 
   async function initDashboard() {
-    if (!tokens.access() || !tokens.refresh()) { window.location.replace("/login"); return; }
+    if (!tokens.access()) {
+      try { await refreshSession(); }
+      catch (_) { tokens.clear(); window.location.replace("/login"); return; }
+    }
     document.querySelector("#logout-button").addEventListener("click", logout);
     const errorBox = document.querySelector("#dashboard-error");
     initEntityForms(errorBox);
