@@ -117,7 +117,7 @@ La route du catalogue est volontairement exacte (`GET /{$}`). Une URL inconnue, 
 
 ## Migrations SQLite
 
-Les migrations embarquées sont appliquées automatiquement au démarrage, dans l'ordre et dans une transaction. La table `schema_migrations` conserve leur version et leur checksum.
+Les migrations embarquées sont appliquées automatiquement au démarrage, dans l'ordre et dans une transaction. La table `schema_migrations` conserve leur version et leur checksum. Une base vide est initialisée avec le catalogue `defta`, son index FTS5, puis les tables d'identité et de sécurité ; les anciennes bases restent migrées sans recréer leurs données.
 
 La première migration de sécurité crée :
 
