@@ -61,10 +61,10 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Cache-Control", "no-store")
 	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
-		"accessToken": session.AccessToken,
-		"refreshToken": session.RefreshToken,
-		"tokenType":   "Bearer",
-		"expiresIn":   int64(time.Until(session.AccessExpiresAt).Seconds()),
+		"accessToken":      session.AccessToken,
+		"refreshToken":     session.RefreshToken,
+		"tokenType":        "Bearer",
+		"expiresIn":        int64(time.Until(session.AccessExpiresAt).Seconds()),
 		"refreshExpiresIn": int64(time.Until(session.RefreshExpiresAt).Seconds()),
 		"user": map[string]interface{}{
 			"id": result.User.ID, "username": result.User.Username,

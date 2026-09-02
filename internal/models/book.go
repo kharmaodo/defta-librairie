@@ -50,15 +50,15 @@ type Book struct {
 }
 
 type BookInput struct {
-	Title      string  `json:"title"`
-	Auteur     string  `json:"auteur"`
-	Editeur    string  `json:"editeur"`
-	Price      float64 `json:"price"`
-	Volume     int     `json:"volume"`
-	Status     string  `json:"status"`
-	Tags       string  `json:"tags"`
-	Categorie  string  `json:"categorie"`
-	CoverURL   string  `json:"coverUrl"`
-	LibraryID  string  `json:"libraryId,omitempty"`
-	Version    int     `json:"version,omitempty"`
+	Title     string  `json:"title"`
+	Auteur    string  `json:"auteur"`
+	Editeur   string  `json:"editeur"`
+	Price     float64 `json:"price"`
+	Volume    int     `json:"volume"`
+	Status    string  `json:"status"`
+	Tags      string  `json:"tags"`
+	Categorie string  `json:"categorie"`
+	CoverURL  string  `json:"coverUrl"`
+	LibraryID string  `json:"libraryId,omitempty"`
+	Version   int     `json:"version,omitempty"`
 }

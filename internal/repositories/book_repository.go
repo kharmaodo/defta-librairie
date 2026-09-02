@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	ErrBookNotFound = errors.New("book not found")
-	ErrBookConflict = errors.New("book was modified by another request")
+	ErrBookNotFound       = errors.New("book not found")
+	ErrBookConflict       = errors.New("book was modified by another request")
 	ErrLibraryUnavailable = errors.New("library not found or disabled")
 )
 

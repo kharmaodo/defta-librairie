@@ -10,15 +10,15 @@ import (
 )
 
 type Config struct {
-	Port         string
-	DBPath       string
-	Version      string
-	BuildDate    string
-	PageSize     int
-	JWTSecret    string
-	JWTIssuer    string
-	JWTAudience  string
-	JWTAccessTTL time.Duration
+	Port          string
+	DBPath        string
+	Version       string
+	BuildDate     string
+	PageSize      int
+	JWTSecret     string
+	JWTIssuer     string
+	JWTAudience   string
+	JWTAccessTTL  time.Duration
 	JWTRefreshTTL time.Duration
 }
 
@@ -27,15 +27,15 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		Port:         getEnv("PORT", "8080"),
-		DBPath:       getEnv("DB_PATH", "./data/defta.db"),
-		Version:      getEnv("VERSION", "0.1.0-dev"),
-		BuildDate:    getEnv("BUILD_DATE", "unknown"),
-		PageSize:     getEnvInt("PAGE_SIZE", 30),
-		JWTSecret:    getEnv("JWT_SECRET", ""),
-		JWTIssuer:    getEnv("JWT_ISSUER", "defta-librairie"),
-		JWTAudience:  getEnv("JWT_AUDIENCE", "defta-librairie-web"),
-		JWTAccessTTL: time.Duration(getEnvInt("JWT_ACCESS_TTL_SECONDS", 900)) * time.Second,
+		Port:          getEnv("PORT", "8080"),
+		DBPath:        getEnv("DB_PATH", "./data/defta.db"),
+		Version:       getEnv("VERSION", "0.1.0-dev"),
+		BuildDate:     getEnv("BUILD_DATE", "unknown"),
+		PageSize:      getEnvInt("PAGE_SIZE", 30),
+		JWTSecret:     getEnv("JWT_SECRET", ""),
+		JWTIssuer:     getEnv("JWT_ISSUER", "defta-librairie"),
+		JWTAudience:   getEnv("JWT_AUDIENCE", "defta-librairie-web"),
+		JWTAccessTTL:  time.Duration(getEnvInt("JWT_ACCESS_TTL_SECONDS", 900)) * time.Second,
 		JWTRefreshTTL: time.Duration(getEnvInt("JWT_REFRESH_TTL_SECONDS", 604800)) * time.Second,
 	}
 

@@ -16,11 +16,11 @@ var (
 )
 
 type SessionResult struct {
-	AccessToken     string
-	AccessExpiresAt time.Time
-	RefreshToken    string
+	AccessToken      string
+	AccessExpiresAt  time.Time
+	RefreshToken     string
 	RefreshExpiresAt time.Time
-	User            models.User
+	User             models.User
 }
 
 type SessionService struct {
