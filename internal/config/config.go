@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -63,7 +64,9 @@ func getEnvBool(key string, fallback bool) bool {
 
 func getEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists && value != "" {
-		return value
+		// Un fichier .env modifié sous Windows peut conserver un retour
+		// chariot final. Il rend notamment PORT invalide sous Linux.
+		return strings.TrimRight(value, "\r\n")
 	}
 	return fallback
 }
