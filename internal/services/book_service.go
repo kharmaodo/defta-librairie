@@ -46,6 +46,33 @@ func (s *BookService) List(ctx context.Context, claims *auth.Claims, requestedLi
 	return s.repository.List(ctx, libraryID, offset, limit)
 }
 
+func (s *BookService) Search(ctx context.Context, claims *auth.Claims, requestedLibrary, query string, offset, limit int) ([]models.Book, int, error) {
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return s.List(ctx, claims, requestedLibrary, offset, limit)
+	}
+	if len([]rune(query)) > 200 {
+		return nil, 0, ErrInvalidBook
+	}
+	libraryID, err := resolveBookScope(claims, strings.TrimSpace(requestedLibrary), false)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err = s.ensureOwnerLibraryActive(ctx, claims, libraryID); err != nil {
+		return nil, 0, err
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if limit < 1 {
+		limit = 30
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repository.Search(ctx, libraryID, query, offset, limit)
+}
+
 func (s *BookService) Find(ctx context.Context, claims *auth.Claims, id int) (models.Book, error) {
 	libraryID, err := resolveBookScope(claims, "", false)
 	if err != nil {

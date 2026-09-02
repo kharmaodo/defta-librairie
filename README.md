@@ -175,6 +175,13 @@ curl -fsS -X POST http://localhost:8080/api/admin/owners \
 
 Les mutations de livres exigent un JWT `SUPER_ADMIN_ROOT` ou `OWNER_LIBRARY`. Le root précise `libraryId` lors de la création ; pour un propriétaire, le backend utilise exclusivement la librairie signée dans son JWT.
 
+La liste `GET /api/manage/books` accepte également `q`, `offset` et `limit`. Si `q` est renseigné, le backend utilise FTS5 et classe les livres par pertinence ; une expression FTS invalide bascule vers une recherche `LIKE`. Les deux chemins appliquent le même filtre de librairie issu du JWT.
+
+```bash
+curl -fsS 'http://localhost:8080/api/manage/books?q=fiqh&offset=0&limit=10' \
+  -H "Authorization: Bearer $OWNER_TOKEN" | jq .
+```
+
 | Méthode | Route | Action |
 |---|---|---|
 | `GET` | `/api/manage/books?offset=0&limit=30&libraryId=...` | Lister les livres autorisés |

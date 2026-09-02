@@ -54,6 +54,66 @@ func (r *BookRepository) List(ctx context.Context, libraryID string, offset, lim
 	return books, total, rows.Err()
 }
 
+func (r *BookRepository) Search(ctx context.Context, libraryID, query string, offset, limit int) ([]models.Book, int, error) {
+	where := " WHERE defta_fts MATCH ? AND d.deleted_at IS NULL"
+	args := []interface{}{query}
+	if libraryID != "" {
+		where += " AND d.library_id=?"
+		args = append(args, libraryID)
+	}
+	var total int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM defta_fts JOIN defta d ON defta_fts.rowid=d.id
+	`+where, args...).Scan(&total)
+	if err == nil {
+		queryArgs := append(append([]interface{}{}, args...), limit, offset)
+		rows, queryErr := r.db.QueryContext(ctx, managedBookSearchSelect+where+` ORDER BY defta_fts.rank LIMIT ? OFFSET ?`, queryArgs...)
+		if queryErr == nil {
+			defer rows.Close()
+			books := make([]models.Book, 0)
+			for rows.Next() {
+				book, scanErr := scanManagedSearchBook(rows)
+				if scanErr != nil {
+					return nil, 0, fmt.Errorf("scan managed FTS book: %w", scanErr)
+				}
+				books = append(books, book)
+			}
+			return books, total, rows.Err()
+		}
+	}
+	return r.searchLike(ctx, libraryID, query, offset, limit)
+}
+
+func (r *BookRepository) searchLike(ctx context.Context, libraryID, query string, offset, limit int) ([]models.Book, int, error) {
+	pattern := "%" + query + "%"
+	where := ` WHERE deleted_at IS NULL AND (
+		title LIKE ? OR auteur LIKE ? OR editeur LIKE ? OR tags LIKE ? OR categorie LIKE ?)`
+	args := []interface{}{pattern, pattern, pattern, pattern, pattern}
+	if libraryID != "" {
+		where += " AND library_id=?"
+		args = append(args, libraryID)
+	}
+	var total int
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM defta"+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count managed LIKE books: %w", err)
+	}
+	queryArgs := append(append([]interface{}{}, args...), limit, offset)
+	rows, err := r.db.QueryContext(ctx, bookSelect+where+" ORDER BY id DESC LIMIT ? OFFSET ?", queryArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("search managed LIKE books: %w", err)
+	}
+	defer rows.Close()
+	books := make([]models.Book, 0)
+	for rows.Next() {
+		book, scanErr := scanManagedBook(rows)
+		if scanErr != nil {
+			return nil, 0, fmt.Errorf("scan managed LIKE book: %w", scanErr)
+		}
+		books = append(books, book)
+	}
+	return books, total, rows.Err()
+}
+
 func (r *BookRepository) Find(ctx context.Context, id int, libraryID string) (models.Book, error) {
 	query := bookSelect + ` WHERE id=? AND deleted_at IS NULL`
 	args := []interface{}{id}
@@ -173,10 +233,25 @@ const bookSelect = `
 	       library_id, COALESCE(created_at, ''), COALESCE(updated_at, ''), version
 	FROM defta`
 
+const managedBookSearchSelect = `
+	SELECT d.id, d.title, d.auteur, d.editeur, COALESCE(d.price, 0), COALESCE(d.volume, 0),
+	       d.status, d.tags, d.categorie, d.coverUrl,
+	       d.library_id, COALESCE(d.created_at, ''), COALESCE(d.updated_at, ''), d.version,
+	       defta_fts.rank
+	FROM defta_fts JOIN defta d ON defta_fts.rowid=d.id`
+
 func scanManagedBook(row rowScanner) (models.Book, error) {
 	var book models.Book
 	err := row.Scan(&book.ID, &book.Title, &book.Auteur, &book.Editeur, &book.Price, &book.Volume,
 		&book.Status, &book.Tags, &book.Categorie, &book.CoverURL, &book.LibraryID,
 		&book.CreatedAt, &book.UpdatedAt, &book.Version)
+	return book, err
+}
+
+func scanManagedSearchBook(row rowScanner) (models.Book, error) {
+	var book models.Book
+	err := row.Scan(&book.ID, &book.Title, &book.Auteur, &book.Editeur, &book.Price, &book.Volume,
+		&book.Status, &book.Tags, &book.Categorie, &book.CoverURL, &book.LibraryID,
+		&book.CreatedAt, &book.UpdatedAt, &book.Version, &book.Score)
 	return book, err
 }

@@ -49,12 +49,13 @@
     </section>
 
     <section class="panel">
-      <div class="panel-heading"><div><p class="eyebrow">Catalogue privé</p><h2>Livres</h2></div><div class="heading-actions"><span class="hint">30 premiers résultats</span><button id="add-book-button" class="button primary" type="button">Nouveau livre</button></div></div>
+      <div class="panel-heading book-heading"><div><p class="eyebrow">Catalogue privé</p><h2>Livres</h2></div><div class="heading-actions"><form id="book-search-form" class="inline-search"><input name="q" maxlength="200" placeholder="Titre, auteur, tag…" aria-label="Rechercher dans les livres"><button class="button ghost" type="submit">Rechercher</button></form><button id="add-book-button" class="button primary" type="button">Nouveau livre</button></div></div>
       <div class="table-wrap">
         <table><thead><tr><th>Titre</th><th>Auteur</th><th>Prix</th><th>Tags</th><th>Statut</th><th>Actions</th></tr></thead>
           <tbody id="books-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
+      <div class="pagination"><button id="books-previous" class="button ghost" type="button">Précédent</button><span id="books-page-label" class="hint">Page 1</span><button id="books-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
     <section class="panel">

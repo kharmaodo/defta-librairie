@@ -20,7 +20,8 @@ func NewBookManagementHandler(service *services.BookService) *BookManagementHand
 func (h *BookManagementHandler) List(w http.ResponseWriter, r *http.Request) {
 	claims, _ := auth.ClaimsFromContext(r.Context())
 	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
-	books, total, err := h.service.List(r.Context(), claims, strings.TrimSpace(r.URL.Query().Get("libraryId")), offset, limit)
+	books, total, err := h.service.Search(r.Context(), claims, strings.TrimSpace(r.URL.Query().Get("libraryId")),
+		r.URL.Query().Get("q"), offset, limit)
 	if err != nil {
 		writeBookError(w, err)
 		return

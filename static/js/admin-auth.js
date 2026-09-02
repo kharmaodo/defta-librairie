@@ -4,7 +4,7 @@
   const ACCESS_KEY = "defta.accessToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
-  const state = {isRoot: false, owners: [], books: [], currentSessionId: ""};
+  const state = {isRoot: false, owners: [], books: [], currentSessionId: "", bookOffset: 0, bookLimit: 10, bookQuery: ""};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
@@ -135,17 +135,23 @@
     const body = document.querySelector("#books-body");
     body.replaceChildren();
     if (!payload.results.length) {
-      const row = body.insertRow(); textCell(row, "Aucun livre dans ce périmètre", "empty").colSpan = 6; return;
+      const row = body.insertRow(); textCell(row, "Aucun livre dans ce périmètre", "empty").colSpan = 6;
+    } else {
+      payload.results.forEach((book) => {
+        const row = body.insertRow();
+        textCell(row, book.title); textCell(row, book.auteur);
+        textCell(row, new Intl.NumberFormat("fr-FR").format(book.price || 0));
+        textCell(row, book.tags); textCell(row, book.status, "pill");
+        const actions = textCell(row, "");
+        actions.className = "row-actions";
+        actions.replaceChildren(actionButton("Modifier", "edit-book", book.id), actionButton("Supprimer", "delete-book", book.id, true));
+      });
     }
-    payload.results.forEach((book) => {
-      const row = body.insertRow();
-      textCell(row, book.title); textCell(row, book.auteur);
-      textCell(row, new Intl.NumberFormat("fr-FR").format(book.price || 0));
-      textCell(row, book.tags); textCell(row, book.status, "pill");
-      const actions = textCell(row, "");
-      actions.className = "row-actions";
-      actions.replaceChildren(actionButton("Modifier", "edit-book", book.id), actionButton("Supprimer", "delete-book", book.id, true));
-    });
+    const page = Math.floor(payload.offset / payload.limit) + 1;
+    const pages = Math.max(1, Math.ceil(payload.total / payload.limit));
+    document.querySelector("#books-page-label").textContent = `Page ${page} sur ${pages}`;
+    document.querySelector("#books-previous").disabled = payload.offset === 0;
+    document.querySelector("#books-next").disabled = payload.offset + payload.results.length >= payload.total;
   }
 
   function renderAudit(payload) {
@@ -275,7 +281,14 @@
   }
 
   async function reloadBooks() {
-    renderBooks(await apiFetch("/api/manage/books?offset=0&limit=30"));
+    const query = new URLSearchParams({offset: String(state.bookOffset), limit: String(state.bookLimit)});
+    if (state.bookQuery) query.set("q", state.bookQuery);
+    const payload = await apiFetch(`/api/manage/books?${query}`);
+    if (!payload.results.length && state.bookOffset > 0) {
+      state.bookOffset = Math.max(0, state.bookOffset - state.bookLimit);
+      return reloadBooks();
+    }
+    renderBooks(payload);
   }
 
   async function reloadAudit() {
@@ -307,6 +320,22 @@
       errorBox.hidden = true;
       try { await reloadAudit(); }
       catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#book-search-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      state.bookQuery = event.currentTarget.elements.q.value.trim();
+      state.bookOffset = 0;
+      errorBox.hidden = true;
+      try { await reloadBooks(); }
+      catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#books-previous").addEventListener("click", async () => {
+      state.bookOffset = Math.max(0, state.bookOffset - state.bookLimit);
+      try { await reloadBooks(); } catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#books-next").addEventListener("click", async () => {
+      state.bookOffset += state.bookLimit;
+      try { await reloadBooks(); } catch (error) { showError(errorBox, error); }
     });
     document.querySelector("#refresh-sessions-button").addEventListener("click", async () => {
       errorBox.hidden = true;
@@ -384,6 +413,7 @@
           method: id ? "PUT" : "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(bookPayload(form))
         });
         document.querySelector("#book-dialog").close();
+        if (!id) state.bookOffset = 0;
         await reloadBooks();
       } catch (error) { showError(formError, error); }
     });
@@ -452,7 +482,7 @@
         ? "Vue globale des sessions actives de tous les utilisateurs."
         : "Seules les sessions actives de votre compte sont affichées.";
       const requests = [
-        apiFetch("/api/manage/books?offset=0&limit=30").then(renderBooks),
+        reloadBooks(),
         apiFetch("/api/audit-logs?offset=0&limit=30").then(renderAudit),
         apiFetch("/api/auth/sessions?offset=0&limit=30").then(renderSessions)
       ];
