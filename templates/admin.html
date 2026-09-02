@@ -35,6 +35,7 @@
       <article class="metric"><span>Livres visibles</span><strong id="book-total">—</strong></article>
       <article class="metric root-only" hidden><span>Propriétaires</span><strong id="owner-total">—</strong></article>
       <article class="metric"><span>Événements d’audit</span><strong id="audit-total">—</strong></article>
+      <article class="metric"><span>Sessions actives</span><strong id="session-total">—</strong></article>
       <article class="metric"><span>État de session</span><strong class="status-good">Active</strong></article>
     </section>
 
@@ -69,6 +70,16 @@
       <div class="table-wrap">
         <table><thead><tr><th>Date</th><th>Action</th><th>Acteur</th><th>Ressource</th><th>Résultat</th><th>Adresse IP</th></tr></thead>
           <tbody id="audit-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading"><div><p class="eyebrow">Sécurité</p><h2>Sessions actives</h2></div><button id="refresh-sessions-button" class="button ghost" type="button">Actualiser</button></div>
+      <p id="session-scope-note" class="scope-note">Chargement du périmètre des sessions…</p>
+      <div class="table-wrap">
+        <table><thead><tr><th>Utilisateur</th><th>Appareil</th><th>Adresse IP</th><th>Créée</th><th>Expiration</th><th>État</th><th>Action</th></tr></thead>
+          <tbody id="sessions-body"><tr><td colspan="7" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
     </section>

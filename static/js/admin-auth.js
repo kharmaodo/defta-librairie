@@ -4,7 +4,7 @@
   const ACCESS_KEY = "defta.accessToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
-  const state = {isRoot: false, owners: [], books: []};
+  const state = {isRoot: false, owners: [], books: [], currentSessionId: ""};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
@@ -163,6 +163,34 @@
     });
   }
 
+  function renderSessions(payload) {
+    state.currentSessionId = payload.currentSessionId;
+    document.querySelector("#session-total").textContent = payload.total;
+    const body = document.querySelector("#sessions-body");
+    body.replaceChildren();
+    if (!payload.results.length) {
+      const row = body.insertRow(); textCell(row, "Aucune session active", "empty").colSpan = 7; return;
+    }
+    payload.results.forEach((session) => {
+      const row = body.insertRow();
+      textCell(row, session.username);
+      textCell(row, session.userAgent, "device");
+      textCell(row, session.ipAddress);
+      textCell(row, formatDate(session.createdAt));
+      textCell(row, formatDate(session.expiresAt));
+      const current = session.id === payload.currentSessionId;
+      textCell(row, current ? "Session courante" : "Active", "pill");
+      const actions = textCell(row, "");
+      actions.className = "row-actions";
+      actions.replaceChildren(actionButton(current ? "Révoquer et quitter" : "Révoquer", "revoke-session", session.id, true));
+    });
+  }
+
+  function formatDate(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? value || "—" : date.toLocaleString("fr-FR");
+  }
+
   function updateLibraryOptions() {
     const select = document.querySelector("#book-form [name=libraryId]");
     if (!select) return;
@@ -256,6 +284,10 @@
     renderAudit(await apiFetch(`/api/audit-logs?${query}`));
   }
 
+  async function reloadSessions() {
+    renderSessions(await apiFetch("/api/auth/sessions?offset=0&limit=30"));
+  }
+
   function initEntityForms(errorBox) {
     document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.querySelector(`#${button.dataset.close}`).close()));
     document.querySelector("#add-book-button").addEventListener("click", () => openBookForm());
@@ -271,6 +303,23 @@
       errorBox.hidden = true;
       try { await reloadAudit(); }
       catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#refresh-sessions-button").addEventListener("click", async () => {
+      errorBox.hidden = true;
+      try { await reloadSessions(); }
+      catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#sessions-body").addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-action=revoke-session]");
+      if (!button || !window.confirm("Révoquer cette session active ?")) return;
+      const current = button.dataset.id === state.currentSessionId;
+      try {
+        await apiFetch(`/api/auth/sessions/${button.dataset.id}`, {method: "DELETE"});
+        if (current) {
+          tokens.clear(); window.location.replace("/login"); return;
+        }
+        await Promise.all([reloadSessions(), reloadAudit()]);
+      } catch (error) { showError(errorBox, error); }
     });
 
     document.querySelector("#password-form").addEventListener("submit", async (event) => {
@@ -389,9 +438,13 @@
       if (isRoot) document.querySelectorAll(".root-only").forEach((element) => { element.hidden = false; });
       if (isRoot) document.querySelectorAll(".root-only-field").forEach((element) => { element.hidden = false; });
       if (!isRoot) document.querySelector(".owner-audit-note").hidden = false;
+      document.querySelector("#session-scope-note").textContent = isRoot
+        ? "Vue globale des sessions actives de tous les utilisateurs."
+        : "Seules les sessions actives de votre compte sont affichées.";
       const requests = [
         apiFetch("/api/manage/books?offset=0&limit=30").then(renderBooks),
-        apiFetch("/api/audit-logs?offset=0&limit=30").then(renderAudit)
+        apiFetch("/api/audit-logs?offset=0&limit=30").then(renderAudit),
+        apiFetch("/api/auth/sessions?offset=0&limit=30").then(renderSessions)
       ];
       if (isRoot) requests.push(apiFetch("/api/admin/owners").then(renderOwners));
       await Promise.all(requests);

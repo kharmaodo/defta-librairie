@@ -169,6 +169,41 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *AuthHandler) ActiveSessions(w http.ResponseWriter, r *http.Request) {
+	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	sessions, total, err := h.sessions.ListActive(r.Context(), claims, offset, limit)
+	if err != nil {
+		writeAuthJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Session query failed"})
+		return
+	}
+	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
+		"results": sessions, "total": total, "offset": offset, "limit": limit,
+		"currentSessionId": claims.SessionID,
+	})
+}
+
+func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	sessionID := strings.TrimSpace(r.PathValue("id"))
+	if sessionID == "" || len(sessionID) > 128 {
+		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request", "message": "Invalid session identifier"})
+		return
+	}
+	if err := h.sessions.RevokeActive(r.Context(), claims, sessionID); err != nil {
+		if errors.Is(err, services.ErrSessionNotFound) {
+			writeAuthJSON(w, http.StatusNotFound, map[string]string{"error": "session_not_found", "message": "Active session not found"})
+			return
+		}
+		writeAuthJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Session revocation failed"})
+		return
+	}
+	if sessionID == claims.SessionID {
+		h.clearRefreshCookie(w)
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func wantsCookieSession(r *http.Request) bool {
 	return strings.EqualFold(strings.TrimSpace(r.Header.Get(cookieSessionHeader)), "cookie")
 }

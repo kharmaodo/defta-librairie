@@ -111,6 +111,8 @@ func main() {
 	}
 	mux.Handle("GET /api/auth/me", authenticated(http.HandlerFunc(authHandler.Me)))
 	mux.Handle("POST /api/auth/change-password", authenticated(http.HandlerFunc(authHandler.ChangePassword)))
+	mux.Handle("GET /api/auth/sessions", authenticated(http.HandlerFunc(authHandler.ActiveSessions)))
+	mux.Handle("DELETE /api/auth/sessions/{id}", authenticated(http.HandlerFunc(authHandler.RevokeSession)))
 	mux.Handle("GET /api/audit-logs", authenticated(http.HandlerFunc(auditHandler.List)))
 	rootOnly := func(handler http.Handler) http.Handler {
 		return authenticated(middleware.RequireRoles(handler, models.RoleSuperAdminRoot))

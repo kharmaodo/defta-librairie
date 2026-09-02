@@ -13,6 +13,7 @@ import (
 var (
 	ErrInvalidRefreshToken = errors.New("invalid refresh token")
 	ErrRefreshTokenReuse   = errors.New("refresh token reuse detected")
+	ErrSessionNotFound     = errors.New("active session not found")
 )
 
 type SessionResult struct {
@@ -21,6 +22,48 @@ type SessionResult struct {
 	RefreshToken     string
 	RefreshExpiresAt time.Time
 	User             models.User
+}
+
+func (s *SessionService) ListActive(ctx context.Context, claims *auth.Claims, offset, limit int) ([]models.ActiveSession, int, error) {
+	if claims == nil || claims.Role != models.RoleSuperAdminRoot && claims.Role != models.RoleOwnerLibrary {
+		return nil, 0, ErrSessionNotFound
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if limit < 1 {
+		limit = 30
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	scopedUserID := ""
+	if claims.Role == models.RoleOwnerLibrary {
+		scopedUserID = claims.Subject
+	}
+	return s.repository.ListActive(ctx, scopedUserID, s.now().UTC().Format(time.RFC3339Nano), offset, limit)
+}
+
+func (s *SessionService) RevokeActive(ctx context.Context, claims *auth.Claims, sessionID string) error {
+	if claims == nil || sessionID == "" {
+		return ErrSessionNotFound
+	}
+	scopedUserID := ""
+	if claims.Role == models.RoleOwnerLibrary {
+		scopedUserID = claims.Subject
+	} else if claims.Role != models.RoleSuperAdminRoot {
+		return ErrSessionNotFound
+	}
+	auditID, err := identity.NewID()
+	if err != nil {
+		return err
+	}
+	err = s.repository.RevokeActive(ctx, sessionID, scopedUserID, claims.Subject, auditID,
+		s.now().UTC().Format(time.RFC3339Nano))
+	if errors.Is(err, repositories.ErrActiveSessionNotFound) {
+		return ErrSessionNotFound
+	}
+	return err
 }
 
 type SessionService struct {

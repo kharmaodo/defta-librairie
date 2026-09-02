@@ -393,6 +393,20 @@ curl -fsS 'http://localhost:8080/api/audit-logs?action=LOGIN_FAILED&success=fals
 
 Le tableau de bord expose les mêmes filtres et affiche les 30 événements les plus récents. Cette API est en lecture seule et ne permet pas au client de fournir un identifiant d'acteur.
 
+### Sessions actives
+
+`GET /api/auth/sessions` liste les sessions actives et `DELETE /api/auth/sessions/{id}` révoque toute la famille correspondant à un appareil. Le root dispose d'une vue globale ; un propriétaire ne peut ni voir ni révoquer les sessions d'un autre compte.
+
+La réponse indique `currentSessionId` pour identifier la session utilisée par la requête. Révoquer cette session supprime également le cookie web et impose une nouvelle connexion. Chaque révocation crée un audit `SESSION_REVOKED`.
+
+```bash
+curl -fsS http://localhost:8080/api/auth/sessions \
+  -H "Authorization: Bearer $TOKEN" | jq .
+
+curl -i -X DELETE http://localhost:8080/api/auth/sessions/SESSION_ID \
+  -H "Authorization: Bearer $TOKEN"
+```
+
 ```bash
 LOGIN_RESPONSE=$(jq -n \
   --arg username 'kharmaodo' \

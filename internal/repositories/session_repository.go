@@ -12,6 +12,7 @@ import (
 var (
 	ErrRefreshSessionNotFound = errors.New("refresh session not found")
 	ErrRefreshTokenReused     = errors.New("refresh token reuse detected")
+	ErrActiveSessionNotFound  = errors.New("active session not found")
 )
 
 type SessionRepository struct{ db *sql.DB }
@@ -54,6 +55,74 @@ func (r *SessionRepository) Create(ctx context.Context, session models.RefreshSe
 		session.ExpiresAt, session.IPAddress, session.UserAgent, session.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("create refresh session: %w", err)
+	}
+	return nil
+}
+
+func (r *SessionRepository) ListActive(ctx context.Context, userID, now string, offset, limit int) ([]models.ActiveSession, int, error) {
+	where := " WHERE s.revoked_at IS NULL AND s.expires_at>?"
+	args := []interface{}{now}
+	if userID != "" {
+		where += " AND s.user_id=?"
+		args = append(args, userID)
+	}
+	var total int
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM refresh_sessions s"+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count active sessions: %w", err)
+	}
+	args = append(args, limit, offset)
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT s.id, s.user_id, u.username, COALESCE(s.ip_address, ''), COALESCE(s.user_agent, ''),
+		       s.created_at, COALESCE(s.last_used_at, ''), s.expires_at
+		FROM refresh_sessions s JOIN users u ON u.id=s.user_id
+	`+where+" ORDER BY s.created_at DESC LIMIT ? OFFSET ?", args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list active sessions: %w", err)
+	}
+	defer rows.Close()
+	sessions := make([]models.ActiveSession, 0)
+	for rows.Next() {
+		var session models.ActiveSession
+		if err = rows.Scan(&session.ID, &session.UserID, &session.Username, &session.IPAddress,
+			&session.UserAgent, &session.CreatedAt, &session.LastUsedAt, &session.ExpiresAt); err != nil {
+			return nil, 0, fmt.Errorf("scan active session: %w", err)
+		}
+		sessions = append(sessions, session)
+	}
+	return sessions, total, rows.Err()
+}
+
+func (r *SessionRepository) RevokeActive(ctx context.Context, sessionID, scopedUserID, actorID, auditID, now string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin active session revocation: %w", err)
+	}
+	defer tx.Rollback()
+	query := "SELECT user_id, token_family FROM refresh_sessions WHERE id=? AND revoked_at IS NULL AND expires_at>?"
+	args := []interface{}{sessionID, now}
+	if scopedUserID != "" {
+		query += " AND user_id=?"
+		args = append(args, scopedUserID)
+	}
+	var userID, family string
+	if err = tx.QueryRowContext(ctx, query, args...).Scan(&userID, &family); errors.Is(err, sql.ErrNoRows) {
+		return ErrActiveSessionNotFound
+	} else if err != nil {
+		return fmt.Errorf("find active session: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?) WHERE token_family=?
+	`, now, family); err != nil {
+		return fmt.Errorf("revoke active session family: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'SESSION_REVOKED', 'SESSION', ?, '{"family_revoked":true}', 1, ?)
+	`, auditID, actorID, sessionID, now); err != nil {
+		return fmt.Errorf("audit active session revocation: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit active session revocation: %w", err)
 	}
 	return nil
 }
