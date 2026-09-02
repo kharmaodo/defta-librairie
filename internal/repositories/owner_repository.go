@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	ErrOwnerNotFound = errors.New("owner not found")
-	ErrOwnerConflict = errors.New("owner username or email already exists")
+	ErrOwnerNotFound  = errors.New("owner not found")
+	ErrOwnerConflict  = errors.New("owner username or email already exists")
 	ErrOwnerNotLocked = errors.New("owner is not locked")
 )
 
