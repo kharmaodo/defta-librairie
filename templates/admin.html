@@ -18,6 +18,7 @@
     </a>
     <div class="account">
       <span id="role-badge" class="badge">Chargement…</span>
+      <button id="change-password-button" class="button ghost" type="button">Mot de passe</button>
       <button id="logout-button" class="button ghost" type="button">Se déconnecter</button>
     </div>
   </header>
@@ -90,6 +91,20 @@
       </div>
       <p id="book-form-error" class="alert" role="alert" hidden></p>
       <div class="modal-actions"><button class="button ghost" type="button" data-close="book-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="password-dialog" class="modal narrow">
+    <form id="password-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Sécurité du compte</p><h2>Changer le mot de passe</h2></div><button class="icon-button" type="button" data-close="password-dialog" aria-label="Fermer">×</button></div>
+      <p class="muted form-note">Toutes vos sessions seront révoquées. Vous devrez vous reconnecter avec le nouveau mot de passe.</p>
+      <div class="form-grid single">
+        <label>Mot de passe actuel<input name="currentPassword" type="password" autocomplete="current-password" required></label>
+        <label>Nouveau mot de passe<input name="newPassword" type="password" minlength="12" autocomplete="new-password" required></label>
+        <label>Confirmer le nouveau mot de passe<input name="confirmation" type="password" minlength="12" autocomplete="new-password" required></label>
+      </div>
+      <p id="password-form-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="password-dialog">Annuler</button><button class="button primary" type="submit">Changer et me déconnecter</button></div>
     </form>
   </dialog>
 

@@ -341,6 +341,17 @@ Sans token ou avec un token invalide, l'endpoint retourne `401 Unauthorized` et 
 
 L'access token contient uniquement les claims nécessaires : `sub`, `role`, `library_id`, `sid`, `iss`, `aud`, `iat`, `nbf`, `exp` et `jti`. Sa durée par défaut est de 15 minutes. Le middleware vérifie le `sid` dans SQLite à chaque requête protégée : une déconnexion, une réutilisation de refresh token, la désactivation d'un compte ou de sa librairie invalide donc immédiatement l'access token.
 
+### Changement du mot de passe
+
+`POST /api/auth/change-password` est accessible aux deux rôles authentifiés. La requête contient `currentPassword` et `newPassword` ; le nouveau secret doit compter au moins 12 caractères et être différent de l'ancien. Après succès, toutes les sessions de l'utilisateur sont révoquées, le cookie web est supprimé et un audit `PASSWORD_CHANGED` est créé.
+
+```json
+{
+  "currentPassword": "ancien-mot-de-passe",
+  "newPassword": "nouveau-mot-de-passe-2026"
+}
+```
+
 ### Rotation et déconnexion
 
 La connexion renvoie également un `refreshToken` opaque aux clients API. Seul son hash SHA-256 est conservé dans SQLite. Chaque appel à `/api/auth/refresh` révoque le token présenté et en émet un nouveau. La réutilisation d'un ancien token révoque toute sa famille de session et crée un audit `REFRESH_TOKEN_REUSE`.

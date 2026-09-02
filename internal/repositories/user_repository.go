@@ -59,6 +59,62 @@ func (r *UserRepository) FindByUsername(ctx context.Context, username string) (m
 	return user, nil
 }
 
+func (r *UserRepository) FindByID(ctx context.Context, id string) (models.User, error) {
+	var user models.User
+	err := r.db.QueryRowContext(ctx, `
+		SELECT u.id, u.username, COALESCE(u.email, ''), u.password_hash, u.role, u.status,
+		       u.created_at, u.updated_at, u.failed_login_attempts, COALESCE(u.locked_until, ''),
+		       COALESCE(l.id, '')
+		FROM users u LEFT JOIN libraries l ON l.owner_user_id = u.id
+		WHERE u.id = ?
+	`, id).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Role,
+		&user.Status, &user.CreatedAt, &user.UpdatedAt, &user.FailedLoginAttempts,
+		&user.LockedUntil, &user.LibraryID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.User{}, ErrUserNotFound
+	}
+	if err != nil {
+		return models.User{}, fmt.Errorf("find user by id: %w", err)
+	}
+	return user, nil
+}
+
+func (r *UserRepository) ChangePassword(ctx context.Context, userID, passwordHash, auditID, ipAddress, now string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin password change: %w", err)
+	}
+	defer tx.Rollback()
+
+	result, err := tx.ExecContext(ctx, `
+		UPDATE users SET password_hash=?, password_changed_at=?, updated_at=?
+		WHERE id=? AND status='ACTIVE'
+	`, passwordHash, now, now, userID)
+	if err != nil {
+		return fmt.Errorf("change password: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil || rows != 1 {
+		return ErrUserNotFound
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?)
+		WHERE user_id=?
+	`, now, userID); err != nil {
+		return fmt.Errorf("revoke sessions after password change: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, ip_address, success, created_at)
+		VALUES (?, ?, 'PASSWORD_CHANGED', 'USER', ?, '{"sessions_revoked":true}', NULLIF(?, ''), 1, ?)
+	`, auditID, userID, userID, ipAddress, now); err != nil {
+		return fmt.Errorf("audit password change: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit password change: %w", err)
+	}
+	return nil
+}
+
 func (r *UserRepository) RecordFailedLogin(ctx context.Context, userID, auditID, ipAddress, now, lockedUntil string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

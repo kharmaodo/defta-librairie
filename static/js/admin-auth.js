@@ -75,6 +75,12 @@
   async function initLogin() {
     const form = document.querySelector("#login-form");
     const errorBox = document.querySelector("#login-error");
+    if (new URLSearchParams(window.location.search).get("passwordChanged") === "1") {
+      const notice = document.querySelector("#login-notice");
+      notice.textContent = "Mot de passe modifié. Reconnectez-vous avec votre nouveau mot de passe.";
+      notice.hidden = false;
+      window.history.replaceState({}, "", "/login");
+    }
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       errorBox.hidden = true;
@@ -225,6 +231,31 @@
     document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.querySelector(`#${button.dataset.close}`).close()));
     document.querySelector("#add-book-button").addEventListener("click", () => openBookForm());
     document.querySelector("#add-owner-button").addEventListener("click", () => openOwnerForm());
+    document.querySelector("#change-password-button").addEventListener("click", () => {
+      const form = document.querySelector("#password-form");
+      form.reset();
+      document.querySelector("#password-form-error").hidden = true;
+      document.querySelector("#password-dialog").showModal();
+    });
+
+    document.querySelector("#password-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formError = document.querySelector("#password-form-error");
+      formError.hidden = true;
+      if (form.elements.newPassword.value !== form.elements.confirmation.value) {
+        showError(formError, new Error("La confirmation ne correspond pas au nouveau mot de passe."));
+        return;
+      }
+      try {
+        await apiFetch("/api/auth/change-password", {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({currentPassword: form.elements.currentPassword.value, newPassword: form.elements.newPassword.value})
+        });
+        tokens.clear();
+        window.location.replace("/login?passwordChanged=1");
+      } catch (error) { showError(formError, error); }
+    });
 
     document.querySelector("#owner-form").addEventListener("submit", async (event) => {
       event.preventDefault();

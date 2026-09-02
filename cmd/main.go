@@ -70,7 +70,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Configuration JWT invalide : %v", err)
 	}
-	loginService, err := services.NewLoginService(repositories.NewUserRepository(database.DB), tokens)
+	userRepository := repositories.NewUserRepository(database.DB)
+	loginService, err := services.NewLoginService(userRepository, tokens)
 	if err != nil {
 		log.Fatalf("Initialisation authentification impossible : %v", err)
 	}
@@ -79,7 +80,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Initialisation sessions impossible : %v", err)
 	}
-	authHandler := handlers.NewAuthHandler(loginService, sessionService, cfg.AuthCookieSecure)
+	passwordService := services.NewPasswordService(userRepository)
+	authHandler := handlers.NewAuthHandler(loginService, sessionService, passwordService, cfg.AuthCookieSecure)
 	ownerService := services.NewOwnerService(repositories.NewOwnerRepository(database.DB))
 	ownerHandler := handlers.NewOwnerHandler(ownerService)
 	bookService := services.NewBookService(repositories.NewBookRepository(database.DB))
@@ -106,6 +108,7 @@ func main() {
 		return middleware.AuthenticateSession(tokens, sessionRepository, handler)
 	}
 	mux.Handle("GET /api/auth/me", authenticated(http.HandlerFunc(authHandler.Me)))
+	mux.Handle("POST /api/auth/change-password", authenticated(http.HandlerFunc(authHandler.ChangePassword)))
 	rootOnly := func(handler http.Handler) http.Handler {
 		return authenticated(middleware.RequireRoles(handler, models.RoleSuperAdminRoot))
 	}

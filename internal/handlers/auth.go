@@ -15,6 +15,7 @@ import (
 type AuthHandler struct {
 	login        *services.LoginService
 	sessions     *services.SessionService
+	passwords    *services.PasswordService
 	cookieSecure bool
 }
 
@@ -23,8 +24,8 @@ const (
 	cookieSessionHeader = "X-Defta-Session"
 )
 
-func NewAuthHandler(login *services.LoginService, sessions *services.SessionService, cookieSecure bool) *AuthHandler {
-	return &AuthHandler{login: login, sessions: sessions, cookieSecure: cookieSecure}
+func NewAuthHandler(login *services.LoginService, sessions *services.SessionService, passwords *services.PasswordService, cookieSecure bool) *AuthHandler {
+	return &AuthHandler{login: login, sessions: sessions, passwords: passwords, cookieSecure: cookieSecure}
 }
 
 type loginRequest struct {
@@ -34,6 +35,11 @@ type loginRequest struct {
 
 type refreshRequest struct {
 	RefreshToken string `json:"refreshToken"`
+}
+
+type changePasswordRequest struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -133,6 +139,33 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		writeAuthJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Logout failed"})
 		return
 	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	var request changePasswordRequest
+	if err := decodeAuthJSON(w, r, &request); err != nil || request.CurrentPassword == "" || request.NewPassword == "" {
+		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request", "message": "Invalid password change request"})
+		return
+	}
+	claims, ok := auth.ClaimsFromContext(r.Context())
+	if !ok {
+		writeAuthJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized", "message": "Authentication required"})
+		return
+	}
+	err := h.passwords.Change(r.Context(), claims.Subject, request.CurrentPassword, request.NewPassword, remoteIP(r))
+	if err != nil {
+		switch {
+		case errors.Is(err, services.ErrInvalidCurrentPassword):
+			writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_current_password", "message": "Current password is invalid"})
+		case errors.Is(err, services.ErrPasswordUnchanged), errors.Is(err, auth.ErrPasswordTooShort):
+			writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_new_password", "message": err.Error()})
+		default:
+			writeAuthJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Password change failed"})
+		}
+		return
+	}
+	h.clearRefreshCookie(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 
