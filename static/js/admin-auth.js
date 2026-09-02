@@ -4,7 +4,7 @@
   const ACCESS_KEY = "defta.accessToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
-  const state = {isRoot: false, owners: [], ownerOptions: [], books: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: ""};
+  const state = {isRoot: false, owners: [], ownerOptions: [], books: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: ""};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
@@ -205,20 +205,36 @@
   }
 
   function updateLibraryOptions() {
-    const select = document.querySelector("#book-form [name=libraryId]");
-    if (!select) return;
-    const selected = select.value;
-    select.replaceChildren();
-    const placeholder = document.createElement("option");
-    placeholder.value = ""; placeholder.textContent = "Choisir une librairie";
-    select.append(placeholder);
-    state.ownerOptions.forEach((owner) => {
-      const option = document.createElement("option");
-      option.value = owner.library.id;
-      option.textContent = `${owner.library.name} · ${owner.username}`;
-      select.append(option);
+    document.querySelectorAll("#book-form [name=libraryId], #tag-form [name=libraryId]").forEach((select) => {
+      const selected = select.value;
+      select.replaceChildren();
+      const placeholder = document.createElement("option");
+      placeholder.value = ""; placeholder.textContent = "Choisir une librairie";
+      select.append(placeholder);
+      state.ownerOptions.forEach((owner) => {
+        const option = document.createElement("option");
+        option.value = owner.library.id;
+        option.textContent = `${owner.library.name} · ${owner.username}`;
+        select.append(option);
+      });
+      select.value = selected;
     });
-    select.value = selected;
+  }
+
+  function renderTags(payload) {
+    state.tags = payload.results;
+    const list = document.querySelector("#tags-list");
+    list.replaceChildren();
+    if (!payload.results.length) {
+      const empty = document.createElement("span"); empty.className = "hint"; empty.textContent = "Aucun tag défini"; list.append(empty);
+    } else payload.results.forEach((tag) => {
+      const chip = document.createElement("span"); chip.className = "tag-chip"; chip.append(document.createTextNode(tag.name));
+      const remove = document.createElement("button"); remove.type = "button"; remove.dataset.id = tag.id; remove.setAttribute("aria-label", `Supprimer ${tag.name}`); remove.textContent = "×"; chip.append(remove); list.append(chip);
+    });
+    const suggestions = document.querySelector("#tag-suggestions");
+    suggestions.replaceChildren(...payload.results.map((tag) => {
+      const option = document.createElement("option"); option.value = tag.name; return option;
+    }));
   }
 
   function openOwnerForm(owner = null) {
@@ -257,6 +273,10 @@
     form.elements.coverUrl.value = book ? book.coverUrl || "" : "";
     form.elements.libraryId.value = book ? book.libraryId || "" : "";
     form.elements.libraryId.disabled = Boolean(book);
+    if (state.isRoot) {
+      document.querySelector("#tag-library").value = form.elements.libraryId.value;
+      reloadTags().catch(() => renderTags({results: [], total: 0}));
+    }
     document.querySelector("#book-form-title").textContent = book ? "Modifier le livre" : "Nouveau livre";
     document.querySelector("#book-form-error").hidden = true;
     dialog.showModal();
@@ -337,6 +357,17 @@
     renderBooks(payload);
   }
 
+  async function reloadTags() {
+    const libraryID = state.isRoot ? document.querySelector("#tag-library").value : "";
+    if (state.isRoot && !libraryID) {
+      renderTags({results: [], total: 0});
+      return;
+    }
+    const query = new URLSearchParams();
+    if (libraryID) query.set("libraryId", libraryID);
+    renderTags(await apiFetch(`/api/manage/tags?${query}`));
+  }
+
   async function reloadAudit() {
     const form = document.querySelector("#audit-filters");
     const query = new URLSearchParams({offset: "0", limit: "30"});
@@ -387,6 +418,34 @@
       state.bookOffset = 0;
       errorBox.hidden = true;
       try { await reloadBooks(); }
+      catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#tag-library").addEventListener("change", async () => {
+      try { await reloadTags(); } catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#book-form [name=libraryId]").addEventListener("change", async (event) => {
+      if (!state.isRoot) return;
+      document.querySelector("#tag-library").value = event.currentTarget.value;
+      try { await reloadTags(); } catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#tag-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const payload = {name: form.elements.name.value.trim()};
+      if (state.isRoot) payload.libraryId = form.elements.libraryId.value;
+      if (state.isRoot && !payload.libraryId) { showError(errorBox, new Error("Choisissez une librairie.")); return; }
+      try {
+        await apiFetch("/api/manage/tags", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
+        form.elements.name.value = "";
+        await Promise.all([reloadTags(), reloadAudit()]);
+      } catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#tags-list").addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-id]");
+      if (!button) return;
+      const tag = state.tags.find((item) => item.id === button.dataset.id);
+      if (!tag || !window.confirm(`Supprimer le tag « ${tag.name} » ?`)) return;
+      try { await apiFetch(`/api/manage/tags/${tag.id}`, {method: "DELETE"}); await Promise.all([reloadTags(), reloadAudit()]); }
       catch (error) { showError(errorBox, error); }
     });
     document.querySelector("#books-previous").addEventListener("click", async () => {
@@ -547,6 +606,7 @@
         : "Seules les sessions actives de votre compte sont affichées.";
       const requests = [
         reloadBooks(),
+        reloadTags(),
         apiFetch("/api/audit-logs?offset=0&limit=30").then(renderAudit),
         apiFetch("/api/auth/sessions?offset=0&limit=30").then(renderSessions)
       ];

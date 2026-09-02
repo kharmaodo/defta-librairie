@@ -50,6 +50,12 @@
     </section>
 
     <section class="panel">
+      <div class="panel-heading tag-heading"><div><p class="eyebrow">Référentiel</p><h2>Tags de la librairie</h2></div><form id="tag-form" class="filters"><label class="root-only-field" hidden>Librairie<select name="libraryId" id="tag-library"></select></label><label>Nouveau tag<input name="name" minlength="2" maxlength="50" placeholder="ex. fiqh" required></label><button class="button primary" type="submit">Ajouter</button></form></div>
+      <p class="scope-note">Les tags sont uniques sans distinction de majuscules dans chaque librairie.</p>
+      <div id="tags-list" class="tag-list"><span class="hint">Chargement…</span></div>
+    </section>
+
+    <section class="panel">
       <div class="panel-heading book-heading"><div><p class="eyebrow">Catalogue privé</p><h2>Livres</h2></div><div class="heading-actions"><form id="book-search-form" class="inline-search"><input name="q" maxlength="200" placeholder="Titre, auteur, tag…" aria-label="Rechercher dans les livres"><button class="button ghost" type="submit">Rechercher</button></form><button id="add-book-button" class="button primary" type="button">Nouveau livre</button></div></div>
       <div class="table-wrap">
         <table><thead><tr><th>Titre</th><th>Auteur</th><th>Prix</th><th>Tags</th><th>Statut</th><th>Actions</th></tr></thead>
@@ -117,7 +123,7 @@
         <label>Volume<input name="volume" type="number" min="0" step="1" value="0" required></label>
         <label>Statut<select name="status"><option value="AVAILABLE">Disponible</option><option value="UNAVAILABLE">Indisponible</option><option value="OUT_OF_STOCK">Rupture</option></select></label>
         <label>Catégorie<input name="categorie" maxlength="120"></label>
-        <label class="full">Tags<input name="tags" maxlength="500" placeholder="arabe, fiqh, promotion"></label>
+        <label class="full">Tags<input name="tags" list="tag-suggestions" maxlength="500" placeholder="arabe, fiqh, promotion"><datalist id="tag-suggestions"></datalist></label>
         <label class="full">URL de couverture<input name="coverUrl" type="url" maxlength="2048"></label>
       </div>
       <p id="book-form-error" class="alert" role="alert" hidden></p>

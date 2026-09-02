@@ -197,6 +197,24 @@ Les mises à jour utilisent le champ `version`. Une version périmée produit `4
 
 Chaque création, modification ou suppression conserve un instantané JSON du prix, du statut, des tags et de la version. L'historique reste consultable après une suppression logique ; un propriétaire ne peut toutefois consulter que les livres rattachés à sa propre librairie.
 
+### Référentiel des tags
+
+Les tags réutilisables sont définis par librairie. Leur unicité est insensible à la casse (`Fiqh` et `fiqh` représentent le même tag). Un propriétaire utilise toujours la librairie signée dans son JWT ; le root précise `libraryId` lors de la création.
+
+| Méthode | Route | Action |
+|---|---|---|
+| `GET` | `/api/manage/tags?libraryId=...` | Lister les tags autorisés |
+| `POST` | `/api/manage/tags` | Créer un tag dans la librairie autorisée |
+| `PATCH` | `/api/manage/tags/{id}` | Renommer un tag autorisé |
+| `DELETE` | `/api/manage/tags/{id}` | Supprimer un tag autorisé |
+
+```bash
+curl -fsS -X POST http://localhost:8080/api/manage/tags \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Fiqh"}' | jq .
+```
+
 ```bash
 curl -fsS -X POST http://localhost:8080/api/manage/books \
   -H "Authorization: Bearer $OWNER_TOKEN" \
