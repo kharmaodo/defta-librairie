@@ -600,6 +600,16 @@ jq -n --arg token "$REFRESH_TOKEN" '{refreshToken:$token}' \
 unset TOKEN REFRESH_TOKEN LOGIN_RESPONSE REFRESH_RESPONSE
 ```
 
+### Tableau de bord des ventes
+
+Le tableau de bord `/admin` affiche les ventes accessibles au compte connecté. Il permet de filtrer par état et par période ; le `SUPER_ADMIN_ROOT` peut également sélectionner une librairie. Les actions proposées respectent le cycle métier :
+
+- une vente `DRAFT` peut être confirmée et retire atomiquement les quantités du stock ;
+- une vente `CONFIRMED` peut être annulée et restitue atomiquement les quantités ;
+- une vente `CANCELLED` est terminale et ne propose plus d'action.
+
+Après chaque transition, l'interface actualise ensemble les ventes, les stocks et le journal d'audit. La version courante de la vente est transmise au backend afin de détecter une modification concurrente.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :

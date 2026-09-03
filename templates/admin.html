@@ -33,10 +33,31 @@
 
     <section class="metrics" aria-label="Indicateurs">
       <article class="metric"><span>Livres visibles</span><strong id="book-total">—</strong></article>
+      <article class="metric"><span>Ventes visibles</span><strong id="sale-total">—</strong></article>
       <article class="metric root-only" hidden><span>Propriétaires</span><strong id="owner-total">—</strong></article>
       <article class="metric"><span>Événements d’audit</span><strong id="audit-total">—</strong></article>
       <article class="metric"><span>Sessions actives</span><strong id="session-total">—</strong></article>
       <article class="metric"><span>État de session</span><strong class="status-good">Active</strong></article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading sales-heading">
+        <div><p class="eyebrow">Activité commerciale</p><h2>Ventes</h2></div>
+        <form id="sale-filters" class="filters">
+          <label>État<select name="status"><option value="">Tous</option><option value="DRAFT">Brouillon</option><option value="CONFIRMED">Confirmée</option><option value="CANCELLED">Annulée</option></select></label>
+          <label class="root-only-field" hidden>Librairie<select name="libraryId" id="sale-library"></select></label>
+          <label>Du<input name="from" type="datetime-local"></label>
+          <label>Au<input name="to" type="datetime-local"></label>
+          <button class="button ghost" type="submit">Filtrer</button>
+        </form>
+      </div>
+      <p class="scope-note">Confirmer une vente retire son stock. L’annuler restitue exactement les quantités vendues.</p>
+      <div class="table-wrap">
+        <table><thead><tr><th>Référence</th><th>Client</th><th>Articles</th><th>Total</th><th>État</th><th>Date</th><th>Actions</th></tr></thead>
+          <tbody id="sales-body"><tr><td colspan="7" class="empty">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination"><button id="sales-previous" class="button ghost" type="button">Précédent</button><span id="sales-page-label" class="hint">Page 1</span><button id="sales-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
     <section class="panel">

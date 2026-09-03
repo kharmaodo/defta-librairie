@@ -4,7 +4,7 @@
   const ACCESS_KEY = "defta.accessToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
-  const state = {isRoot: false, passwordChangeRequired: false, owners: [], ownerOptions: [], books: [], inventory: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", inventoryOffset: 0, inventoryLimit: 10, auditOffset: 0, auditLimit: 20, sessionOffset: 0, sessionLimit: 20};
+  const state = {isRoot: false, passwordChangeRequired: false, owners: [], ownerOptions: [], books: [], sales: [], inventory: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", saleOffset: 0, saleLimit: 10, inventoryOffset: 0, inventoryLimit: 10, auditOffset: 0, auditLimit: 20, sessionOffset: 0, sessionLimit: 20};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
@@ -184,6 +184,36 @@
     document.querySelector("#inventory-next").disabled = payload.offset + payload.results.length >= payload.total;
   }
 
+  function renderSales(payload) {
+    state.sales = payload.results;
+    document.querySelector("#sale-total").textContent = payload.total;
+    const body = document.querySelector("#sales-body");
+    body.replaceChildren();
+    if (!payload.results.length) {
+      const row = body.insertRow(); textCell(row, "Aucune vente correspondante", "empty").colSpan = 7;
+    } else payload.results.forEach((sale) => {
+      const row = body.insertRow();
+      textCell(row, sale.reference);
+      textCell(row, sale.customerName || "Client comptoir");
+      textCell(row, sale.lines.reduce((total, line) => total + line.quantity, 0));
+      textCell(row, new Intl.NumberFormat("fr-FR", {style: "currency", currency: "XOF", maximumFractionDigits: 0}).format(sale.totalAmount || 0));
+      const statusLabel = sale.status === "DRAFT" ? "Brouillon" : sale.status === "CONFIRMED" ? "Confirmée" : "Annulée";
+      const status = textCell(row, statusLabel, "pill");
+      status.classList.add(`sale-${sale.status.toLowerCase()}`);
+      textCell(row, formatDate(sale.createdAt));
+      const actions = textCell(row, "");
+      actions.className = "row-actions";
+      if (sale.status === "DRAFT") actions.replaceChildren(actionButton("Confirmer", "confirm-sale", sale.id));
+      if (sale.status === "CONFIRMED") actions.replaceChildren(actionButton("Annuler", "cancel-sale", sale.id, true));
+      if (sale.status === "CANCELLED") actions.textContent = "Terminée";
+    });
+    const page = Math.floor(payload.offset / payload.limit) + 1;
+    const pages = Math.max(1, Math.ceil(payload.total / payload.limit));
+    document.querySelector("#sales-page-label").textContent = `Page ${page} sur ${pages}`;
+    document.querySelector("#sales-previous").disabled = payload.offset === 0;
+    document.querySelector("#sales-next").disabled = payload.offset + payload.results.length >= payload.total;
+  }
+
   function renderAudit(payload) {
     document.querySelector("#audit-total").textContent = payload.total;
     const body = document.querySelector("#audit-body");
@@ -241,7 +271,7 @@
   }
 
   function updateLibraryOptions() {
-    document.querySelectorAll("#book-form [name=libraryId], #tag-form [name=libraryId], #inventory-filters [name=libraryId]").forEach((select) => {
+    document.querySelectorAll("#book-form [name=libraryId], #tag-form [name=libraryId], #inventory-filters [name=libraryId], #sale-filters [name=libraryId]").forEach((select) => {
       const selected = select.value;
       select.replaceChildren();
       const placeholder = document.createElement("option");
@@ -450,6 +480,25 @@
     renderInventory(payload);
   }
 
+  async function reloadSales() {
+    const form = document.querySelector("#sale-filters");
+    const query = new URLSearchParams({offset: String(state.saleOffset), limit: String(state.saleLimit)});
+    const status = form.elements.status.value;
+    const libraryID = state.isRoot ? form.elements.libraryId.value : "";
+    if (status) query.set("status", status);
+    if (libraryID) query.set("libraryId", libraryID);
+    ["from", "to"].forEach((name) => {
+      const value = form.elements[name].value;
+      if (value) query.set(name, new Date(value).toISOString());
+    });
+    const payload = await apiFetch(`/api/manage/sales?${query}`);
+    if (!payload.results.length && state.saleOffset > 0) {
+      state.saleOffset = Math.max(0, state.saleOffset - state.saleLimit);
+      return reloadSales();
+    }
+    renderSales(payload);
+  }
+
   async function reloadTags() {
     const libraryID = state.isRoot ? document.querySelector("#tag-library").value : "";
     if (state.isRoot && !libraryID) {
@@ -528,6 +577,20 @@
     document.querySelector("#inventory-next").addEventListener("click", async () => {
       state.inventoryOffset += state.inventoryLimit;
       try { await reloadInventory(); } catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#sale-filters").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      state.saleOffset = 0;
+      errorBox.hidden = true;
+      try { await reloadSales(); } catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#sales-previous").addEventListener("click", async () => {
+      state.saleOffset = Math.max(0, state.saleOffset - state.saleLimit);
+      try { await reloadSales(); } catch (error) { showError(errorBox, error); }
+    });
+    document.querySelector("#sales-next").addEventListener("click", async () => {
+      state.saleOffset += state.saleLimit;
+      try { await reloadSales(); } catch (error) { showError(errorBox, error); }
     });
     document.querySelector("#audit-previous").addEventListener("click", async () => {
       state.auditOffset = Math.max(0, state.auditOffset - state.auditLimit);
@@ -761,6 +824,31 @@
       }
     });
 
+    document.querySelector("#sales-body").addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const sale = state.sales.find((item) => item.id === button.dataset.id);
+      if (!sale) return;
+      const confirm = button.dataset.action === "confirm-sale";
+      const cancel = button.dataset.action === "cancel-sale";
+      if (!confirm && !cancel) return;
+      const question = confirm
+        ? `Confirmer la vente ${sale.reference} et retirer les articles du stock ?`
+        : `Annuler la vente ${sale.reference} et restituer les articles au stock ?`;
+      if (!window.confirm(question)) return;
+      button.disabled = true;
+      try {
+        await apiFetch(`/api/manage/sales/${sale.id}/${confirm ? "confirm" : "cancel"}`, {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({version: sale.version})
+        });
+        await Promise.all([reloadSales(), reloadInventory(), reloadAudit()]);
+      } catch (error) {
+        showError(errorBox, error);
+        try { await reloadSales(); } catch (_) { /* conserve l'erreur métier initiale */ }
+      } finally { button.disabled = false; }
+    });
+
     document.querySelector("#owners-body").addEventListener("click", async (event) => {
       const button = event.target.closest("button[data-action]");
       if (!button) return;
@@ -843,6 +931,7 @@
       }
       const requests = [
         reloadBooks(),
+        reloadSales(),
         reloadInventory(),
         reloadTags(),
         reloadAudit(),
