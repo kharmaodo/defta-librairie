@@ -28,8 +28,8 @@ func (r *OwnerRepository) Create(ctx context.Context, owner models.OwnerAccount,
 	defer tx.Rollback()
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO users(id, username, email, password_hash, role, status, password_changed_at, created_at, updated_at)
-		VALUES (?, ?, NULLIF(?, ''), ?, 'OWNER_LIBRARY', ?, ?, ?, ?)
+		INSERT INTO users(id, username, email, password_hash, role, status, must_change_password, password_changed_at, created_at, updated_at)
+		VALUES (?, ?, NULLIF(?, ''), ?, 'OWNER_LIBRARY', ?, 1, ?, ?, ?)
 	`, owner.ID, owner.Username, owner.Email, passwordHash, owner.Status,
 		owner.CreatedAt, owner.CreatedAt, owner.UpdatedAt)
 	if isUniqueViolation(err) {
@@ -141,7 +141,7 @@ func (r *OwnerRepository) Update(ctx context.Context, owner models.OwnerAccount,
 	query := `UPDATE users SET username=?, email=NULLIF(?, ''), status=?, updated_at=?`
 	args := []interface{}{owner.Username, owner.Email, owner.Status, now}
 	if passwordHash != "" {
-		query += `, password_hash=?, password_changed_at=?`
+		query += `, password_hash=?, must_change_password=1, password_changed_at=?`
 		args = append(args, passwordHash, now)
 	}
 	query += ` WHERE id=? AND role='OWNER_LIBRARY'`

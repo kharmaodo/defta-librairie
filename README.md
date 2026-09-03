@@ -280,6 +280,8 @@ Le premier compte racine est créé par une commande locale contrôlée. Aucun e
 
 Le mot de passe doit contenir au moins 12 caractères et il est stocké avec Argon2id. Les variables ne doivent pas être ajoutées au fichier `.env` versionné ni écrites dans les journaux.
 
+Tout propriétaire nouvellement créé, ou dont le mot de passe est réinitialisé par le root, reçoit un mot de passe temporaire. Le JWT porte alors `password_change_required=true`. Seuls `/api/auth/me`, `/api/auth/change-password`, les opérations de session, le refresh et la déconnexion restent accessibles ; les routes de gestion répondent `403 password_change_required` jusqu'au changement du mot de passe. Le tableau de bord ouvre automatiquement le formulaire obligatoire sans possibilité de le fermer.
+
 ```bash
 export DEFTA_ROOT_USERNAME='kharmaodo'
 export DEFTA_ROOT_EMAIL='root@example.com'

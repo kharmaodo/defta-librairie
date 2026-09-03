@@ -39,6 +39,32 @@ func TestRequireRoles(t *testing.T) {
 	}
 }
 
+func TestRequirePasswordChanged(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
+	protected := RequirePasswordChanged(next)
+	for _, test := range []struct {
+		name string
+		claims *auth.Claims
+		want int
+	}{
+		{name: "missing identity", want: http.StatusUnauthorized},
+		{name: "temporary password forbidden", claims: &auth.Claims{PasswordChangeRequired: true}, want: http.StatusForbidden},
+		{name: "changed password allowed", claims: &auth.Claims{}, want: http.StatusNoContent},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/manage", nil)
+			if test.claims != nil {
+				request = request.WithContext(auth.ContextWithClaims(request.Context(), test.claims))
+			}
+			response := httptest.NewRecorder()
+			protected.ServeHTTP(response, request)
+			if response.Code != test.want {
+				t.Fatalf("expected %d, got %d", test.want, response.Code)
+			}
+		})
+	}
+}
+
 func TestRequireLibraryAccess(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)

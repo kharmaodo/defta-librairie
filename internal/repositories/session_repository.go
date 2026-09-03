@@ -201,14 +201,14 @@ func (r *SessionRepository) Rotate(ctx context.Context, oldTokenHash string, rep
 	err = tx.QueryRowContext(ctx, `
 		SELECT s.id, s.user_id, s.token_family, s.expires_at, COALESCE(s.revoked_at, ''),
 		       COALESCE(s.replaced_by_id, ''), u.username, COALESCE(u.email, ''), u.role,
-		       u.status, COALESCE(l.id, ''), COALESCE(l.status, '')
+		       u.status, COALESCE(l.id, ''), COALESCE(l.status, ''), u.must_change_password
 		FROM refresh_sessions s
 		JOIN users u ON u.id=s.user_id
 		LEFT JOIN libraries l ON l.owner_user_id=u.id
 		WHERE s.token_hash=?
 	`, oldTokenHash).Scan(&session.ID, &session.UserID, &session.TokenFamily,
 		&session.ExpiresAt, &session.RevokedAt, &session.ReplacedByID, &user.Username,
-		&user.Email, &user.Role, &user.Status, &user.LibraryID, &libraryStatus)
+		&user.Email, &user.Role, &user.Status, &user.LibraryID, &libraryStatus, &user.MustChangePassword)
 	if errors.Is(err, sql.ErrNoRows) {
 		return models.User{}, ErrRefreshSessionNotFound
 	}

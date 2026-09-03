@@ -4,7 +4,7 @@
   const ACCESS_KEY = "defta.accessToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
-  const state = {isRoot: false, owners: [], ownerOptions: [], books: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", auditOffset: 0, auditLimit: 20, sessionOffset: 0, sessionLimit: 20};
+  const state = {isRoot: false, passwordChangeRequired: false, owners: [], ownerOptions: [], books: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", auditOffset: 0, auditLimit: 20, sessionOffset: 0, sessionLimit: 20};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
@@ -414,6 +414,10 @@
   }
 
   function initEntityForms(errorBox) {
+    const passwordDialog = document.querySelector("#password-dialog");
+    passwordDialog.addEventListener("cancel", (event) => {
+      if (state.passwordChangeRequired) event.preventDefault();
+    });
     document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.querySelector(`#${button.dataset.close}`).close()));
     document.querySelector("#add-book-button").addEventListener("click", () => openBookForm());
     document.querySelector("#add-owner-button").addEventListener("click", () => openOwnerForm());
@@ -673,6 +677,13 @@
       document.querySelector("#session-scope-note").textContent = isRoot
         ? "Vue globale des sessions actives de tous les utilisateurs."
         : "Seules les sessions actives de votre compte sont affichées.";
+      if (user.passwordChangeRequired) {
+        state.passwordChangeRequired = true;
+        document.querySelector("#scope-text").textContent = "Vous devez remplacer votre mot de passe temporaire avant de gérer la librairie.";
+        document.querySelectorAll("#password-dialog .password-optional-action").forEach((element) => { element.hidden = true; });
+        document.querySelector("#password-dialog").showModal();
+        return;
+      }
       const requests = [
         reloadBooks(),
         reloadTags(),

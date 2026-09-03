@@ -23,7 +23,8 @@ func TestOwnerLifecycle(t *testing.T) {
 			id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE COLLATE NOCASE, email TEXT UNIQUE COLLATE NOCASE,
 			password_hash TEXT NOT NULL, role TEXT NOT NULL, status TEXT NOT NULL,
 			failed_login_attempts INTEGER NOT NULL DEFAULT 0, locked_until TEXT, last_login_at TEXT,
-			password_changed_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+			password_changed_at TEXT, must_change_password INTEGER NOT NULL DEFAULT 0,
+			created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 		);
 		CREATE TABLE libraries (
 			id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT, owner_user_id TEXT UNIQUE,
@@ -57,6 +58,10 @@ func TestOwnerLifecycle(t *testing.T) {
 	}
 	if owner.Library.ID == "" || owner.Status != models.UserStatusActive {
 		t.Fatalf("unexpected owner: %+v", owner)
+	}
+	var mustChange bool
+	if err = db.QueryRow(`SELECT must_change_password FROM users WHERE id=?`, owner.ID).Scan(&mustChange); err != nil || !mustChange {
+		t.Fatalf("mustChange=%t err=%v", mustChange, err)
 	}
 	_, err = db.Exec(`
 		UPDATE users SET status='LOCKED', failed_login_attempts=5, locked_until='2099-01-01T00:00:00Z' WHERE id=?;

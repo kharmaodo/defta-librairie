@@ -113,9 +113,12 @@ func main() {
 	mux.Handle("GET /api/auth/sessions", authenticated(http.HandlerFunc(authHandler.ActiveSessions)))
 	mux.Handle("POST /api/auth/sessions/revoke-others", authenticated(http.HandlerFunc(authHandler.RevokeOtherSessions)))
 	mux.Handle("DELETE /api/auth/sessions/{id}", authenticated(http.HandlerFunc(authHandler.RevokeSession)))
-	mux.Handle("GET /api/audit-logs", authenticated(http.HandlerFunc(auditHandler.List)))
+	passwordChanged := func(handler http.Handler) http.Handler {
+		return authenticated(middleware.RequirePasswordChanged(handler))
+	}
+	mux.Handle("GET /api/audit-logs", passwordChanged(http.HandlerFunc(auditHandler.List)))
 	rootOnly := func(handler http.Handler) http.Handler {
-		return authenticated(middleware.RequireRoles(handler, models.RoleSuperAdminRoot))
+		return passwordChanged(middleware.RequireRoles(handler, models.RoleSuperAdminRoot))
 	}
 	mux.Handle("GET /api/admin/owners", rootOnly(http.HandlerFunc(ownerHandler.List)))
 	mux.Handle("POST /api/admin/owners", rootOnly(http.HandlerFunc(ownerHandler.Create)))
@@ -125,7 +128,7 @@ func main() {
 	mux.Handle("POST /api/admin/owners/{id}/unlock", rootOnly(http.HandlerFunc(ownerHandler.Unlock)))
 	mux.Handle("POST /api/admin/owners/{id}/reactivate", rootOnly(http.HandlerFunc(ownerHandler.Reactivate)))
 	bookManagers := func(handler http.Handler) http.Handler {
-		return authenticated(middleware.RequireRoles(handler,
+		return passwordChanged(middleware.RequireRoles(handler,
 			models.RoleSuperAdminRoot, models.RoleOwnerLibrary))
 	}
 	mux.Handle("GET /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.List)))

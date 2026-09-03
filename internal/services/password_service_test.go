@@ -23,7 +23,8 @@ func TestPasswordChangeRevokesSessionsAndAudits(t *testing.T) {
 		CREATE TABLE users (
 			id TEXT PRIMARY KEY, username TEXT NOT NULL, email TEXT, password_hash TEXT NOT NULL,
 			role TEXT NOT NULL, status TEXT NOT NULL, failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-			locked_until TEXT, password_changed_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+			locked_until TEXT, password_changed_at TEXT, must_change_password INTEGER NOT NULL DEFAULT 0,
+			created_at TEXT NOT NULL, updated_at TEXT NOT NULL
 		);
 		CREATE TABLE libraries (id TEXT PRIMARY KEY, owner_user_id TEXT, status TEXT);
 		CREATE TABLE refresh_sessions (
@@ -45,8 +46,8 @@ func TestPasswordChangeRevokesSessionsAndAudits(t *testing.T) {
 		t.Fatalf("hash old password: %v", err)
 	}
 	_, err = db.Exec(`
-		INSERT INTO users(id, username, password_hash, role, status, created_at, updated_at)
-		VALUES('user-1', 'owner', ?, 'OWNER_LIBRARY', 'ACTIVE', 'now', 'now');
+		INSERT INTO users(id, username, password_hash, role, status, must_change_password, created_at, updated_at)
+		VALUES('user-1', 'owner', ?, 'OWNER_LIBRARY', 'ACTIVE', 1, 'now', 'now');
 		INSERT INTO libraries(id, owner_user_id, status) VALUES('library-1', 'user-1', 'ACTIVE');
 		INSERT INTO refresh_sessions(id, user_id, token_hash, token_family, expires_at, created_at)
 		VALUES('session-1', 'user-1', 'hash', 'family', '2099-01-01T00:00:00Z', 'now');
@@ -68,12 +69,16 @@ func TestPasswordChangeRevokesSessionsAndAudits(t *testing.T) {
 	}
 
 	var newHash string
-	if err = db.QueryRow(`SELECT password_hash FROM users WHERE id='user-1'`).Scan(&newHash); err != nil {
+	var mustChange bool
+	if err = db.QueryRow(`SELECT password_hash, must_change_password FROM users WHERE id='user-1'`).Scan(&newHash, &mustChange); err != nil {
 		t.Fatalf("read new hash: %v", err)
 	}
 	valid, err := auth.VerifyPassword(newPassword, newHash)
 	if err != nil || !valid {
 		t.Fatalf("new password was not stored: valid=%t err=%v", valid, err)
+	}
+	if mustChange {
+		t.Fatal("password change requirement was not cleared")
 	}
 	var revoked, audits int
 	_ = db.QueryRow(`SELECT COUNT(*) FROM refresh_sessions WHERE user_id='user-1' AND revoked_at IS NOT NULL`).Scan(&revoked)

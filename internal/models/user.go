@@ -27,4 +27,5 @@ type User struct {
 	FailedLoginAttempts int
 	LockedUntil         string
 	LibraryID           string
+	MustChangePassword  bool
 }

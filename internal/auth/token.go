@@ -14,9 +14,10 @@ import (
 var ErrInvalidToken = errors.New("invalid access token")
 
 type Claims struct {
-	Role      models.UserRole `json:"role"`
-	LibraryID string          `json:"library_id,omitempty"`
-	SessionID string          `json:"sid,omitempty"`
+	Role                   models.UserRole `json:"role"`
+	LibraryID              string          `json:"library_id,omitempty"`
+	SessionID              string          `json:"sid,omitempty"`
+	PasswordChangeRequired bool            `json:"password_change_required,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -63,6 +64,7 @@ func (m *TokenManager) issue(user models.User, sessionID string) (string, time.T
 	}
 	claims := Claims{
 		Role: user.Role, LibraryID: user.LibraryID, SessionID: sessionID,
+		PasswordChangeRequired: user.MustChangePassword,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer: m.issuer, Subject: user.ID,
 			Audience:  jwt.ClaimStrings{m.audience},

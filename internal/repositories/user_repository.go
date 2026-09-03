@@ -26,10 +26,10 @@ func (r *UserRepository) FindByRole(ctx context.Context, role models.UserRole) (
 	var user models.User
 	err := r.db.QueryRowContext(ctx, `
 		SELECT id, username, COALESCE(email, ''), password_hash, role, status,
-		       created_at, updated_at, failed_login_attempts, COALESCE(locked_until, '')
+		       created_at, updated_at, failed_login_attempts, COALESCE(locked_until, ''), must_change_password
 		FROM users WHERE role = ? LIMIT 1
 	`, role).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Role,
-		&user.Status, &user.CreatedAt, &user.UpdatedAt, &user.FailedLoginAttempts, &user.LockedUntil)
+		&user.Status, &user.CreatedAt, &user.UpdatedAt, &user.FailedLoginAttempts, &user.LockedUntil, &user.MustChangePassword)
 	if errors.Is(err, sql.ErrNoRows) {
 		return models.User{}, ErrUserNotFound
 	}
@@ -44,12 +44,12 @@ func (r *UserRepository) FindByUsername(ctx context.Context, username string) (m
 	err := r.db.QueryRowContext(ctx, `
 		SELECT u.id, u.username, COALESCE(u.email, ''), u.password_hash, u.role, u.status,
 		       u.created_at, u.updated_at, u.failed_login_attempts, COALESCE(u.locked_until, ''),
-		       COALESCE(l.id, '')
+		       COALESCE(l.id, ''), u.must_change_password
 		FROM users u LEFT JOIN libraries l ON l.owner_user_id = u.id
 		WHERE u.username = ? COLLATE NOCASE
 	`, username).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Role,
 		&user.Status, &user.CreatedAt, &user.UpdatedAt, &user.FailedLoginAttempts,
-		&user.LockedUntil, &user.LibraryID)
+		&user.LockedUntil, &user.LibraryID, &user.MustChangePassword)
 	if errors.Is(err, sql.ErrNoRows) {
 		return models.User{}, ErrUserNotFound
 	}
@@ -64,12 +64,12 @@ func (r *UserRepository) FindByID(ctx context.Context, id string) (models.User, 
 	err := r.db.QueryRowContext(ctx, `
 		SELECT u.id, u.username, COALESCE(u.email, ''), u.password_hash, u.role, u.status,
 		       u.created_at, u.updated_at, u.failed_login_attempts, COALESCE(u.locked_until, ''),
-		       COALESCE(l.id, '')
+		       COALESCE(l.id, ''), u.must_change_password
 		FROM users u LEFT JOIN libraries l ON l.owner_user_id = u.id
 		WHERE u.id = ?
 	`, id).Scan(&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.Role,
 		&user.Status, &user.CreatedAt, &user.UpdatedAt, &user.FailedLoginAttempts,
-		&user.LockedUntil, &user.LibraryID)
+		&user.LockedUntil, &user.LibraryID, &user.MustChangePassword)
 	if errors.Is(err, sql.ErrNoRows) {
 		return models.User{}, ErrUserNotFound
 	}
@@ -87,7 +87,7 @@ func (r *UserRepository) ChangePassword(ctx context.Context, userID, passwordHas
 	defer tx.Rollback()
 
 	result, err := tx.ExecContext(ctx, `
-		UPDATE users SET password_hash=?, password_changed_at=?, updated_at=?
+		UPDATE users SET password_hash=?, must_change_password=0, password_changed_at=?, updated_at=?
 		WHERE id=? AND status='ACTIVE'
 	`, passwordHash, now, now, userID)
 	if err != nil {
