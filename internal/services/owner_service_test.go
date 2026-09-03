@@ -42,6 +42,10 @@ func TestOwnerLifecycle(t *testing.T) {
 			resource_id TEXT, old_values TEXT, new_values TEXT, ip_address TEXT,
 			success INTEGER NOT NULL, created_at TEXT NOT NULL
 		);
+		CREATE TABLE password_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
+			password_hash TEXT NOT NULL, created_at TEXT NOT NULL
+		);
 		INSERT INTO users(id, username, password_hash, role, status, created_at, updated_at)
 		VALUES('root', 'root-admin', 'hash', 'SUPER_ADMIN_ROOT', 'ACTIVE', 'now', 'now');
 	`)
@@ -129,6 +133,9 @@ func TestOwnerLifecycle(t *testing.T) {
 	}
 	if err = service.ResetPassword(context.Background(), owner.ID, "Disabled-Temporary-2026", "root"); err != nil {
 		t.Fatalf("reset disabled owner password: %v", err)
+	}
+	if err = service.ResetPassword(context.Background(), owner.ID, "New-Temporary-2026", "root"); !errors.Is(err, ErrPasswordReused) {
+		t.Fatalf("reuse owner password: %v", err)
 	}
 	if err = db.QueryRow(`SELECT status FROM users WHERE id=?`, owner.ID).Scan(&resetStatus); err != nil || resetStatus != "DISABLED" {
 		t.Fatalf("disabled owner status=%s err=%v", resetStatus, err)

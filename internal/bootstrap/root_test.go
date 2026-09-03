@@ -35,6 +35,10 @@ func TestCreateRoot(t *testing.T) {
 			token_family TEXT NOT NULL, expires_at TEXT NOT NULL, revoked_at TEXT,
 			replaced_by_id TEXT, ip_address TEXT, user_agent TEXT, created_at TEXT NOT NULL, last_used_at TEXT
 		);
+		CREATE TABLE password_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
+			password_hash TEXT NOT NULL, created_at TEXT NOT NULL
+		);
 	`)
 	if err != nil {
 		t.Fatalf("create schema: %v", err)
@@ -85,6 +89,8 @@ func TestResetRootPassword(t *testing.T) {
 		CREATE TABLE refresh_sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE,
 		token_family TEXT NOT NULL, expires_at TEXT NOT NULL, revoked_at TEXT, replaced_by_id TEXT,
 		ip_address TEXT, user_agent TEXT, created_at TEXT NOT NULL, last_used_at TEXT);
+		CREATE TABLE password_history (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
+		password_hash TEXT NOT NULL, created_at TEXT NOT NULL);
 		INSERT INTO users(id,username,password_hash,role,status,failed_login_attempts,locked_until,created_at,updated_at)
 		VALUES('root','kharmaodo','old-hash','SUPER_ADMIN_ROOT','LOCKED',5,'2099-01-01T00:00:00Z','now','now');
 		INSERT INTO refresh_sessions(id,user_id,token_hash,token_family,expires_at,created_at)

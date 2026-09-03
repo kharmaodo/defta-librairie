@@ -35,6 +35,10 @@ func TestPasswordChangeRevokesSessionsAndAudits(t *testing.T) {
 			id TEXT PRIMARY KEY, actor_user_id TEXT, action TEXT NOT NULL, resource_type TEXT NOT NULL,
 			resource_id TEXT, new_values TEXT, ip_address TEXT, success INTEGER NOT NULL, created_at TEXT NOT NULL
 		);
+		CREATE TABLE password_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
+			password_hash TEXT NOT NULL, created_at TEXT NOT NULL
+		);
 	`)
 	if err != nil {
 		t.Fatalf("create schema: %v", err)
@@ -85,5 +89,8 @@ func TestPasswordChangeRevokesSessionsAndAudits(t *testing.T) {
 	_ = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE actor_user_id='user-1' AND action='PASSWORD_CHANGED'`).Scan(&audits)
 	if revoked != 1 || audits != 1 {
 		t.Fatalf("revoked=%d audits=%d", revoked, audits)
+	}
+	if err = service.Change(context.Background(), "user-1", newPassword, oldPassword, "127.0.0.1"); !errors.Is(err, ErrPasswordReused) {
+		t.Fatalf("reused historical password: %v", err)
 	}
 }

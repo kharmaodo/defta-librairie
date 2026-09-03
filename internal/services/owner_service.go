@@ -107,6 +107,13 @@ func (s *OwnerService) Update(ctx context.Context, id string, input models.Owner
 	}
 	passwordHash := ""
 	if input.Password != nil {
+		hashes, historyErr := s.repository.PasswordHashes(ctx, id, 4)
+		if historyErr != nil {
+			return models.OwnerAccount{}, historyErr
+		}
+		if passwordMatchesHistory(*input.Password, hashes) {
+			return models.OwnerAccount{}, ErrPasswordReused
+		}
 		passwordHash, err = auth.HashPassword(*input.Password)
 		if err != nil {
 			return models.OwnerAccount{}, err
@@ -150,6 +157,13 @@ func (s *OwnerService) Reactivate(ctx context.Context, id, actorID string) error
 }
 
 func (s *OwnerService) ResetPassword(ctx context.Context, id, password, actorID string) error {
+	hashes, err := s.repository.PasswordHashes(ctx, id, 4)
+	if err != nil {
+		return err
+	}
+	if passwordMatchesHistory(password, hashes) {
+		return ErrPasswordReused
+	}
 	passwordHash, err := auth.HashPassword(password)
 	if err != nil {
 		return err

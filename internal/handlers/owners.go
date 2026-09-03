@@ -177,6 +177,8 @@ func writeOwnerError(w http.ResponseWriter, err error) {
 		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "owner_not_locked", "message": "Library owner is not locked"})
 	case errors.Is(err, repositories.ErrOwnerNotDisabled):
 		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "owner_not_disabled", "message": "Library owner is not disabled"})
+	case errors.Is(err, services.ErrPasswordReused):
+		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_new_password", "message": err.Error()})
 	case errors.Is(err, services.ErrInvalidOwner), errors.Is(err, auth.ErrPasswordTooShort):
 		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request", "message": err.Error()})
 	default:

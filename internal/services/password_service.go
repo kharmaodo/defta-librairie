@@ -12,10 +12,12 @@ import (
 var (
 	ErrInvalidCurrentPassword = errors.New("invalid current password")
 	ErrPasswordUnchanged      = errors.New("new password must be different")
+	ErrPasswordReused         = errors.New("new password was recently used")
 )
 
 type passwordUserStore interface {
 	FindByID(context.Context, string) (models.User, error)
+	RecentPasswordHashes(context.Context, string, int) ([]string, error)
 	ChangePassword(context.Context, string, string, string, string, string) error
 }
 
@@ -41,6 +43,13 @@ func (s *PasswordService) Change(ctx context.Context, userID, currentPassword, n
 	if err == nil && unchanged {
 		return ErrPasswordUnchanged
 	}
+	history, err := s.users.RecentPasswordHashes(ctx, userID, 4)
+	if err != nil {
+		return err
+	}
+	if passwordMatchesHistory(newPassword, history) {
+		return ErrPasswordReused
+	}
 	passwordHash, err := auth.HashPassword(newPassword)
 	if err != nil {
 		return err
@@ -51,4 +60,14 @@ func (s *PasswordService) Change(ctx context.Context, userID, currentPassword, n
 	}
 	return s.users.ChangePassword(ctx, userID, passwordHash, auditID, ipAddress,
 		s.now().UTC().Format(time.RFC3339Nano))
+}
+
+func passwordMatchesHistory(password string, hashes []string) bool {
+	for _, hash := range hashes {
+		matches, err := auth.VerifyPassword(password, hash)
+		if err == nil && matches {
+			return true
+		}
+	}
+	return false
 }

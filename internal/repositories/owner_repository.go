@@ -20,6 +20,33 @@ type OwnerRepository struct{ db *sql.DB }
 
 func NewOwnerRepository(db *sql.DB) *OwnerRepository { return &OwnerRepository{db: db} }
 
+func (r *OwnerRepository) PasswordHashes(ctx context.Context, ownerID string, historyLimit int) ([]string, error) {
+	var current string
+	if err := r.db.QueryRowContext(ctx, `SELECT password_hash FROM users WHERE id=? AND role='OWNER_LIBRARY'`, ownerID).Scan(&current); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrOwnerNotFound
+		}
+		return nil, fmt.Errorf("find owner password: %w", err)
+	}
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT password_hash FROM password_history WHERE user_id=?
+		ORDER BY created_at DESC, id DESC LIMIT ?
+	`, ownerID, historyLimit)
+	if err != nil {
+		return nil, fmt.Errorf("list owner password history: %w", err)
+	}
+	defer rows.Close()
+	hashes := []string{current}
+	for rows.Next() {
+		var hash string
+		if err = rows.Scan(&hash); err != nil {
+			return nil, fmt.Errorf("scan owner password history: %w", err)
+		}
+		hashes = append(hashes, hash)
+	}
+	return hashes, rows.Err()
+}
+
 func (r *OwnerRepository) Create(ctx context.Context, owner models.OwnerAccount, passwordHash, actorID, auditID string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -141,6 +168,12 @@ func (r *OwnerRepository) Update(ctx context.Context, owner models.OwnerAccount,
 	query := `UPDATE users SET username=?, email=NULLIF(?, ''), status=?, updated_at=?`
 	args := []interface{}{owner.Username, owner.Email, owner.Status, now}
 	if passwordHash != "" {
+		if _, err = tx.ExecContext(ctx, `
+			INSERT INTO password_history(user_id, password_hash, created_at)
+			SELECT id, password_hash, ? FROM users WHERE id=? AND role='OWNER_LIBRARY'
+		`, now, owner.ID); err != nil {
+			return fmt.Errorf("archive owner password: %w", err)
+		}
 		query += `, password_hash=?, must_change_password=1, password_changed_at=?`
 		args = append(args, passwordHash, now)
 	}
@@ -155,6 +188,11 @@ func (r *OwnerRepository) Update(ctx context.Context, owner models.OwnerAccount,
 	}
 	if rows, rowsErr := result.RowsAffected(); rowsErr != nil || rows != 1 {
 		return ErrOwnerNotFound
+	}
+	if passwordHash != "" {
+		if err = prunePasswordHistory(ctx, tx, owner.ID); err != nil {
+			return err
+		}
 	}
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE libraries SET name=?, description=NULLIF(?, ''), status=?, updated_at=?
@@ -313,6 +351,12 @@ func (r *OwnerRepository) ResetPassword(ctx context.Context, ownerID, passwordHa
 		return fmt.Errorf("begin owner password reset: %w", err)
 	}
 	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO password_history(user_id, password_hash, created_at)
+		SELECT id, password_hash, ? FROM users WHERE id=? AND role='OWNER_LIBRARY'
+	`, now, ownerID); err != nil {
+		return fmt.Errorf("archive owner password: %w", err)
+	}
 	result, err := tx.ExecContext(ctx, `
 		UPDATE users
 		SET password_hash=?, must_change_password=1,
@@ -326,6 +370,9 @@ func (r *OwnerRepository) ResetPassword(ctx context.Context, ownerID, passwordHa
 	}
 	if rows, rowsErr := result.RowsAffected(); rowsErr != nil || rows != 1 {
 		return ErrOwnerNotFound
+	}
+	if err = prunePasswordHistory(ctx, tx, ownerID); err != nil {
+		return err
 	}
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?) WHERE user_id=?

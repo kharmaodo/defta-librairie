@@ -284,6 +284,8 @@ Tout propriétaire nouvellement créé, ou dont le mot de passe est réinitialis
 
 Le root utilise la route dédiée `POST /api/admin/owners/{id}/reset-password` avec `{ "password": "..." }`. L'opération révoque toutes les sessions, remet à zéro les échecs de connexion, déverrouille un compte `LOCKED`, mais conserve un compte `DISABLED` dans cet état. Aucun mot de passe n'est écrit dans l'audit `RESET_LIBRARY_OWNER_PASSWORD`.
 
+La migration `008_create_password_history.sql` conserve uniquement les hashes Argon2id des quatre mots de passe précédents. Avec le mot de passe courant, les cinq derniers secrets ne peuvent donc pas être réutilisés. Cette règle s'applique au changement autonome, à la réinitialisation d'un propriétaire par le root et à la commande locale `reset-root-password`. L'API répond `400 invalid_new_password` lorsqu'un mot de passe récent est proposé.
+
 ```bash
 read -rsp 'Nouveau mot de passe temporaire : ' DEFTA_TEMP_PASSWORD
 echo

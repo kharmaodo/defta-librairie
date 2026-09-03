@@ -7,6 +7,7 @@ import (
 	"defta-librairie/internal/identity"
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
+	"defta-librairie/internal/services"
 	"errors"
 	"fmt"
 	"net/mail"
@@ -40,6 +41,20 @@ func ResetRootPasswordFromEnvironment(ctx context.Context, db *sql.DB) (models.U
 	user, err := repository.FindByRole(ctx, models.RoleSuperAdminRoot)
 	if err != nil {
 		return models.User{}, err
+	}
+	unchanged, verifyErr := auth.VerifyPassword(password, user.PasswordHash)
+	if verifyErr == nil && unchanged {
+		return models.User{}, services.ErrPasswordReused
+	}
+	history, err := repository.RecentPasswordHashes(ctx, user.ID, 4)
+	if err != nil {
+		return models.User{}, err
+	}
+	for _, previousHash := range history {
+		reused, historyErr := auth.VerifyPassword(password, previousHash)
+		if historyErr == nil && reused {
+			return models.User{}, services.ErrPasswordReused
+		}
 	}
 	passwordHash, err := auth.HashPassword(password)
 	if err != nil {

@@ -12,7 +12,29 @@ var ErrUserNotFound = errors.New("user not found")
 
 type UserRepository struct{ db *sql.DB }
 
+const passwordHistoryPreviousLimit = 4
+
 func NewUserRepository(db *sql.DB) *UserRepository { return &UserRepository{db: db} }
+
+func (r *UserRepository) RecentPasswordHashes(ctx context.Context, userID string, limit int) ([]string, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT password_hash FROM password_history
+		WHERE user_id=? ORDER BY created_at DESC, id DESC LIMIT ?
+	`, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list password history: %w", err)
+	}
+	defer rows.Close()
+	hashes := make([]string, 0, limit)
+	for rows.Next() {
+		var hash string
+		if err = rows.Scan(&hash); err != nil {
+			return nil, fmt.Errorf("scan password history: %w", err)
+		}
+		hashes = append(hashes, hash)
+	}
+	return hashes, rows.Err()
+}
 
 func (r *UserRepository) CountByRole(ctx context.Context, role models.UserRole) (int, error) {
 	var count int
@@ -85,6 +107,12 @@ func (r *UserRepository) ChangePassword(ctx context.Context, userID, passwordHas
 		return fmt.Errorf("begin password change: %w", err)
 	}
 	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO password_history(user_id, password_hash, created_at)
+		SELECT id, password_hash, ? FROM users WHERE id=? AND status='ACTIVE'
+	`, now, userID); err != nil {
+		return fmt.Errorf("archive current password: %w", err)
+	}
 
 	result, err := tx.ExecContext(ctx, `
 		UPDATE users SET password_hash=?, must_change_password=0, password_changed_at=?, updated_at=?
@@ -96,6 +124,9 @@ func (r *UserRepository) ChangePassword(ctx context.Context, userID, passwordHas
 	rows, err := result.RowsAffected()
 	if err != nil || rows != 1 {
 		return ErrUserNotFound
+	}
+	if err = prunePasswordHistory(ctx, tx, userID); err != nil {
+		return err
 	}
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?)
@@ -209,6 +240,12 @@ func (r *UserRepository) ResetRootPassword(ctx context.Context, userID, password
 		return fmt.Errorf("begin root password reset: %w", err)
 	}
 	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO password_history(user_id, password_hash, created_at)
+		SELECT id, password_hash, ? FROM users WHERE id=? AND role='SUPER_ADMIN_ROOT'
+	`, now, userID); err != nil {
+		return fmt.Errorf("archive root password: %w", err)
+	}
 
 	result, err := tx.ExecContext(ctx, `
 		UPDATE users SET password_hash = ?, status = 'ACTIVE', failed_login_attempts = 0,
@@ -221,6 +258,9 @@ func (r *UserRepository) ResetRootPassword(ctx context.Context, userID, password
 	rows, err := result.RowsAffected()
 	if err != nil || rows != 1 {
 		return fmt.Errorf("update root password: root account not found")
+	}
+	if err = prunePasswordHistory(ctx, tx, userID); err != nil {
+		return err
 	}
 
 	if _, err = tx.ExecContext(ctx, `
@@ -237,6 +277,20 @@ func (r *UserRepository) ResetRootPassword(ctx context.Context, userID, password
 	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("commit root password reset: %w", err)
+	}
+	return nil
+}
+
+func prunePasswordHistory(ctx context.Context, tx *sql.Tx, userID string) error {
+	_, err := tx.ExecContext(ctx, `
+		DELETE FROM password_history
+		WHERE user_id=? AND id NOT IN (
+			SELECT id FROM password_history WHERE user_id=?
+			ORDER BY created_at DESC, id DESC LIMIT ?
+		)
+	`, userID, userID, passwordHistoryPreviousLimit)
+	if err != nil {
+		return fmt.Errorf("prune password history: %w", err)
 	}
 	return nil
 }
