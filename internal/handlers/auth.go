@@ -213,6 +213,22 @@ func (h *AuthHandler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *AuthHandler) RevokeOtherSessions(w http.ResponseWriter, r *http.Request) {
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	revoked, err := h.sessions.RevokeOthers(r.Context(), claims)
+	if err != nil {
+		if errors.Is(err, services.ErrSessionNotFound) {
+			writeAuthJSON(w, http.StatusNotFound, map[string]string{"error": "session_not_found", "message": "Current active session not found"})
+			return
+		}
+		writeAuthJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Other sessions revocation failed"})
+		return
+	}
+	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
+		"revoked": revoked, "currentSessionId": claims.SessionID,
+	})
+}
+
 func wantsCookieSession(r *http.Request) bool {
 	return strings.EqualFold(strings.TrimSpace(r.Header.Get(cookieSessionHeader)), "cookie")
 }

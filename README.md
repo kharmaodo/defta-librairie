@@ -430,9 +430,9 @@ Le tableau de bord expose les mêmes filtres avec une pagination de 20 événeme
 
 ### Sessions actives
 
-`GET /api/auth/sessions` liste les sessions actives et accepte `offset`, `limit`, `username`, `role`, `ipAddress` et `userAgent`. Le root dispose d'une vue globale et de tous les filtres. Un propriétaire reste limité à ses sessions, peut filtrer par IP ou appareil, mais ne peut pas utiliser `username` ou `role`. `DELETE /api/auth/sessions/{id}` révoque toute la famille correspondant à un appareil et masque les sessions d'un autre compte avec `404 Not Found`.
+`GET /api/auth/sessions` liste les sessions actives et accepte `offset`, `limit`, `username`, `role`, `ipAddress` et `userAgent`. Le root dispose d'une vue globale et de tous les filtres. Un propriétaire reste limité à ses sessions, peut filtrer par IP ou appareil, mais ne peut pas utiliser `username` ou `role`. `DELETE /api/auth/sessions/{id}` révoque toute la famille correspondant à un appareil et masque les sessions d'un autre compte avec `404 Not Found`. `POST /api/auth/sessions/revoke-others` révoque atomiquement toutes les autres familles du compte authentifié sans interrompre sa session courante.
 
-La réponse indique `currentSessionId` pour identifier la session utilisée par la requête. Révoquer cette session supprime également le cookie web et impose une nouvelle connexion. Chaque révocation crée un audit `SESSION_REVOKED`.
+La réponse indique `currentSessionId` pour identifier la session utilisée par la requête. Révoquer cette session supprime également le cookie web et impose une nouvelle connexion. Une révocation ciblée crée un audit `SESSION_REVOKED` ; la déconnexion des autres appareils crée `OTHER_SESSIONS_REVOKED` avec le nombre de familles révoquées.
 
 ```bash
 curl -fsS http://localhost:8080/api/auth/sessions \
@@ -440,6 +440,9 @@ curl -fsS http://localhost:8080/api/auth/sessions \
 
 curl -i -X DELETE http://localhost:8080/api/auth/sessions/SESSION_ID \
   -H "Authorization: Bearer $TOKEN"
+
+curl -fsS -X POST http://localhost:8080/api/auth/sessions/revoke-others \
+  -H "Authorization: Bearer $TOKEN" | jq .
 ```
 
 ```bash

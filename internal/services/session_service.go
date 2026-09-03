@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	ErrInvalidRefreshToken = errors.New("invalid refresh token")
-	ErrRefreshTokenReuse   = errors.New("refresh token reuse detected")
-	ErrSessionNotFound     = errors.New("active session not found")
+	ErrInvalidRefreshToken  = errors.New("invalid refresh token")
+	ErrRefreshTokenReuse    = errors.New("refresh token reuse detected")
+	ErrSessionNotFound      = errors.New("active session not found")
 	ErrInvalidSessionFilter = errors.New("invalid session filter")
 )
 
@@ -77,6 +77,23 @@ func (s *SessionService) RevokeActive(ctx context.Context, claims *auth.Claims, 
 		return ErrSessionNotFound
 	}
 	return err
+}
+
+func (s *SessionService) RevokeOthers(ctx context.Context, claims *auth.Claims) (int, error) {
+	if claims == nil || claims.Subject == "" || claims.SessionID == "" ||
+		claims.Role != models.RoleSuperAdminRoot && claims.Role != models.RoleOwnerLibrary {
+		return 0, ErrSessionNotFound
+	}
+	auditID, err := identity.NewID()
+	if err != nil {
+		return 0, err
+	}
+	revoked, err := s.repository.RevokeOthers(ctx, claims.Subject, claims.SessionID, claims.Subject, auditID,
+		s.now().UTC().Format(time.RFC3339Nano))
+	if errors.Is(err, repositories.ErrActiveSessionNotFound) {
+		return 0, ErrSessionNotFound
+	}
+	return revoked, err
 }
 
 type SessionService struct {

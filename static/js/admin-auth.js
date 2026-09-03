@@ -499,6 +499,16 @@
       try { await reloadSessions(); }
       catch (error) { showError(errorBox, error); }
     });
+    document.querySelector("#revoke-other-sessions-button").addEventListener("click", async () => {
+      if (!window.confirm("Déconnecter tous les autres appareils de ce compte ?")) return;
+      errorBox.hidden = true;
+      try {
+        const result = await apiFetch("/api/auth/sessions/revoke-others", {method: "POST"});
+        document.querySelector("#session-scope-note").textContent = `${result.revoked} autre(s) appareil(s) déconnecté(s). La session courante reste active.`;
+        state.sessionOffset = 0;
+        await Promise.all([reloadSessions(), reloadAudit()]);
+      } catch (error) { showError(errorBox, error); }
+    });
     document.querySelector("#session-filters").addEventListener("submit", async (event) => {
       event.preventDefault();
       state.sessionOffset = 0;

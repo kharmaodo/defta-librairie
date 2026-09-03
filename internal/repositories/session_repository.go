@@ -143,6 +143,51 @@ func (r *SessionRepository) RevokeActive(ctx context.Context, sessionID, scopedU
 	return nil
 }
 
+func (r *SessionRepository) RevokeOthers(ctx context.Context, userID, currentSessionID, actorID, auditID, now string) (int, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("begin other sessions revocation: %w", err)
+	}
+	defer tx.Rollback()
+
+	var currentFamily string
+	err = tx.QueryRowContext(ctx, `
+		SELECT token_family FROM refresh_sessions
+		WHERE id=? AND user_id=? AND revoked_at IS NULL AND expires_at>?
+	`, currentSessionID, userID, now).Scan(&currentFamily)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrActiveSessionNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("find current active session: %w", err)
+	}
+
+	var revokedFamilies int
+	if err = tx.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT token_family) FROM refresh_sessions
+		WHERE user_id=? AND token_family<>? AND revoked_at IS NULL AND expires_at>?
+	`, userID, currentFamily, now).Scan(&revokedFamilies); err != nil {
+		return 0, fmt.Errorf("count other active session families: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?)
+		WHERE user_id=? AND token_family<>? AND revoked_at IS NULL AND expires_at>?
+	`, now, userID, currentFamily, now); err != nil {
+		return 0, fmt.Errorf("revoke other active session families: %w", err)
+	}
+	newValues := fmt.Sprintf(`{"revoked_families":%d}`, revokedFamilies)
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'OTHER_SESSIONS_REVOKED', 'SESSION', ?, ?, 1, ?)
+	`, auditID, actorID, currentSessionID, newValues, now); err != nil {
+		return 0, fmt.Errorf("audit other sessions revocation: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return 0, fmt.Errorf("commit other sessions revocation: %w", err)
+	}
+	return revokedFamilies, nil
+}
+
 func (r *SessionRepository) Rotate(ctx context.Context, oldTokenHash string, replacement models.RefreshSession, auditID, now string) (models.User, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

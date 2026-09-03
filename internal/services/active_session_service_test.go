@@ -37,6 +37,7 @@ func TestActiveSessionScopeAndRevocation(t *testing.T) {
 		INSERT INTO refresh_sessions(id, user_id, token_hash, token_family, expires_at, ip_address, user_agent, created_at)
 		VALUES
 			('session-1', 'owner-1', 'hash-1', 'family-1', '2099-01-01T00:00:00Z', '192.0.2.1', 'Browser One', '2026-09-02T10:00:00Z'),
+			('session-1-other', 'owner-1', 'hash-1-other', 'family-1-other', '2099-01-01T00:00:00Z', '192.0.2.3', 'Browser Other', '2026-09-02T10:30:00Z'),
 			('session-2', 'owner-2', 'hash-2', 'family-2', '2099-01-01T00:00:00Z', '192.0.2.2', 'Browser Two', '2026-09-02T11:00:00Z');
 	`)
 	if err != nil {
@@ -51,13 +52,24 @@ func TestActiveSessionScopeAndRevocation(t *testing.T) {
 		t.Fatalf("session service: %v", err)
 	}
 	service.now = func() time.Time { return time.Date(2026, 9, 2, 12, 0, 0, 0, time.UTC) }
-	owner := &auth.Claims{Role: models.RoleOwnerLibrary, RegisteredClaims: jwt.RegisteredClaims{Subject: "owner-1"}}
+	owner := &auth.Claims{Role: models.RoleOwnerLibrary, SessionID: "session-1", RegisteredClaims: jwt.RegisteredClaims{Subject: "owner-1"}}
 	sessions, total, err := service.ListActive(context.Background(), owner, models.SessionFilter{IPAddress: "192.0.2.1"}, 0, 30)
 	if err != nil || total != 1 || len(sessions) != 1 || sessions[0].ID != "session-1" {
 		t.Fatalf("owner sessions=%+v total=%d err=%v", sessions, total, err)
 	}
 	if err = service.RevokeActive(context.Background(), owner, "session-2"); !errors.Is(err, ErrSessionNotFound) {
 		t.Fatalf("cross-account revocation error=%v", err)
+	}
+	revokedOthers, err := service.RevokeOthers(context.Background(), owner)
+	if err != nil || revokedOthers != 1 {
+		t.Fatalf("revoke other sessions=%d err=%v", revokedOthers, err)
+	}
+	var currentActive, otherRevoked, otherAudits int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM refresh_sessions WHERE id='session-1' AND revoked_at IS NULL`).Scan(&currentActive)
+	_ = db.QueryRow(`SELECT COUNT(*) FROM refresh_sessions WHERE id='session-1-other' AND revoked_at IS NOT NULL`).Scan(&otherRevoked)
+	_ = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE action='OTHER_SESSIONS_REVOKED' AND actor_user_id='owner-1' AND new_values='{"revoked_families":1}'`).Scan(&otherAudits)
+	if currentActive != 1 || otherRevoked != 1 || otherAudits != 1 {
+		t.Fatalf("currentActive=%d otherRevoked=%d otherAudits=%d", currentActive, otherRevoked, otherAudits)
 	}
 	root := &auth.Claims{Role: models.RoleSuperAdminRoot, RegisteredClaims: jwt.RegisteredClaims{Subject: "root"}}
 	sessions, total, err = service.ListActive(context.Background(), root, models.SessionFilter{
