@@ -240,6 +240,16 @@ Chaque livre possède un état de stock versionné et un seuil d'alerte. Tous le
 
 Les entrées et sorties reçoivent `{ "quantity": 5, "reason": "...", "version": 1 }`. L'ajustement reçoit `{ "quantity": 12, "reason": "inventaire physique", "version": 2 }`. Le seuil reçoit `{ "lowStockThreshold": 3, "version": 3 }`. Une version périmée répondra `409 inventory_version_conflict` et une sortie excessive `409 insufficient_stock`.
 
+```bash
+curl -fsS "http://localhost:8080/api/manage/books/$BOOK_ID/inventory" \
+  -H "Authorization: Bearer $OWNER_TOKEN" | jq .
+
+jq -n '{quantity:10,reason:"Réception fournisseur",version:1}' |
+curl -fsS -X POST "http://localhost:8080/api/manage/books/$BOOK_ID/inventory/entries" \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  -H 'Content-Type: application/json' --data-binary @- | jq .
+```
+
 Les mises à jour utilisent le champ `version`. Une version périmée produit `409 Conflict` afin d'éviter l'écrasement silencieux d'une modification concurrente. Les suppressions logiques disparaissent également du catalogue public et de la recherche FTS5.
 
 Chaque création, modification ou suppression conserve un instantané JSON du prix, du statut, des tags et de la version. L'historique reste consultable après une suppression logique ; un propriétaire ne peut toutefois consulter que les livres rattachés à sa propre librairie.

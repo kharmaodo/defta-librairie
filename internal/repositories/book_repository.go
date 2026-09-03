@@ -164,6 +164,12 @@ func (r *BookRepository) Create(ctx context.Context, book models.BookInput, acto
 		return models.Book{}, fmt.Errorf("read book id: %w", err)
 	}
 	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO book_inventory(book_id, library_id, quantity, low_stock_threshold, version, updated_at)
+		VALUES (?, ?, 0, 5, 1, ?)
+	`, id, book.LibraryID, now); err != nil {
+		return models.Book{}, fmt.Errorf("initialize book inventory: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
 		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
 		VALUES (?, ?, 'CREATE_BOOK', 'BOOK', ?, ?, 1, ?)
 	`, auditID, actorID, id, newValues, now); err != nil {
