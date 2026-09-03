@@ -160,7 +160,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, services.ErrInvalidCurrentPassword):
 			writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_current_password", "message": "Current password is invalid"})
-		case errors.Is(err, services.ErrPasswordUnchanged), errors.Is(err, services.ErrPasswordReused), errors.Is(err, auth.ErrPasswordTooShort):
+		case errors.Is(err, services.ErrPasswordUnchanged), errors.Is(err, services.ErrPasswordReused), errors.Is(err, auth.ErrPasswordTooShort), errors.Is(err, auth.ErrPasswordTooWeak):
 			writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_new_password", "message": err.Error()})
 		default:
 			writeAuthJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Password change failed"})
