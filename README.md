@@ -270,6 +270,32 @@ Les mises à jour utilisent le champ `version`. Une version périmée produit `4
 
 Chaque création, modification ou suppression conserve un instantané JSON du prix, du statut, des tags et de la version. L'historique reste consultable après une suppression logique ; un propriétaire ne peut toutefois consulter que les livres rattachés à sa propre librairie.
 
+### Gestion des ventes
+
+Une vente appartient à une seule librairie et contient une ou plusieurs lignes. Le prix et le titre du livre sont copiés dans la ligne afin de préserver la valeur commerciale au moment de la vente. Le cycle de vie autorisé est `DRAFT → CONFIRMED → CANCELLED`.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/sales?status=CONFIRMED&from=...&to=...&offset=0&limit=30&libraryId=...` | Lister les ventes autorisées |
+| `POST` | `/api/manage/sales` | Créer un brouillon avec ses lignes |
+| `GET` | `/api/manage/sales/{id}` | Consulter une vente et ses lignes |
+| `PUT` | `/api/manage/sales/{id}` | Modifier un brouillon versionné |
+| `POST` | `/api/manage/sales/{id}/confirm` | Confirmer et déduire atomiquement le stock |
+| `POST` | `/api/manage/sales/{id}/cancel` | Annuler et remettre atomiquement le stock |
+
+Le propriétaire ne peut créer ou consulter que les ventes de la librairie portée par son JWT. Le root précise `libraryId` pour une création et peut filtrer la liste globale. Une confirmation vérifie toutes les quantités avant la moindre écriture : si une ligne manque de stock, la vente, les mouvements et les quantités restent inchangés. Une annulation n'est possible qu'après confirmation et crée les mouvements inverses. Les modifications utilisent `version` et les transitions répétées sont refusées.
+
+Exemple de brouillon :
+
+~~~json
+{
+  "customerName": "Client comptoir",
+  "lines": [
+    {"bookId": 470, "quantity": 2}
+  ]
+}
+~~~
+
 ### Référentiel des tags
 
 Les tags réutilisables sont définis par librairie. Leur unicité est insensible à la casse (`Fiqh` et `fiqh` représentent le même tag). Un propriétaire utilise toujours la librairie signée dans son JWT ; le root précise `libraryId` lors de la création.
