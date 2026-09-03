@@ -48,3 +48,9 @@ type SaleInput struct {
 	Lines        []SaleLineInput `json:"lines"`
 	Version      int             `json:"version,omitempty"`
 }
+
+type SaleFilter struct {
+	Status SaleStatus
+	From   string
+	To     string
+}

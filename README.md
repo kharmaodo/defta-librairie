@@ -296,6 +296,8 @@ Exemple de brouillon :
 }
 ~~~
 
+La création répond `201 Created`, génère une référence `V-AAAAMMJJ-XXXXXXXX` et calcule `totalAmount` depuis les prix actuels des livres. Une modification de brouillon remplace atomiquement ses lignes, recalcule le total et incrémente `version`. Les actions `CREATE_SALE` et `UPDATE_SALE` sont enregistrées dans l'audit.
+
 ### Référentiel des tags
 
 Les tags réutilisables sont définis par librairie. Leur unicité est insensible à la casse (`Fiqh` et `fiqh` représentent le même tag). Un propriétaire utilise toujours la librairie signée dans son JWT ; le root précise `libraryId` lors de la création.
