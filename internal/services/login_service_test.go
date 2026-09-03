@@ -62,8 +62,11 @@ func TestLoginServiceSuccessAndInvalidPassword(t *testing.T) {
 func TestLoginServiceUnknownUserUsesGenericError(t *testing.T) {
 	store := &loginStoreStub{findErr: repositories.ErrUserNotFound}
 	tokens, _ := auth.NewTokenManager("0123456789abcdef0123456789abcdef", "issuer", "audience", time.Minute)
-	service, _ := NewLoginService(store, tokens)
-	_, err := service.Login(context.Background(), "missing", "Any-Password-2026", "127.0.0.1")
+	service, err := NewLoginService(store, tokens)
+	if err != nil {
+		t.Fatalf("new login service: %v", err)
+	}
+	_, err = service.Login(context.Background(), "missing", "Any-Password-2026", "127.0.0.1")
 	if !errors.Is(err, ErrInvalidCredentials) || store.unknown != 1 {
 		t.Fatalf("unknown login: audits=%d err=%v", store.unknown, err)
 	}
