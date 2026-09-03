@@ -120,7 +120,15 @@ Toutes les variables sont optionnelles :
 | `AUTH_RATE_LIMIT_WINDOW_SECONDS` | `60` | Fenêtre du rate limit d'authentification |
 | `AUTH_COOKIE_SECURE` | `false` | Mettre à `true` derrière HTTPS pour le cookie de refresh du navigateur |
 
-Exemple `.env` :
+Créer la configuration locale, qui reste ignorée par Git, puis générer un secret propre à l'environnement :
+
+```bash
+cp .env.example .env
+sed -i "s|^JWT_SECRET=.*$|JWT_SECRET=$(openssl rand -base64 48)|" .env
+chmod 600 .env
+```
+
+Contenu de référence de `.env.example` :
 
 ```dotenv
 PORT=8080
@@ -128,7 +136,7 @@ DB_PATH=./data/defta.db
 PAGE_SIZE=30
 VERSION=0.2.0-dev
 BUILD_DATE=2026-09-01
-JWT_SECRET=remplacer-par-un-secret-aleatoire-d-au-moins-32-octets
+JWT_SECRET=
 JWT_ISSUER=defta-librairie
 JWT_AUDIENCE=defta-librairie-web
 JWT_ACCESS_TTL_SECONDS=900
@@ -137,6 +145,8 @@ AUTH_RATE_LIMIT_REQUESTS=10
 AUTH_RATE_LIMIT_WINDOW_SECONDS=60
 AUTH_COOKIE_SECURE=false
 ```
+
+Ne jamais commiter `.env`, une sauvegarde de ce fichier, ni une valeur réelle de `JWT_SECRET`.
 
 Sous Linux ou WSL, si `.env` a été modifié sous Windows, supprimer les retours chariot avant le lancement avec `sed -i 's/\r$//' .env`. Le chargeur neutralise également ces fins de ligne pour éviter qu'une valeur telle que `PORT=8080\r` soit transmise au serveur HTTP.
 
