@@ -240,6 +240,8 @@ Chaque livre possède un état de stock versionné et un seuil d'alerte. Tous le
 
 Les entrées et sorties reçoivent `{ "quantity": 5, "reason": "...", "version": 1 }`. L'ajustement reçoit `{ "quantity": 12, "reason": "inventaire physique", "version": 2 }`. Le seuil reçoit `{ "lowStockThreshold": 3, "version": 3 }`. Une version périmée répondra `409 inventory_version_conflict` et une sortie excessive `409 insufficient_stock`.
 
+L'historique des mouvements est paginé avec `offset` et `limit` (maximum 100), trié du plus récent au plus ancien. Une modification du seuil incrémente également la version du stock et écrit l'événement `UPDATE_INVENTORY_THRESHOLD` dans le journal d'audit, sans créer de faux mouvement de quantité.
+
 ```bash
 curl -fsS "http://localhost:8080/api/manage/books/$BOOK_ID/inventory" \
   -H "Authorization: Bearer $OWNER_TOKEN" | jq .

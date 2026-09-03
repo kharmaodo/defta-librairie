@@ -48,6 +48,39 @@ func (s *InventoryService) Adjust(ctx context.Context, claims *auth.Claims, book
 	return s.apply(ctx, claims, bookID, models.InventoryMovementAdjustment, quantity, version, reason)
 }
 
+func (s *InventoryService) UpdateThreshold(ctx context.Context, claims *auth.Claims, bookID, threshold, version int) (models.BookInventory, error) {
+	if claims == nil || bookID < 1 || threshold < 0 || version < 1 {
+		return models.BookInventory{}, ErrInvalidInventory
+	}
+	libraryID, err := resolveBookScope(claims, "", false)
+	if err != nil {
+		return models.BookInventory{}, err
+	}
+	auditID, err := identity.NewID()
+	if err != nil {
+		return models.BookInventory{}, err
+	}
+	return s.repository.UpdateThreshold(ctx, bookID, libraryID, claims.Subject, auditID, threshold, version,
+		s.now().UTC().Format(time.RFC3339Nano))
+}
+
+func (s *InventoryService) ListMovements(ctx context.Context, claims *auth.Claims, bookID, offset, limit int) ([]models.InventoryMovement, int, error) {
+	if claims == nil || bookID < 1 {
+		return nil, 0, ErrInvalidInventory
+	}
+	libraryID, err := resolveBookScope(claims, "", false)
+	if err != nil {
+		return nil, 0, err
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if limit < 1 || limit > 100 {
+		limit = 30
+	}
+	return s.repository.ListMovements(ctx, bookID, libraryID, offset, limit)
+}
+
 func (s *InventoryService) apply(ctx context.Context, claims *auth.Claims, bookID int,
 	movementType models.InventoryMovementType, quantity, version int, reason string) (models.BookInventory, error) {
 	libraryID, err := resolveBookScope(claims, "", false)

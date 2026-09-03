@@ -41,8 +41,17 @@ func TestInventoryMovementsAndIsolation(t *testing.T) {
 	if _, err = service.Move(context.Background(), owner, 1, models.InventoryMovementExit, 8, 3, "vente"); !errors.Is(err, repositories.ErrInsufficientStock) { t.Fatalf("insufficient=%v", err) }
 	if _, err = service.Adjust(context.Background(), owner, 1, 12, 2, "inventaire"); !errors.Is(err, repositories.ErrInventoryConflict) { t.Fatalf("conflict=%v", err) }
 	if _, err = service.Find(context.Background(), other, 1); !errors.Is(err, repositories.ErrInventoryNotFound) { t.Fatalf("cross-library=%v", err) }
+	stock, err = service.UpdateThreshold(context.Background(), owner, 1, 2, 3)
+	if err != nil || stock.LowStockThreshold != 2 || stock.Version != 4 { t.Fatalf("threshold=%+v err=%v", stock, err) }
+	if _, err = service.UpdateThreshold(context.Background(), owner, 1, 4, 3); !errors.Is(err, repositories.ErrInventoryConflict) { t.Fatalf("threshold conflict=%v", err) }
+	movementList, total, err := service.ListMovements(context.Background(), owner, 1, 0, 30)
+	if err != nil || total != 2 || len(movementList) != 2 { t.Fatalf("movement history total=%d len=%d err=%v", total, len(movementList), err) }
+	if _, _, err = service.ListMovements(context.Background(), other, 1, 0, 30); !errors.Is(err, repositories.ErrInventoryNotFound) { t.Fatalf("cross-library history=%v", err) }
 	var movements, audits int
 	_ = db.QueryRow(`SELECT COUNT(*) FROM inventory_movements`).Scan(&movements)
 	_ = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE action='UPDATE_INVENTORY'`).Scan(&audits)
 	if movements != 2 || audits != 2 { t.Fatalf("movements=%d audits=%d", movements, audits) }
+	var thresholdAudits int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE action='UPDATE_INVENTORY_THRESHOLD'`).Scan(&thresholdAudits)
+	if thresholdAudits != 1 { t.Fatalf("threshold audits=%d", thresholdAudits) }
 }

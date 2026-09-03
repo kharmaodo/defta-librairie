@@ -21,6 +21,11 @@ type inventoryQuantityRequest struct {
 	Version  int    `json:"version"`
 }
 
+type inventoryThresholdRequest struct {
+	LowStockThreshold int `json:"lowStockThreshold"`
+	Version           int `json:"version"`
+}
+
 func (h *InventoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 	bookID, err := bookID(r)
 	if err != nil {
@@ -75,6 +80,40 @@ func (h *InventoryHandler) Adjust(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeAuthJSON(w, http.StatusOK, inventory)
+}
+
+func (h *InventoryHandler) UpdateThreshold(w http.ResponseWriter, r *http.Request) {
+	bookID, err := bookID(r)
+	var request inventoryThresholdRequest
+	if err != nil || decodeOwnerJSON(w, r, &request) != nil {
+		writeInventoryError(w, services.ErrInvalidInventory)
+		return
+	}
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	inventory, err := h.service.UpdateThreshold(r.Context(), claims, bookID, request.LowStockThreshold, request.Version)
+	if err != nil {
+		writeInventoryError(w, err)
+		return
+	}
+	writeAuthJSON(w, http.StatusOK, inventory)
+}
+
+func (h *InventoryHandler) ListMovements(w http.ResponseWriter, r *http.Request) {
+	bookID, err := bookID(r)
+	if err != nil {
+		writeInventoryError(w, services.ErrInvalidInventory)
+		return
+	}
+	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	movements, total, err := h.service.ListMovements(r.Context(), claims, bookID, offset, limit)
+	if err != nil {
+		writeInventoryError(w, err)
+		return
+	}
+	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
+		"results": movements, "total": total, "offset": offset, "limit": limit,
+	})
 }
 
 func writeInventoryError(w http.ResponseWriter, err error) {

@@ -144,6 +144,8 @@ func main() {
 	mux.Handle("POST /api/manage/books/{id}/inventory/entries", bookManagers(http.HandlerFunc(inventoryHandler.Entry)))
 	mux.Handle("POST /api/manage/books/{id}/inventory/exits", bookManagers(http.HandlerFunc(inventoryHandler.Exit)))
 	mux.Handle("PUT /api/manage/books/{id}/inventory", bookManagers(http.HandlerFunc(inventoryHandler.Adjust)))
+	mux.Handle("PATCH /api/manage/books/{id}/inventory/threshold", bookManagers(http.HandlerFunc(inventoryHandler.UpdateThreshold)))
+	mux.Handle("GET /api/manage/books/{id}/inventory/movements", bookManagers(http.HandlerFunc(inventoryHandler.ListMovements)))
 	mux.Handle("GET /api/manage/tags", bookManagers(http.HandlerFunc(tagHandler.List)))
 	mux.Handle("POST /api/manage/tags", bookManagers(http.HandlerFunc(tagHandler.Create)))
 	mux.Handle("PATCH /api/manage/tags/{id}", bookManagers(http.HandlerFunc(tagHandler.Update)))
