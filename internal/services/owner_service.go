@@ -141,6 +141,14 @@ func (s *OwnerService) Unlock(ctx context.Context, id, actorID string) error {
 	return s.repository.Unlock(ctx, id, actorID, auditID, s.now().UTC().Format(time.RFC3339Nano))
 }
 
+func (s *OwnerService) Reactivate(ctx context.Context, id, actorID string) error {
+	auditID, err := identity.NewID()
+	if err != nil {
+		return err
+	}
+	return s.repository.Reactivate(ctx, id, actorID, auditID, s.now().UTC().Format(time.RFC3339Nano))
+}
+
 func normalizeCreateInput(input *models.OwnerCreateInput) {
 	input.Username = strings.TrimSpace(input.Username)
 	input.Email = strings.TrimSpace(input.Email)

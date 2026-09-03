@@ -121,6 +121,8 @@
       actions.className = "row-actions";
       if (owner.status === "LOCKED") {
         actions.replaceChildren(actionButton("Déverrouiller", "unlock-owner", owner.id));
+      } else if (owner.status === "DISABLED") {
+        actions.replaceChildren(actionButton("Réactiver", "reactivate-owner", owner.id));
       } else {
         actions.replaceChildren(actionButton("Modifier", "edit-owner", owner.id), actionButton("Désactiver", "disable-owner", owner.id, true));
       }
@@ -611,6 +613,12 @@
       if (button.dataset.action === "unlock-owner" && window.confirm(`Déverrouiller le compte ${owner.username} ?`)) {
         try {
           await apiFetch(`/api/admin/owners/${owner.id}/unlock`, {method: "POST"});
+          await Promise.all([reloadOwners(), reloadOwnerOptions(), reloadAudit(), reloadSessions()]);
+        } catch (error) { showError(errorBox, error); }
+      }
+      if (button.dataset.action === "reactivate-owner" && window.confirm(`Réactiver ${owner.username} et sa librairie ?`)) {
+        try {
+          await apiFetch(`/api/admin/owners/${owner.id}/reactivate`, {method: "POST"});
           await Promise.all([reloadOwners(), reloadOwnerOptions(), reloadAudit(), reloadSessions()]);
         } catch (error) { showError(errorBox, error); }
       }

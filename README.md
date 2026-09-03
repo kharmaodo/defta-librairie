@@ -158,6 +158,8 @@ Ces routes exigent un JWT `SUPER_ADMIN_ROOT` :
 | `GET` | `/api/admin/owners/{id}` | Consulter un propriétaire |
 | `PATCH` | `/api/admin/owners/{id}` | Modifier le compte, le mot de passe ou la librairie |
 | `DELETE` | `/api/admin/owners/{id}` | Désactiver le compte et la librairie, puis révoquer ses sessions |
+| `POST` | `/api/admin/owners/{id}/unlock` | Déverrouiller un compte bloqué après des échecs de connexion |
+| `POST` | `/api/admin/owners/{id}/reactivate` | Réactiver atomiquement un compte et sa librairie désactivés |
 
 Exemple de création :
 
@@ -414,6 +416,8 @@ Le tableau de bord permet également :
 - au root de déverrouiller explicitement un propriétaire bloqué après plusieurs échecs de connexion.
 
 `POST /api/admin/owners/{id}/unlock` remet le compte `LOCKED` à `ACTIVE`, réinitialise `failed_login_attempts`, efface `locked_until`, révoque ses anciennes sessions et crée un audit `UNLOCK_LIBRARY_OWNER`. L'opération retourne `409 Conflict` si le compte n'est pas verrouillé.
+
+`POST /api/admin/owners/{id}/reactivate` remet un propriétaire `DISABLED` et sa librairie à `ACTIVE`, nettoie son verrouillage, révoque préventivement ses anciennes sessions et crée un audit `REACTIVATE_LIBRARY_OWNER`. Un compte absent retourne `404 Not Found` et un compte qui n'est pas désactivé retourne `409 Conflict`.
 
 L'interface ne constitue pas une frontière de sécurité : les contrôles d'autorisation restent appliqués par le middleware et les services backend.
 

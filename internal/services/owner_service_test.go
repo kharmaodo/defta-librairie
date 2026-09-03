@@ -124,8 +124,22 @@ func TestOwnerLifecycle(t *testing.T) {
 	if userStatus != "DISABLED" || libraryStatus != "DISABLED" {
 		t.Fatalf("user=%s library=%s", userStatus, libraryStatus)
 	}
+	if err = service.Reactivate(context.Background(), owner.ID, "root"); err != nil {
+		t.Fatalf("reactivate owner: %v", err)
+	}
+	if err = db.QueryRow(`
+		SELECT u.status, l.status FROM users u JOIN libraries l ON l.owner_user_id=u.id WHERE u.id=?
+	`, owner.ID).Scan(&userStatus, &libraryStatus); err != nil {
+		t.Fatalf("read reactivated state: %v", err)
+	}
+	if userStatus != "ACTIVE" || libraryStatus != "ACTIVE" {
+		t.Fatalf("reactivated user=%s library=%s", userStatus, libraryStatus)
+	}
+	if err = service.Reactivate(context.Background(), owner.ID, "root"); !errors.Is(err, repositories.ErrOwnerNotDisabled) {
+		t.Fatalf("reactivate active owner error=%v", err)
+	}
 	var audits int
-	if err = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE actor_user_id='root'`).Scan(&audits); err != nil || audits != 4 {
+	if err = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE actor_user_id='root'`).Scan(&audits); err != nil || audits != 5 {
 		t.Fatalf("audits=%d err=%v", audits, err)
 	}
 }

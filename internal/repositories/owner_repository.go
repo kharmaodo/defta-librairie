@@ -10,9 +10,10 @@ import (
 )
 
 var (
-	ErrOwnerNotFound  = errors.New("owner not found")
-	ErrOwnerConflict  = errors.New("owner username or email already exists")
-	ErrOwnerNotLocked = errors.New("owner is not locked")
+	ErrOwnerNotFound    = errors.New("owner not found")
+	ErrOwnerConflict    = errors.New("owner username or email already exists")
+	ErrOwnerNotLocked   = errors.New("owner is not locked")
+	ErrOwnerNotDisabled = errors.New("owner is not disabled")
 )
 
 type OwnerRepository struct{ db *sql.DB }
@@ -253,6 +254,55 @@ func (r *OwnerRepository) Unlock(ctx context.Context, ownerID, actorID, auditID,
 	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("commit owner unlock: %w", err)
+	}
+	return nil
+}
+
+func (r *OwnerRepository) Reactivate(ctx context.Context, ownerID, actorID, auditID, now string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin owner reactivation: %w", err)
+	}
+	defer tx.Rollback()
+	result, err := tx.ExecContext(ctx, `
+		UPDATE users SET status='ACTIVE', failed_login_attempts=0, locked_until=NULL, updated_at=?
+		WHERE id=? AND role='OWNER_LIBRARY' AND status='DISABLED'
+	`, now, ownerID)
+	if err != nil {
+		return fmt.Errorf("reactivate owner: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("reactivate owner rows: %w", err)
+	}
+	if rows != 1 {
+		var exists int
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM users WHERE id=? AND role='OWNER_LIBRARY'`, ownerID).Scan(&exists); err != nil {
+			return fmt.Errorf("check owner before reactivation: %w", err)
+		}
+		if exists == 0 {
+			return ErrOwnerNotFound
+		}
+		return ErrOwnerNotDisabled
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE libraries SET status='ACTIVE', updated_at=? WHERE owner_user_id=?
+	`, now, ownerID); err != nil {
+		return fmt.Errorf("reactivate owner library: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?) WHERE user_id=?
+	`, now, ownerID); err != nil {
+		return fmt.Errorf("revoke reactivated owner sessions: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'REACTIVATE_LIBRARY_OWNER', 'USER', ?, '{"status":"ACTIVE","library_status":"ACTIVE"}', 1, ?)
+	`, auditID, actorID, ownerID, now); err != nil {
+		return fmt.Errorf("audit owner reactivation: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit owner reactivation: %w", err)
 	}
 	return nil
 }
