@@ -230,7 +230,7 @@ Chaque livre possède un état de stock versionné et un seuil d'alerte. Tous le
 
 | Méthode | Route | Fonction |
 |---|---|---|
-| `GET` | `/api/manage/inventory?status=LOW_STOCK&offset=0&limit=30` | Lister le stock autorisé |
+| `GET` | `/api/manage/inventory?status=LOW_STOCK&offset=0&limit=30&libraryId=...` | Lister le stock autorisé |
 | `GET` | `/api/manage/books/{id}/inventory` | Consulter le stock d'un livre |
 | `POST` | `/api/manage/books/{id}/inventory/entries` | Enregistrer une entrée positive |
 | `POST` | `/api/manage/books/{id}/inventory/exits` | Enregistrer une sortie positive |
@@ -241,6 +241,8 @@ Chaque livre possède un état de stock versionné et un seuil d'alerte. Tous le
 Les entrées et sorties reçoivent `{ "quantity": 5, "reason": "...", "version": 1 }`. L'ajustement reçoit `{ "quantity": 12, "reason": "inventaire physique", "version": 2 }`. Le seuil reçoit `{ "lowStockThreshold": 3, "version": 3 }`. Une version périmée répondra `409 inventory_version_conflict` et une sortie excessive `409 insufficient_stock`.
 
 L'historique des mouvements est paginé avec `offset` et `limit` (maximum 100), trié du plus récent au plus ancien. Une modification du seuil incrémente également la version du stock et écrit l'événement `UPDATE_INVENTORY_THRESHOLD` dans le journal d'audit, sans créer de faux mouvement de quantité.
+
+La liste des stocks accepte `LOW_STOCK` (quantité positive inférieure ou égale au seuil), `OUT_OF_STOCK` (quantité nulle) et `IN_STOCK` (quantité supérieure au seuil). Sans filtre, elle retourne tous les stocks autorisés, en présentant d'abord les ruptures puis les alertes. Seul le root peut utiliser `libraryId` pour limiter la liste à une librairie précise.
 
 ```bash
 curl -fsS "http://localhost:8080/api/manage/books/$BOOK_ID/inventory" \

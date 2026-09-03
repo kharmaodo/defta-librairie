@@ -7,6 +7,7 @@ import (
 	"defta-librairie/internal/services"
 	"errors"
 	"net/http"
+	"strings"
 )
 
 type InventoryHandler struct{ service *services.InventoryService }
@@ -39,6 +40,20 @@ func (h *InventoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeAuthJSON(w, http.StatusOK, inventory)
+}
+
+func (h *InventoryHandler) List(w http.ResponseWriter, r *http.Request) {
+	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	items, total, err := h.service.List(r.Context(), claims,
+		strings.TrimSpace(r.URL.Query().Get("libraryId")), r.URL.Query().Get("status"), offset, limit)
+	if err != nil {
+		writeInventoryError(w, err)
+		return
+	}
+	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
+		"results": items, "total": total, "offset": offset, "limit": limit,
+	})
 }
 
 func (h *InventoryHandler) Entry(w http.ResponseWriter, r *http.Request) {

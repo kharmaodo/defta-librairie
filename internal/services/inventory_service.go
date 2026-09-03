@@ -13,6 +13,10 @@ import (
 
 var ErrInvalidInventory = errors.New("invalid inventory data")
 
+var inventoryStatuses = map[string]bool{
+	"": true, "LOW_STOCK": true, "OUT_OF_STOCK": true, "IN_STOCK": true,
+}
+
 type InventoryService struct {
 	repository *repositories.InventoryRepository
 	now        func() time.Time
@@ -28,6 +32,25 @@ func (s *InventoryService) Find(ctx context.Context, claims *auth.Claims, bookID
 		return models.BookInventory{}, err
 	}
 	return s.repository.Find(ctx, bookID, libraryID)
+}
+
+func (s *InventoryService) List(ctx context.Context, claims *auth.Claims, requestedLibrary, status string,
+	offset, limit int) ([]models.InventoryListItem, int, error) {
+	status = strings.ToUpper(strings.TrimSpace(status))
+	if !inventoryStatuses[status] {
+		return nil, 0, ErrInvalidInventory
+	}
+	libraryID, err := resolveBookScope(claims, strings.TrimSpace(requestedLibrary), false)
+	if err != nil {
+		return nil, 0, err
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if limit < 1 || limit > 100 {
+		limit = 30
+	}
+	return s.repository.List(ctx, libraryID, status, offset, limit)
 }
 
 func (s *InventoryService) Move(ctx context.Context, claims *auth.Claims, bookID int,

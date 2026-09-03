@@ -17,6 +17,17 @@ type BookInventory struct {
 	UpdatedAt         string `json:"updatedAt"`
 }
 
+type InventoryListItem struct {
+	BookID            int64  `json:"bookId"`
+	LibraryID         string `json:"libraryId"`
+	Title             string `json:"title"`
+	Quantity          int    `json:"quantity"`
+	LowStockThreshold int    `json:"lowStockThreshold"`
+	StockStatus       string `json:"stockStatus"`
+	Version           int    `json:"version"`
+	UpdatedAt         string `json:"updatedAt"`
+}
+
 type InventoryMovement struct {
 	ID             string                `json:"id"`
 	BookID         int64                 `json:"bookId"`

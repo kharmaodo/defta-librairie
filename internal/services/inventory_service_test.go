@@ -22,7 +22,7 @@ func TestInventoryMovementsAndIsolation(t *testing.T) {
 	_, err = db.Exec(`
 		CREATE TABLE users(id TEXT PRIMARY KEY);
 		CREATE TABLE libraries(id TEXT PRIMARY KEY);
-		CREATE TABLE defta(id INTEGER PRIMARY KEY, library_id TEXT, deleted_at TEXT);
+		CREATE TABLE defta(id INTEGER PRIMARY KEY, title TEXT NOT NULL, library_id TEXT, deleted_at TEXT);
 		CREATE TABLE book_inventory(book_id INTEGER PRIMARY KEY, library_id TEXT NOT NULL, quantity INTEGER NOT NULL,
 			low_stock_threshold INTEGER NOT NULL, version INTEGER NOT NULL, updated_at TEXT NOT NULL);
 		CREATE TABLE inventory_movements(id TEXT PRIMARY KEY, book_id INTEGER, library_id TEXT, actor_user_id TEXT,
@@ -30,7 +30,8 @@ func TestInventoryMovementsAndIsolation(t *testing.T) {
 		CREATE TABLE audit_logs(id TEXT PRIMARY KEY, actor_user_id TEXT, action TEXT, resource_type TEXT,
 			resource_id TEXT, new_values TEXT, success INTEGER, created_at TEXT);
 		INSERT INTO users VALUES('owner-1'),('owner-2'); INSERT INTO libraries VALUES('library-1'),('library-2');
-		INSERT INTO defta VALUES(1,'library-1',NULL); INSERT INTO book_inventory VALUES(1,'library-1',0,5,1,'now');
+		INSERT INTO defta VALUES(1,'Livre un','library-1',NULL),(2,'Livre deux','library-1',NULL),(3,'Livre trois','library-2',NULL);
+		INSERT INTO book_inventory VALUES(1,'library-1',0,5,1,'now'),(2,'library-1',8,5,1,'now'),(3,'library-2',1,5,1,'now');
 	`)
 	if err != nil {
 		t.Fatal(err)
@@ -40,6 +41,20 @@ func TestInventoryMovementsAndIsolation(t *testing.T) {
 	owner.Subject = "owner-1"
 	other := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-2"}
 	other.Subject = "owner-2"
+	items, total, err := service.List(context.Background(), owner, "", "OUT_OF_STOCK", 0, 30)
+	if err != nil || total != 1 || len(items) != 1 || items[0].BookID != 1 {
+		t.Fatalf("out-of-stock list=%+v total=%d err=%v", items, total, err)
+	}
+	items, total, err = service.List(context.Background(), owner, "", "IN_STOCK", 0, 30)
+	if err != nil || total != 1 || len(items) != 1 || items[0].BookID != 2 {
+		t.Fatalf("in-stock list=%+v total=%d err=%v", items, total, err)
+	}
+	if _, _, err = service.List(context.Background(), owner, "library-2", "", 0, 30); !errors.Is(err, ErrBookForbidden) {
+		t.Fatalf("cross-library inventory list=%v", err)
+	}
+	if _, _, err = service.List(context.Background(), owner, "", "INVALID", 0, 30); !errors.Is(err, ErrInvalidInventory) {
+		t.Fatalf("invalid inventory status=%v", err)
+	}
 	stock, err := service.Move(context.Background(), owner, 1, models.InventoryMovementEntry, 10, 1, "réception")
 	if err != nil || stock.Quantity != 10 || stock.Version != 2 {
 		t.Fatalf("entry=%+v err=%v", stock, err)

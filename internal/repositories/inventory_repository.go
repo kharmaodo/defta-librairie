@@ -41,6 +41,55 @@ func (r *InventoryRepository) Find(ctx context.Context, bookID int, libraryID st
 	return inventory, nil
 }
 
+func (r *InventoryRepository) List(ctx context.Context, libraryID, status string, offset, limit int) ([]models.InventoryListItem, int, error) {
+	where := ` WHERE d.deleted_at IS NULL`
+	args := make([]interface{}, 0, 4)
+	if libraryID != "" {
+		where += ` AND i.library_id=?`
+		args = append(args, libraryID)
+	}
+	switch status {
+	case "LOW_STOCK":
+		where += ` AND i.quantity > 0 AND i.quantity <= i.low_stock_threshold`
+	case "OUT_OF_STOCK":
+		where += ` AND i.quantity = 0`
+	case "IN_STOCK":
+		where += ` AND i.quantity > i.low_stock_threshold`
+	}
+	var total int
+	if err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM book_inventory i
+		JOIN defta d ON d.id=i.book_id`+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count inventory: %w", err)
+	}
+	queryArgs := append(append([]interface{}{}, args...), limit, offset)
+	rows, err := r.db.QueryContext(ctx, `SELECT i.book_id, i.library_id, d.title, i.quantity,
+		i.low_stock_threshold,
+		CASE WHEN i.quantity=0 THEN 'OUT_OF_STOCK'
+			WHEN i.quantity<=i.low_stock_threshold THEN 'LOW_STOCK'
+			ELSE 'IN_STOCK' END,
+		i.version, i.updated_at
+		FROM book_inventory i JOIN defta d ON d.id=i.book_id`+where+`
+		ORDER BY CASE WHEN i.quantity=0 THEN 0 WHEN i.quantity<=i.low_stock_threshold THEN 1 ELSE 2 END,
+			i.quantity, d.title, i.book_id LIMIT ? OFFSET ?`, queryArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list inventory: %w", err)
+	}
+	defer rows.Close()
+	items := make([]models.InventoryListItem, 0)
+	for rows.Next() {
+		var item models.InventoryListItem
+		if err = rows.Scan(&item.BookID, &item.LibraryID, &item.Title, &item.Quantity,
+			&item.LowStockThreshold, &item.StockStatus, &item.Version, &item.UpdatedAt); err != nil {
+			return nil, 0, fmt.Errorf("scan inventory: %w", err)
+		}
+		items = append(items, item)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate inventory: %w", err)
+	}
+	return items, total, nil
+}
+
 func (r *InventoryRepository) ApplyMovement(ctx context.Context, bookID int, libraryID, actorID, movementID,
 	auditID string, movementType models.InventoryMovementType, quantity, expectedVersion int, reason, now string) (models.BookInventory, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
