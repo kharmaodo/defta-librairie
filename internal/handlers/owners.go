@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strings"
 )
 
 type OwnerHandler struct{ service *services.OwnerService }
@@ -39,13 +40,21 @@ type updateOwnerRequest struct {
 	} `json:"library"`
 }
 
+type resetOwnerPasswordRequest struct {
+	Password string `json:"password"`
+}
+
 func (h *OwnerHandler) List(w http.ResponseWriter, r *http.Request) {
-	owners, err := h.service.List(r.Context())
+	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
+	owners, total, err := h.service.Search(r.Context(), r.URL.Query().Get("q"),
+		strings.TrimSpace(r.URL.Query().Get("status")), strings.TrimSpace(r.URL.Query().Get("libraryStatus")), offset, limit)
 	if err != nil {
 		writeOwnerError(w, err)
 		return
 	}
-	writeAuthJSON(w, http.StatusOK, map[string]interface{}{"results": owners, "total": len(owners)})
+	writeAuthJSON(w, http.StatusOK, map[string]interface{}{
+		"results": owners, "total": total, "offset": offset, "limit": limit,
+	})
 }
 
 func (h *OwnerHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +122,38 @@ func (h *OwnerHandler) Disable(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *OwnerHandler) Unlock(w http.ResponseWriter, r *http.Request) {
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	if err := h.service.Unlock(r.Context(), r.PathValue("id"), claims.Subject); err != nil {
+		writeOwnerError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *OwnerHandler) Reactivate(w http.ResponseWriter, r *http.Request) {
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	if err := h.service.Reactivate(r.Context(), r.PathValue("id"), claims.Subject); err != nil {
+		writeOwnerError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *OwnerHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var request resetOwnerPasswordRequest
+	if err := decodeOwnerJSON(w, r, &request); err != nil || strings.TrimSpace(request.Password) == "" {
+		writeOwnerError(w, services.ErrInvalidOwner)
+		return
+	}
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	if err := h.service.ResetPassword(r.Context(), r.PathValue("id"), request.Password, claims.Subject); err != nil {
+		writeOwnerError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func decodeOwnerJSON(w http.ResponseWriter, r *http.Request, target interface{}) error {
 	r.Body = http.MaxBytesReader(w, r.Body, 256*1024)
 	decoder := json.NewDecoder(r.Body)
@@ -132,7 +173,13 @@ func writeOwnerError(w http.ResponseWriter, err error) {
 		writeAuthJSON(w, http.StatusNotFound, map[string]string{"error": "owner_not_found", "message": "Library owner not found"})
 	case errors.Is(err, repositories.ErrOwnerConflict):
 		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "owner_conflict", "message": "Username or email already exists"})
-	case errors.Is(err, services.ErrInvalidOwner), errors.Is(err, auth.ErrPasswordTooShort):
+	case errors.Is(err, repositories.ErrOwnerNotLocked):
+		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "owner_not_locked", "message": "Library owner is not locked"})
+	case errors.Is(err, repositories.ErrOwnerNotDisabled):
+		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "owner_not_disabled", "message": "Library owner is not disabled"})
+	case errors.Is(err, services.ErrPasswordReused):
+		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_new_password", "message": err.Error()})
+	case errors.Is(err, services.ErrInvalidOwner), errors.Is(err, auth.ErrPasswordTooShort), errors.Is(err, auth.ErrPasswordTooWeak):
 		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request", "message": err.Error()})
 	default:
 		writeAuthJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "Owner operation failed"})

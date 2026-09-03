@@ -4,22 +4,26 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Port          string
-	DBPath        string
-	Version       string
-	BuildDate     string
-	PageSize      int
-	JWTSecret     string
-	JWTIssuer     string
-	JWTAudience   string
-	JWTAccessTTL  time.Duration
-	JWTRefreshTTL time.Duration
+	Port             string
+	DBPath           string
+	Version          string
+	BuildDate        string
+	PageSize         int
+	JWTSecret        string
+	JWTIssuer        string
+	JWTAudience      string
+	JWTAccessTTL     time.Duration
+	JWTRefreshTTL    time.Duration
+	AuthRateLimit    int
+	AuthRateWindow   time.Duration
+	AuthCookieSecure bool
 }
 
 func Load() (*Config, error) {
@@ -27,24 +31,42 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		Port:          getEnv("PORT", "8080"),
-		DBPath:        getEnv("DB_PATH", "./data/defta.db"),
-		Version:       getEnv("VERSION", "0.1.0-dev"),
-		BuildDate:     getEnv("BUILD_DATE", "unknown"),
-		PageSize:      getEnvInt("PAGE_SIZE", 30),
-		JWTSecret:     getEnv("JWT_SECRET", ""),
-		JWTIssuer:     getEnv("JWT_ISSUER", "defta-librairie"),
-		JWTAudience:   getEnv("JWT_AUDIENCE", "defta-librairie-web"),
-		JWTAccessTTL:  time.Duration(getEnvInt("JWT_ACCESS_TTL_SECONDS", 900)) * time.Second,
-		JWTRefreshTTL: time.Duration(getEnvInt("JWT_REFRESH_TTL_SECONDS", 604800)) * time.Second,
+		Port:             getEnv("PORT", "8080"),
+		DBPath:           getEnv("DB_PATH", "./data/defta.db"),
+		Version:          getEnv("VERSION", "0.1.0-dev"),
+		BuildDate:        getEnv("BUILD_DATE", "unknown"),
+		PageSize:         getEnvInt("PAGE_SIZE", 30),
+		JWTSecret:        getEnv("JWT_SECRET", ""),
+		JWTIssuer:        getEnv("JWT_ISSUER", "defta-librairie"),
+		JWTAudience:      getEnv("JWT_AUDIENCE", "defta-librairie-web"),
+		JWTAccessTTL:     time.Duration(getEnvInt("JWT_ACCESS_TTL_SECONDS", 900)) * time.Second,
+		JWTRefreshTTL:    time.Duration(getEnvInt("JWT_REFRESH_TTL_SECONDS", 604800)) * time.Second,
+		AuthRateLimit:    getEnvInt("AUTH_RATE_LIMIT_REQUESTS", 10),
+		AuthRateWindow:   time.Duration(getEnvInt("AUTH_RATE_LIMIT_WINDOW_SECONDS", 60)) * time.Second,
+		AuthCookieSecure: getEnvBool("AUTH_COOKIE_SECURE", false),
 	}
 
 	return cfg, nil
 }
 
+func getEnvBool(key string, fallback bool) bool {
+	value := getEnv(key, "")
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseBool(value)
+	if err != nil {
+		log.Printf("Valeur invalide pour %s → utilisation de %t", key, fallback)
+		return fallback
+	}
+	return parsed
+}
+
 func getEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists && value != "" {
-		return value
+		// Un fichier .env modifié sous Windows peut conserver un retour
+		// chariot final. Il rend notamment PORT invalide sous Linux.
+		return strings.TrimRight(value, "\r\n")
 	}
 	return fallback
 }

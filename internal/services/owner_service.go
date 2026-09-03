@@ -66,6 +66,26 @@ func (s *OwnerService) List(ctx context.Context) ([]models.OwnerAccount, error) 
 	return s.repository.List(ctx)
 }
 
+func (s *OwnerService) Search(ctx context.Context, query, userStatus, libraryStatus string, offset, limit int) ([]models.OwnerAccount, int, error) {
+	query = strings.TrimSpace(query)
+	userStatus = strings.ToUpper(strings.TrimSpace(userStatus))
+	libraryStatus = strings.ToUpper(strings.TrimSpace(libraryStatus))
+	if len([]rune(query)) > 200 || (userStatus != "" && !validOwnerSearchStatus(userStatus)) ||
+		(libraryStatus != "" && !validLibrarySearchStatus(libraryStatus)) {
+		return nil, 0, ErrInvalidOwner
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if limit < 1 {
+		limit = 30
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repository.Search(ctx, query, userStatus, libraryStatus, offset, limit)
+}
+
 func (s *OwnerService) Find(ctx context.Context, id string) (models.OwnerAccount, error) {
 	return s.repository.FindByID(ctx, id)
 }
@@ -87,6 +107,13 @@ func (s *OwnerService) Update(ctx context.Context, id string, input models.Owner
 	}
 	passwordHash := ""
 	if input.Password != nil {
+		hashes, historyErr := s.repository.PasswordHashes(ctx, id, 4)
+		if historyErr != nil {
+			return models.OwnerAccount{}, historyErr
+		}
+		if passwordMatchesHistory(*input.Password, hashes) {
+			return models.OwnerAccount{}, ErrPasswordReused
+		}
 		passwordHash, err = auth.HashPassword(*input.Password)
 		if err != nil {
 			return models.OwnerAccount{}, err
@@ -111,6 +138,42 @@ func (s *OwnerService) Disable(ctx context.Context, id, actorID string) error {
 		return err
 	}
 	return s.repository.Disable(ctx, id, actorID, auditID, s.now().UTC().Format(time.RFC3339Nano))
+}
+
+func (s *OwnerService) Unlock(ctx context.Context, id, actorID string) error {
+	auditID, err := identity.NewID()
+	if err != nil {
+		return err
+	}
+	return s.repository.Unlock(ctx, id, actorID, auditID, s.now().UTC().Format(time.RFC3339Nano))
+}
+
+func (s *OwnerService) Reactivate(ctx context.Context, id, actorID string) error {
+	auditID, err := identity.NewID()
+	if err != nil {
+		return err
+	}
+	return s.repository.Reactivate(ctx, id, actorID, auditID, s.now().UTC().Format(time.RFC3339Nano))
+}
+
+func (s *OwnerService) ResetPassword(ctx context.Context, id, password, actorID string) error {
+	hashes, err := s.repository.PasswordHashes(ctx, id, 4)
+	if err != nil {
+		return err
+	}
+	if passwordMatchesHistory(password, hashes) {
+		return ErrPasswordReused
+	}
+	passwordHash, err := auth.HashPassword(password)
+	if err != nil {
+		return err
+	}
+	auditID, err := identity.NewID()
+	if err != nil {
+		return err
+	}
+	return s.repository.ResetPassword(ctx, id, passwordHash, actorID, auditID,
+		s.now().UTC().Format(time.RFC3339Nano))
 }
 
 func normalizeCreateInput(input *models.OwnerCreateInput) {
@@ -161,4 +224,13 @@ func validUserStatus(status models.UserStatus) bool {
 
 func validLibraryStatus(status models.LibraryStatus) bool {
 	return status == models.LibraryStatusActive || status == models.LibraryStatusDisabled
+}
+
+func validOwnerSearchStatus(status string) bool {
+	return status == string(models.UserStatusActive) || status == string(models.UserStatusDisabled) ||
+		status == string(models.UserStatusLocked)
+}
+
+func validLibrarySearchStatus(status string) bool {
+	return status == string(models.LibraryStatusActive) || status == string(models.LibraryStatusDisabled)
 }

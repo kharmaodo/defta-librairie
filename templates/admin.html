@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Tableau de bord Defta Librairie">
+  <title>{{.Title}} · Defta Librairie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body class="dashboard-page" data-page="dashboard">
+  <header class="topbar">
+    <a class="brand compact" href="/">
+      <span class="brand-mark" aria-hidden="true">د</span>
+      <span><strong>Defta</strong><small>Administration</small></span>
+    </a>
+    <div class="account">
+      <span id="role-badge" class="badge">Chargement…</span>
+      <button id="change-password-button" class="button ghost" type="button">Mot de passe</button>
+      <button id="logout-button" class="button ghost" type="button">Se déconnecter</button>
+    </div>
+  </header>
+
+  <main class="dashboard">
+    <section class="welcome">
+      <div><p class="eyebrow">Tableau de bord</p><h1>Bonjour, <span id="user-name">utilisateur</span></h1></div>
+      <p id="scope-text" class="muted">Vérification de vos droits…</p>
+    </section>
+
+    <p id="dashboard-error" class="alert" role="alert" hidden></p>
+
+    <section class="metrics" aria-label="Indicateurs">
+      <article class="metric"><span>Livres visibles</span><strong id="book-total">—</strong></article>
+      <article class="metric root-only" hidden><span>Propriétaires</span><strong id="owner-total">—</strong></article>
+      <article class="metric"><span>Événements d’audit</span><strong id="audit-total">—</strong></article>
+      <article class="metric"><span>Sessions actives</span><strong id="session-total">—</strong></article>
+      <article class="metric"><span>État de session</span><strong class="status-good">Active</strong></article>
+    </section>
+
+    <section id="owners-section" class="panel root-only" hidden>
+      <div class="panel-heading owner-heading"><div><p class="eyebrow">Administration globale</p><h2>Propriétaires et librairies</h2></div><div class="heading-actions"><form id="owner-filters" class="filters"><label>Recherche<input name="q" maxlength="200" placeholder="Compte ou librairie"></label><label>Compte<select name="status"><option value="">Tous</option><option value="ACTIVE">Actif</option><option value="LOCKED">Verrouillé</option><option value="DISABLED">Désactivé</option></select></label><label>Librairie<select name="libraryStatus"><option value="">Toutes</option><option value="ACTIVE">Active</option><option value="DISABLED">Désactivée</option></select></label><button class="button ghost" type="submit">Filtrer</button></form><button id="add-owner-button" class="button primary" type="button">Nouveau propriétaire</button></div></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Propriétaire</th><th>Librairie</th><th>Compte</th><th>Librairie</th><th>Actions</th></tr></thead>
+          <tbody id="owners-body"><tr><td colspan="5" class="empty">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination"><button id="owners-previous" class="button ghost" type="button">Précédent</button><span id="owners-page-label" class="hint">Page 1</span><button id="owners-next" class="button ghost" type="button">Suivant</button></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading tag-heading"><div><p class="eyebrow">Référentiel</p><h2>Tags de la librairie</h2></div><form id="tag-form" class="filters"><label class="root-only-field" hidden>Librairie<select name="libraryId" id="tag-library"></select></label><label>Nouveau tag<input name="name" minlength="2" maxlength="50" placeholder="ex. fiqh" required></label><button class="button primary" type="submit">Ajouter</button></form></div>
+      <p class="scope-note">Les tags sont uniques sans distinction de majuscules dans chaque librairie.</p>
+      <div id="tags-list" class="tag-list"><span class="hint">Chargement…</span></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading book-heading"><div><p class="eyebrow">Catalogue privé</p><h2>Livres</h2></div><div class="heading-actions"><form id="book-search-form" class="inline-search"><input name="q" maxlength="200" placeholder="Titre, auteur, tag…" aria-label="Rechercher dans les livres"><button class="button ghost" type="submit">Rechercher</button></form><button id="add-book-button" class="button primary" type="button">Nouveau livre</button></div></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Titre</th><th>Auteur</th><th>Prix</th><th>Tags</th><th>Statut</th><th>Actions</th></tr></thead>
+          <tbody id="books-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination"><button id="books-previous" class="button ghost" type="button">Précédent</button><span id="books-page-label" class="hint">Page 1</span><button id="books-next" class="button ghost" type="button">Suivant</button></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading audit-heading">
+        <div><p class="eyebrow">Traçabilité</p><h2>Journal d’audit</h2></div>
+        <form id="audit-filters" class="filters">
+          <label class="root-only-field" hidden>Acteur<input name="actor" maxlength="64" placeholder="Utilisateur"></label>
+          <label>Action<input name="action" maxlength="64" placeholder="ex. LOGIN_FAILED"></label>
+          <label>Ressource<input name="resourceType" maxlength="32" placeholder="BOOK, TAG…"></label>
+          <label>Identifiant<input name="resourceId" maxlength="100" placeholder="ID exact"></label>
+          <label>Résultat<select name="success"><option value="">Tous</option><option value="true">Succès</option><option value="false">Échec</option></select></label>
+          <label>Du<input name="from" type="datetime-local"></label>
+          <label>Au<input name="to" type="datetime-local"></label>
+          <button class="button ghost" type="submit">Filtrer</button>
+        </form>
+      </div>
+      <p class="scope-note owner-audit-note" hidden>Seuls les événements associés à votre compte sont affichés.</p>
+      <div class="table-wrap">
+        <table><thead><tr><th>Date</th><th>Action</th><th>Acteur</th><th>Ressource</th><th>Résultat</th><th>Adresse IP</th></tr></thead>
+          <tbody id="audit-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination"><button id="audit-previous" class="button ghost" type="button">Précédent</button><span id="audit-page-label" class="hint">Page 1</span><button id="audit-next" class="button ghost" type="button">Suivant</button></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading session-heading"><div><p class="eyebrow">Sécurité</p><h2>Sessions actives</h2></div><div class="heading-actions"><form id="session-filters" class="filters"><label class="root-only-field" hidden>Utilisateur<input name="username" maxlength="64" placeholder="Nom d’utilisateur"></label><label class="root-only-field" hidden>Rôle<select name="role"><option value="">Tous</option><option value="SUPER_ADMIN_ROOT">Root</option><option value="OWNER_LIBRARY">Propriétaire</option></select></label><label>Adresse IP<input name="ipAddress" maxlength="64" placeholder="Adresse partielle"></label><label>Appareil<input name="userAgent" maxlength="200" placeholder="Navigateur ou client"></label><button class="button ghost" type="submit">Filtrer</button></form><button id="revoke-other-sessions-button" class="button danger" type="button">Déconnecter les autres appareils</button><button id="refresh-sessions-button" class="button ghost" type="button">Actualiser</button></div></div>
+      <p id="session-scope-note" class="scope-note">Chargement du périmètre des sessions…</p>
+      <div class="table-wrap">
+        <table><thead><tr><th>Utilisateur</th><th>Rôle</th><th>Appareil</th><th>Adresse IP</th><th>Créée</th><th>Expiration</th><th>État</th><th>Action</th></tr></thead>
+          <tbody id="sessions-body"><tr><td colspan="8" class="empty">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination"><button id="sessions-previous" class="button ghost" type="button">Précédent</button><span id="sessions-page-label" class="hint">Page 1</span><button id="sessions-next" class="button ghost" type="button">Suivant</button></div>
+    </section>
+  </main>
+
+  <dialog id="owner-dialog" class="modal">
+    <form id="owner-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Compte propriétaire</p><h2 id="owner-form-title">Nouveau propriétaire</h2></div><button class="icon-button" type="button" data-close="owner-dialog" aria-label="Fermer">×</button></div>
+      <input name="id" type="hidden">
+      <div class="form-grid">
+        <label>Nom d’utilisateur<input name="username" minlength="3" maxlength="64" pattern="[a-zA-Z0-9._-]+" required></label>
+        <label>E-mail<input name="email" type="email"></label>
+        <label class="full create-only">Mot de passe <small id="owner-password-help">12 caractères minimum</small><input name="password" type="password" minlength="12" autocomplete="new-password"></label>
+        <label class="full">Nom de la librairie<input name="libraryName" minlength="2" maxlength="120" required></label>
+        <label class="full">Description<textarea name="libraryDescription" maxlength="1000" rows="3"></textarea></label>
+        <label class="edit-only">État du compte<select name="status"><option value="ACTIVE">Actif</option><option value="DISABLED">Désactivé</option></select></label>
+        <label class="edit-only">État de la librairie<select name="libraryStatus"><option value="ACTIVE">Active</option><option value="DISABLED">Désactivée</option></select></label>
+      </div>
+      <p id="owner-form-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="owner-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="owner-password-reset-dialog" class="modal">
+    <form id="owner-password-reset-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Sécurité du propriétaire</p><h2 id="owner-password-reset-title">Nouveau mot de passe temporaire</h2></div><button class="icon-button" type="button" data-close="owner-password-reset-dialog" aria-label="Fermer">×</button></div>
+      <input name="id" type="hidden">
+      <div class="form-grid">
+        <label class="full">Mot de passe temporaire<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
+        <label class="full">Confirmation<input name="confirmation" type="password" minlength="12" autocomplete="new-password" required></label>
+      </div>
+      <p class="hint">Toutes les sessions seront révoquées. Le propriétaire devra remplacer ce mot de passe à sa prochaine connexion.</p>
+      <p id="owner-password-reset-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="owner-password-reset-dialog">Annuler</button><button class="button primary" type="submit">Réinitialiser</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="book-dialog" class="modal">
+    <form id="book-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Catalogue</p><h2 id="book-form-title">Nouveau livre</h2></div><button class="icon-button" type="button" data-close="book-dialog" aria-label="Fermer">×</button></div>
+      <input name="id" type="hidden"><input name="version" type="hidden">
+      <div class="form-grid">
+        <label class="full root-only-field" hidden>Librairie<select name="libraryId"></select></label>
+        <label class="full">Titre<input name="title" maxlength="300" required></label>
+        <label>Auteur<input name="auteur"></label><label>Éditeur<input name="editeur"></label>
+        <label>Prix<input name="price" type="number" min="0" step="0.01" value="0" required></label>
+        <label>Volume<input name="volume" type="number" min="0" step="1" value="0" required></label>
+        <label>Statut<select name="status"><option value="AVAILABLE">Disponible</option><option value="UNAVAILABLE">Indisponible</option><option value="OUT_OF_STOCK">Rupture</option></select></label>
+        <label>Catégorie<input name="categorie" maxlength="120"></label>
+        <label class="full">Tags<input name="tags" list="tag-suggestions" maxlength="500" placeholder="arabe, fiqh, promotion"><datalist id="tag-suggestions"></datalist></label>
+        <label class="full">URL de couverture<input name="coverUrl" type="url" maxlength="2048"></label>
+      </div>
+      <p id="book-form-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="book-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="book-history-dialog" class="modal history-modal">
+    <div class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Prix, statut et tags</p><h2 id="book-history-title">Historique du livre</h2></div><button class="icon-button" type="button" data-close="book-history-dialog" aria-label="Fermer">×</button></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Date</th><th>Acteur</th><th>Action</th><th>Avant</th><th>Après</th></tr></thead><tbody id="book-history-body"></tbody></table>
+      </div>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="book-history-dialog">Fermer</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="password-dialog" class="modal narrow">
+    <form id="password-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Sécurité du compte</p><h2>Changer le mot de passe</h2></div><button class="icon-button password-optional-action" type="button" data-close="password-dialog" aria-label="Fermer">×</button></div>
+      <p class="muted form-note">Toutes vos sessions seront révoquées. Vous devrez vous reconnecter avec le nouveau mot de passe.</p>
+      <div class="form-grid single">
+        <label>Mot de passe actuel<input name="currentPassword" type="password" autocomplete="current-password" required></label>
+        <label>Nouveau mot de passe<input name="newPassword" type="password" minlength="12" autocomplete="new-password" required></label>
+        <label>Confirmer le nouveau mot de passe<input name="confirmation" type="password" minlength="12" autocomplete="new-password" required></label>
+      </div>
+      <p id="password-form-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost password-optional-action" type="button" data-close="password-dialog">Annuler</button><button class="button primary" type="submit">Changer et me déconnecter</button></div>
+    </form>
+  </dialog>
+
+  <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
+  <script src="/static/js/admin-auth.js" defer></script>
+</body>
+</html>

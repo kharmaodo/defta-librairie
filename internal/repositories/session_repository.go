@@ -12,6 +12,7 @@ import (
 var (
 	ErrRefreshSessionNotFound = errors.New("refresh session not found")
 	ErrRefreshTokenReused     = errors.New("refresh token reuse detected")
+	ErrActiveSessionNotFound  = errors.New("active session not found")
 )
 
 type SessionRepository struct{ db *sql.DB }
@@ -58,6 +59,135 @@ func (r *SessionRepository) Create(ctx context.Context, session models.RefreshSe
 	return nil
 }
 
+func (r *SessionRepository) ListActive(ctx context.Context, userID, now string, filter models.SessionFilter, offset, limit int) ([]models.ActiveSession, int, error) {
+	where := " WHERE s.revoked_at IS NULL AND s.expires_at>?"
+	args := []interface{}{now}
+	if userID != "" {
+		where += " AND s.user_id=?"
+		args = append(args, userID)
+	}
+	if filter.Username != "" {
+		where += " AND u.username LIKE ?"
+		args = append(args, "%"+filter.Username+"%")
+	}
+	if filter.Role != "" {
+		where += " AND u.role=?"
+		args = append(args, filter.Role)
+	}
+	if filter.IPAddress != "" {
+		where += " AND COALESCE(s.ip_address, '') LIKE ?"
+		args = append(args, "%"+filter.IPAddress+"%")
+	}
+	if filter.UserAgent != "" {
+		where += " AND COALESCE(s.user_agent, '') LIKE ?"
+		args = append(args, "%"+filter.UserAgent+"%")
+	}
+	var total int
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM refresh_sessions s JOIN users u ON u.id=s.user_id"+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count active sessions: %w", err)
+	}
+	args = append(args, limit, offset)
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT s.id, s.user_id, u.username, u.role, COALESCE(s.ip_address, ''), COALESCE(s.user_agent, ''),
+		       s.created_at, COALESCE(s.last_used_at, ''), s.expires_at
+		FROM refresh_sessions s JOIN users u ON u.id=s.user_id
+	`+where+" ORDER BY s.created_at DESC LIMIT ? OFFSET ?", args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list active sessions: %w", err)
+	}
+	defer rows.Close()
+	sessions := make([]models.ActiveSession, 0)
+	for rows.Next() {
+		var session models.ActiveSession
+		if err = rows.Scan(&session.ID, &session.UserID, &session.Username, &session.Role, &session.IPAddress,
+			&session.UserAgent, &session.CreatedAt, &session.LastUsedAt, &session.ExpiresAt); err != nil {
+			return nil, 0, fmt.Errorf("scan active session: %w", err)
+		}
+		sessions = append(sessions, session)
+	}
+	return sessions, total, rows.Err()
+}
+
+func (r *SessionRepository) RevokeActive(ctx context.Context, sessionID, scopedUserID, actorID, auditID, now string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin active session revocation: %w", err)
+	}
+	defer tx.Rollback()
+	query := "SELECT user_id, token_family FROM refresh_sessions WHERE id=? AND revoked_at IS NULL AND expires_at>?"
+	args := []interface{}{sessionID, now}
+	if scopedUserID != "" {
+		query += " AND user_id=?"
+		args = append(args, scopedUserID)
+	}
+	var userID, family string
+	if err = tx.QueryRowContext(ctx, query, args...).Scan(&userID, &family); errors.Is(err, sql.ErrNoRows) {
+		return ErrActiveSessionNotFound
+	} else if err != nil {
+		return fmt.Errorf("find active session: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?) WHERE token_family=?
+	`, now, family); err != nil {
+		return fmt.Errorf("revoke active session family: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'SESSION_REVOKED', 'SESSION', ?, '{"family_revoked":true}', 1, ?)
+	`, auditID, actorID, sessionID, now); err != nil {
+		return fmt.Errorf("audit active session revocation: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit active session revocation: %w", err)
+	}
+	return nil
+}
+
+func (r *SessionRepository) RevokeOthers(ctx context.Context, userID, currentSessionID, actorID, auditID, now string) (int, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("begin other sessions revocation: %w", err)
+	}
+	defer tx.Rollback()
+
+	var currentFamily string
+	err = tx.QueryRowContext(ctx, `
+		SELECT token_family FROM refresh_sessions
+		WHERE id=? AND user_id=? AND revoked_at IS NULL AND expires_at>?
+	`, currentSessionID, userID, now).Scan(&currentFamily)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrActiveSessionNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("find current active session: %w", err)
+	}
+
+	var revokedFamilies int
+	if err = tx.QueryRowContext(ctx, `
+		SELECT COUNT(DISTINCT token_family) FROM refresh_sessions
+		WHERE user_id=? AND token_family<>? AND revoked_at IS NULL AND expires_at>?
+	`, userID, currentFamily, now).Scan(&revokedFamilies); err != nil {
+		return 0, fmt.Errorf("count other active session families: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?)
+		WHERE user_id=? AND token_family<>? AND revoked_at IS NULL AND expires_at>?
+	`, now, userID, currentFamily, now); err != nil {
+		return 0, fmt.Errorf("revoke other active session families: %w", err)
+	}
+	newValues := fmt.Sprintf(`{"revoked_families":%d}`, revokedFamilies)
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'OTHER_SESSIONS_REVOKED', 'SESSION', ?, ?, 1, ?)
+	`, auditID, actorID, currentSessionID, newValues, now); err != nil {
+		return 0, fmt.Errorf("audit other sessions revocation: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return 0, fmt.Errorf("commit other sessions revocation: %w", err)
+	}
+	return revokedFamilies, nil
+}
+
 func (r *SessionRepository) Rotate(ctx context.Context, oldTokenHash string, replacement models.RefreshSession, auditID, now string) (models.User, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -71,14 +201,14 @@ func (r *SessionRepository) Rotate(ctx context.Context, oldTokenHash string, rep
 	err = tx.QueryRowContext(ctx, `
 		SELECT s.id, s.user_id, s.token_family, s.expires_at, COALESCE(s.revoked_at, ''),
 		       COALESCE(s.replaced_by_id, ''), u.username, COALESCE(u.email, ''), u.role,
-		       u.status, COALESCE(l.id, ''), COALESCE(l.status, '')
+		       u.status, COALESCE(l.id, ''), COALESCE(l.status, ''), u.must_change_password
 		FROM refresh_sessions s
 		JOIN users u ON u.id=s.user_id
 		LEFT JOIN libraries l ON l.owner_user_id=u.id
 		WHERE s.token_hash=?
 	`, oldTokenHash).Scan(&session.ID, &session.UserID, &session.TokenFamily,
 		&session.ExpiresAt, &session.RevokedAt, &session.ReplacedByID, &user.Username,
-		&user.Email, &user.Role, &user.Status, &user.LibraryID, &libraryStatus)
+		&user.Email, &user.Role, &user.Status, &user.LibraryID, &libraryStatus, &user.MustChangePassword)
 	if errors.Is(err, sql.ErrNoRows) {
 		return models.User{}, ErrRefreshSessionNotFound
 	}

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Connexion à l'administration Defta Librairie">
+  <title>{{.Title}} · Defta Librairie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body class="auth-page" data-page="login">
+  <main class="auth-layout">
+    <section class="auth-intro" aria-labelledby="brand-title">
+      <a class="brand" href="/" aria-label="Retour au catalogue">
+        <span class="brand-mark" aria-hidden="true">د</span>
+        <span><strong id="brand-title">Defta Librairie</strong><small>Gestion éditoriale</small></span>
+      </a>
+      <div class="auth-promise">
+        <p class="eyebrow">Espace sécurisé</p>
+        <h1>Pilotez votre librairie avec clarté.</h1>
+        <p>Gérez les propriétaires, les livres, les prix et les tags depuis un espace adapté à vos droits.</p>
+      </div>
+      <p class="version">Version {{.Version}} · Build {{.BuildDate}}</p>
+    </section>
+
+    <section class="auth-panel" aria-labelledby="login-title">
+      <form id="login-form" class="login-card">
+        <div>
+          <p class="eyebrow">Bienvenue</p>
+          <h2 id="login-title">Connexion</h2>
+          <p class="muted">Utilisez votre compte administrateur ou propriétaire.</p>
+        </div>
+        <label>Nom d’utilisateur
+          <input name="username" autocomplete="username" required autofocus>
+        </label>
+        <label>Mot de passe
+          <input name="password" type="password" autocomplete="current-password" required>
+        </label>
+        <p id="login-error" class="alert" role="alert" hidden></p>
+        <p id="login-notice" class="notice" role="status" hidden></p>
+        <button class="button primary" type="submit">Se connecter</button>
+        <a class="back-link" href="/">← Revenir au catalogue</a>
+      </form>
+    </section>
+  </main>
+  <script src="/static/js/admin-auth.js" defer></script>
+</body>
+</html>

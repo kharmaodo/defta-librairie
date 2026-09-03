@@ -6,15 +6,30 @@ import (
 	"defta-librairie/internal/migrations"
 	"defta-librairie/internal/models"
 	"fmt"
+	"io"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 var DB *sql.DB
 
 func Init(path string) error {
-	var err error
+	_, statErr := os.Stat(path)
+	databaseExisted := statErr == nil
+	if statErr != nil && !os.IsNotExist(statErr) {
+		return fmt.Errorf("inspect SQLite database: %w", statErr)
+	}
+	seeded, err := ensureDatabaseFile(path)
+	if err != nil {
+		return err
+	}
+	if seeded {
+		log.Printf("Catalogue initial copié vers → %s", path)
+	}
 	DB, err = sql.Open("sqlite3", path+"?_journal_mode=WAL&_foreign_keys=on&_busy_timeout=5000&mode=rwc")
 	if err != nil {
 		return err
@@ -23,12 +38,83 @@ func Init(path string) error {
 	if err = DB.Ping(); err != nil {
 		return err
 	}
+	if databaseExisted {
+		backupPath, backupErr := backupDatabase(DB, path, time.Now().UTC())
+		if backupErr != nil {
+			_ = DB.Close()
+			return fmt.Errorf("backup SQLite database before migrations: %w", backupErr)
+		}
+		log.Printf("Sauvegarde SQLite automatique → %s", backupPath)
+	}
 	if err = migrations.Run(context.Background(), DB); err != nil {
 		return fmt.Errorf("database migrations: %w", err)
 	}
 
 	log.Printf("Base SQLite connectée → %s", path)
 	return nil
+}
+
+func backupDatabase(db *sql.DB, path string, now time.Time) (string, error) {
+	backupDirectory := filepath.Join(filepath.Dir(path), "backups")
+	if err := os.MkdirAll(backupDirectory, 0o700); err != nil {
+		return "", fmt.Errorf("create backup directory: %w", err)
+	}
+	backupPath := filepath.Join(backupDirectory, "defta-"+now.UTC().Format("20060102T150405.000000000Z")+".db")
+	if _, err := db.Exec(`VACUUM INTO ?`, backupPath); err != nil {
+		return "", fmt.Errorf("create consistent backup: %w", err)
+	}
+	backup, err := sql.Open("sqlite3", backupPath+"?mode=ro")
+	if err != nil {
+		return "", fmt.Errorf("open backup for verification: %w", err)
+	}
+	defer backup.Close()
+	var integrity string
+	if err = backup.QueryRow(`PRAGMA integrity_check`).Scan(&integrity); err != nil {
+		return "", fmt.Errorf("verify backup integrity: %w", err)
+	}
+	if integrity != "ok" {
+		return "", fmt.Errorf("verify backup integrity: %s", integrity)
+	}
+	return backupPath, nil
+}
+
+func ensureDatabaseFile(path string) (bool, error) {
+	if _, err := os.Stat(path); err == nil {
+		return false, nil
+	} else if !os.IsNotExist(err) {
+		return false, fmt.Errorf("inspect SQLite database: %w", err)
+	}
+	seedPath := filepath.Join(filepath.Dir(path), "catalogue.seed.db")
+	seed, err := os.Open(seedPath)
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("open catalogue seed: %w", err)
+	}
+	defer seed.Close()
+	if err = os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		return false, fmt.Errorf("create SQLite directory: %w", err)
+	}
+	temporary, err := os.CreateTemp(filepath.Dir(path), ".defta-seed-*.db")
+	if err != nil {
+		return false, fmt.Errorf("create temporary SQLite database: %w", err)
+	}
+	temporaryPath := temporary.Name()
+	defer os.Remove(temporaryPath)
+	if err = temporary.Chmod(0o600); err == nil {
+		_, err = io.Copy(temporary, seed)
+	}
+	if closeErr := temporary.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return false, fmt.Errorf("copy catalogue seed: %w", err)
+	}
+	if err = os.Rename(temporaryPath, path); err != nil {
+		return false, fmt.Errorf("install catalogue seed: %w", err)
+	}
+	return true, nil
 }
 
 func Close() {

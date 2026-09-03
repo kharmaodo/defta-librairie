@@ -4,9 +4,65 @@ package database
 
 import (
 	"database/sql"
+	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
+
+func TestEnsureDatabaseFileCopiesSeedWithoutOverwritingRuntimeData(t *testing.T) {
+	directory := t.TempDir()
+	seedPath := filepath.Join(directory, "catalogue.seed.db")
+	runtimePath := filepath.Join(directory, "defta.db")
+	if err := os.WriteFile(seedPath, []byte("catalogue"), 0o600); err != nil {
+		t.Fatalf("write seed: %v", err)
+	}
+	seeded, err := ensureDatabaseFile(runtimePath)
+	if err != nil || !seeded {
+		t.Fatalf("seeded=%t err=%v", seeded, err)
+	}
+	content, err := os.ReadFile(runtimePath)
+	if err != nil || string(content) != "catalogue" {
+		t.Fatalf("runtime content=%q err=%v", content, err)
+	}
+	if err = os.WriteFile(runtimePath, []byte("private runtime data"), 0o600); err != nil {
+		t.Fatalf("write runtime data: %v", err)
+	}
+	seeded, err = ensureDatabaseFile(runtimePath)
+	if err != nil || seeded {
+		t.Fatalf("second seeded=%t err=%v", seeded, err)
+	}
+	content, err = os.ReadFile(runtimePath)
+	if err != nil || string(content) != "private runtime data" {
+		t.Fatalf("overwritten runtime content=%q err=%v", content, err)
+	}
+}
+
+func TestBackupDatabaseCreatesConsistentSnapshot(t *testing.T) {
+	directory := t.TempDir()
+	databasePath := filepath.Join(directory, "defta.db")
+	db, err := sql.Open("sqlite3", databasePath)
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer db.Close()
+	if _, err = db.Exec(`CREATE TABLE example(value TEXT); INSERT INTO example(value) VALUES ('preserved');`); err != nil {
+		t.Fatalf("prepare database: %v", err)
+	}
+	backupPath, err := backupDatabase(db, databasePath, time.Date(2026, 9, 3, 9, 30, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("backup database: %v", err)
+	}
+	backup, err := sql.Open("sqlite3", backupPath+"?mode=ro")
+	if err != nil {
+		t.Fatalf("open backup: %v", err)
+	}
+	defer backup.Close()
+	var value string
+	if err = backup.QueryRow(`SELECT value FROM example`).Scan(&value); err != nil || value != "preserved" {
+		t.Fatalf("backup value=%q err=%v", value, err)
+	}
+}
 
 func TestSearchBooksUsesFTS5AndKeepsTotal(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "catalogue.db")

@@ -15,11 +15,14 @@ import (
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"defta-librairie/internal/services"
+	"errors"
 	"fmt"
 	"html/template"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -67,7 +70,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Configuration JWT invalide : %v", err)
 	}
-	loginService, err := services.NewLoginService(repositories.NewUserRepository(database.DB), tokens)
+	userRepository := repositories.NewUserRepository(database.DB)
+	loginService, err := services.NewLoginService(userRepository, tokens)
 	if err != nil {
 		log.Fatalf("Initialisation authentification impossible : %v", err)
 	}
@@ -76,43 +80,68 @@ func main() {
 	if err != nil {
 		log.Fatalf("Initialisation sessions impossible : %v", err)
 	}
-	authHandler := handlers.NewAuthHandler(loginService, sessionService)
+	passwordService := services.NewPasswordService(userRepository)
+	authHandler := handlers.NewAuthHandler(loginService, sessionService, passwordService, cfg.AuthCookieSecure)
 	ownerService := services.NewOwnerService(repositories.NewOwnerRepository(database.DB))
 	ownerHandler := handlers.NewOwnerHandler(ownerService)
 	bookService := services.NewBookService(repositories.NewBookRepository(database.DB))
 	bookHandler := handlers.NewBookManagementHandler(bookService)
+	tagService := services.NewTagService(repositories.NewTagRepository(database.DB))
+	tagHandler := handlers.NewTagHandler(tagService)
+	auditService := services.NewAuditService(repositories.NewAuditRepository(database.DB))
+	auditHandler := handlers.NewAuditHandler(auditService)
+	adminUIHandler := handlers.NewAdminUIHandler(cfg)
+	authRateLimiter, err := middleware.NewRateLimiter(cfg.AuthRateLimit, cfg.AuthRateWindow)
+	if err != nil {
+		log.Fatalf("Configuration rate limit invalide : %v", err)
+	}
 
 	// Chargement des templates (déplacé dans handlers)
 	handlers.InitTemplates()
 
 	// Routes de base
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", handlers.CatalogueHandler)
-	mux.HandleFunc("/api/books", handlers.APIBooksHandler)
-	mux.HandleFunc("POST /api/auth/login", authHandler.Login)
-	mux.HandleFunc("POST /api/auth/refresh", authHandler.Refresh)
+	registerPublicRoutes(mux, adminUIHandler)
+	mux.Handle("POST /api/auth/login", authRateLimiter.Limit(http.HandlerFunc(authHandler.Login)))
+	mux.Handle("POST /api/auth/refresh", authRateLimiter.Limit(http.HandlerFunc(authHandler.Refresh)))
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
 	authenticated := func(handler http.Handler) http.Handler {
 		return middleware.AuthenticateSession(tokens, sessionRepository, handler)
 	}
 	mux.Handle("GET /api/auth/me", authenticated(http.HandlerFunc(authHandler.Me)))
+	mux.Handle("POST /api/auth/change-password", authenticated(http.HandlerFunc(authHandler.ChangePassword)))
+	mux.Handle("GET /api/auth/sessions", authenticated(http.HandlerFunc(authHandler.ActiveSessions)))
+	mux.Handle("POST /api/auth/sessions/revoke-others", authenticated(http.HandlerFunc(authHandler.RevokeOtherSessions)))
+	mux.Handle("DELETE /api/auth/sessions/{id}", authenticated(http.HandlerFunc(authHandler.RevokeSession)))
+	passwordChanged := func(handler http.Handler) http.Handler {
+		return authenticated(middleware.RequirePasswordChanged(handler))
+	}
+	mux.Handle("GET /api/audit-logs", passwordChanged(http.HandlerFunc(auditHandler.List)))
 	rootOnly := func(handler http.Handler) http.Handler {
-		return authenticated(middleware.RequireRoles(handler, models.RoleSuperAdminRoot))
+		return passwordChanged(middleware.RequireRoles(handler, models.RoleSuperAdminRoot))
 	}
 	mux.Handle("GET /api/admin/owners", rootOnly(http.HandlerFunc(ownerHandler.List)))
 	mux.Handle("POST /api/admin/owners", rootOnly(http.HandlerFunc(ownerHandler.Create)))
 	mux.Handle("GET /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Get)))
 	mux.Handle("PATCH /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Update)))
 	mux.Handle("DELETE /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Disable)))
+	mux.Handle("POST /api/admin/owners/{id}/unlock", rootOnly(http.HandlerFunc(ownerHandler.Unlock)))
+	mux.Handle("POST /api/admin/owners/{id}/reactivate", rootOnly(http.HandlerFunc(ownerHandler.Reactivate)))
+	mux.Handle("POST /api/admin/owners/{id}/reset-password", rootOnly(http.HandlerFunc(ownerHandler.ResetPassword)))
 	bookManagers := func(handler http.Handler) http.Handler {
-		return authenticated(middleware.RequireRoles(handler,
+		return passwordChanged(middleware.RequireRoles(handler,
 			models.RoleSuperAdminRoot, models.RoleOwnerLibrary))
 	}
 	mux.Handle("GET /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.List)))
 	mux.Handle("POST /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.Create)))
 	mux.Handle("GET /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Get)))
+	mux.Handle("GET /api/manage/books/{id}/history", bookManagers(http.HandlerFunc(bookHandler.History)))
 	mux.Handle("PUT /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Update)))
 	mux.Handle("DELETE /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Delete)))
+	mux.Handle("GET /api/manage/tags", bookManagers(http.HandlerFunc(tagHandler.List)))
+	mux.Handle("POST /api/manage/tags", bookManagers(http.HandlerFunc(tagHandler.Create)))
+	mux.Handle("PATCH /api/manage/tags/{id}", bookManagers(http.HandlerFunc(tagHandler.Update)))
+	mux.Handle("DELETE /api/manage/tags/{id}", bookManagers(http.HandlerFunc(tagHandler.Delete)))
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
 	addr := fmt.Sprintf(":%s", cfg.Port)
@@ -120,13 +149,37 @@ func main() {
 	log.Printf("Version %s | Build %s", cfg.Version, cfg.BuildDate)
 
 	server := &http.Server{
-		Addr: addr, Handler: mux,
+		Addr: addr, Handler: middleware.SecureHTTP(mux),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("Échec démarrage serveur : %v", err)
+	serverErrors := make(chan error, 1)
+	go func() {
+		serverErrors <- server.ListenAndServe()
+	}()
+
+	signalContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	select {
+	case err = <-serverErrors:
+		if !errors.Is(err, http.ErrServerClosed) {
+			log.Printf("Échec serveur : %v", err)
+		}
+	case <-signalContext.Done():
+		log.Println("Arrêt gracieux du serveur...")
+		shutdownContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err = server.Shutdown(shutdownContext); err != nil {
+			log.Printf("Arrêt forcé après échec du shutdown : %v", err)
+		}
 	}
+}
+
+func registerPublicRoutes(mux *http.ServeMux, adminUIHandler *handlers.AdminUIHandler) {
+	mux.HandleFunc("GET /{$}", handlers.CatalogueHandler)
+	mux.HandleFunc("GET /login", adminUIHandler.Login)
+	mux.HandleFunc("GET /admin", adminUIHandler.Dashboard)
+	mux.HandleFunc("GET /api/books", handlers.APIBooksHandler)
 }

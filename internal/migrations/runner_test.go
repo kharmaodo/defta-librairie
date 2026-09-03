@@ -54,8 +54,8 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	if err = db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&migrationsCount); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if migrationsCount != 5 {
-		t.Fatalf("expected 5 migrations, got %d", migrationsCount)
+	if migrationsCount != 9 {
+		t.Fatalf("expected 9 migrations, got %d", migrationsCount)
 	}
 
 	var assignedBooks int
@@ -74,5 +74,40 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 
 	if _, err = db.Exec("UPDATE defta SET library_id = 'missing-library' WHERE id = 1"); err == nil {
 		t.Fatal("expected foreign key violation for an unknown library")
+	}
+}
+
+func TestRunInitializesFreshDatabase(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "fresh.db")
+	db, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on")
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	if err = Run(context.Background(), db); err != nil {
+		t.Fatalf("migrate fresh database: %v", err)
+	}
+
+	var catalogueTables int
+	if err = db.QueryRow(`
+		SELECT COUNT(*) FROM sqlite_master
+		WHERE type IN ('table', 'view') AND name IN ('defta', 'defta_fts')
+	`).Scan(&catalogueTables); err != nil {
+		t.Fatalf("inspect fresh database: %v", err)
+	}
+	if catalogueTables != 2 {
+		t.Fatalf("expected catalogue and FTS tables, got %d", catalogueTables)
+	}
+
+	if _, err = db.Exec(`INSERT INTO defta(title, tags) VALUES ('Livre FTS neuf', 'test')`); err != nil {
+		t.Fatalf("insert fresh book: %v", err)
+	}
+	var matches int
+	if err = db.QueryRow(`SELECT COUNT(*) FROM defta_fts WHERE defta_fts MATCH 'neuf'`).Scan(&matches); err != nil {
+		t.Fatalf("search fresh catalogue: %v", err)
+	}
+	if matches != 1 {
+		t.Fatalf("expected one FTS match, got %d", matches)
 	}
 }

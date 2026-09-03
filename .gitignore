@@ -1,5 +1,9 @@
 # .gitignore
 vendor/
+data/*.db
+data/*.db.backup-*
+data/*.db:Zone.Identifier
+data/backups/
 *.db-journal
 *.db-shm
 *.db-wal

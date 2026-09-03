@@ -40,7 +40,7 @@ type LoginService struct {
 }
 
 func NewLoginService(users loginUserStore, tokens *auth.TokenManager) (*LoginService, error) {
-	dummyHash, err := auth.HashPassword("Dummy-Password-For-Timing-Only")
+	dummyHash, err := auth.HashPassword("Dummy-Password-For-Timing-Only-2026!")
 	if err != nil {
 		return nil, err
 	}

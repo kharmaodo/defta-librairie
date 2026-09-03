@@ -7,12 +7,15 @@ import (
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"errors"
+	"strings"
 	"time"
 )
 
 var (
-	ErrInvalidRefreshToken = errors.New("invalid refresh token")
-	ErrRefreshTokenReuse   = errors.New("refresh token reuse detected")
+	ErrInvalidRefreshToken  = errors.New("invalid refresh token")
+	ErrRefreshTokenReuse    = errors.New("refresh token reuse detected")
+	ErrSessionNotFound      = errors.New("active session not found")
+	ErrInvalidSessionFilter = errors.New("invalid session filter")
 )
 
 type SessionResult struct {
@@ -21,6 +24,76 @@ type SessionResult struct {
 	RefreshToken     string
 	RefreshExpiresAt time.Time
 	User             models.User
+}
+
+func (s *SessionService) ListActive(ctx context.Context, claims *auth.Claims, filter models.SessionFilter, offset, limit int) ([]models.ActiveSession, int, error) {
+	if claims == nil || claims.Role != models.RoleSuperAdminRoot && claims.Role != models.RoleOwnerLibrary {
+		return nil, 0, ErrSessionNotFound
+	}
+	filter.Username = strings.TrimSpace(filter.Username)
+	filter.Role = strings.ToUpper(strings.TrimSpace(filter.Role))
+	filter.IPAddress = strings.TrimSpace(filter.IPAddress)
+	filter.UserAgent = strings.TrimSpace(filter.UserAgent)
+	if len([]rune(filter.Username)) > 64 || len([]rune(filter.IPAddress)) > 64 || len([]rune(filter.UserAgent)) > 200 ||
+		filter.Role != "" && filter.Role != string(models.RoleSuperAdminRoot) && filter.Role != string(models.RoleOwnerLibrary) {
+		return nil, 0, ErrInvalidSessionFilter
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if limit < 1 {
+		limit = 30
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	scopedUserID := ""
+	if claims.Role == models.RoleOwnerLibrary {
+		scopedUserID = claims.Subject
+		if filter.Username != "" || filter.Role != "" {
+			return nil, 0, ErrInvalidSessionFilter
+		}
+	}
+	return s.repository.ListActive(ctx, scopedUserID, s.now().UTC().Format(time.RFC3339Nano), filter, offset, limit)
+}
+
+func (s *SessionService) RevokeActive(ctx context.Context, claims *auth.Claims, sessionID string) error {
+	if claims == nil || sessionID == "" {
+		return ErrSessionNotFound
+	}
+	scopedUserID := ""
+	if claims.Role == models.RoleOwnerLibrary {
+		scopedUserID = claims.Subject
+	} else if claims.Role != models.RoleSuperAdminRoot {
+		return ErrSessionNotFound
+	}
+	auditID, err := identity.NewID()
+	if err != nil {
+		return err
+	}
+	err = s.repository.RevokeActive(ctx, sessionID, scopedUserID, claims.Subject, auditID,
+		s.now().UTC().Format(time.RFC3339Nano))
+	if errors.Is(err, repositories.ErrActiveSessionNotFound) {
+		return ErrSessionNotFound
+	}
+	return err
+}
+
+func (s *SessionService) RevokeOthers(ctx context.Context, claims *auth.Claims) (int, error) {
+	if claims == nil || claims.Subject == "" || claims.SessionID == "" ||
+		claims.Role != models.RoleSuperAdminRoot && claims.Role != models.RoleOwnerLibrary {
+		return 0, ErrSessionNotFound
+	}
+	auditID, err := identity.NewID()
+	if err != nil {
+		return 0, err
+	}
+	revoked, err := s.repository.RevokeOthers(ctx, claims.Subject, claims.SessionID, claims.Subject, auditID,
+		s.now().UTC().Format(time.RFC3339Nano))
+	if errors.Is(err, repositories.ErrActiveSessionNotFound) {
+		return 0, ErrSessionNotFound
+	}
+	return revoked, err
 }
 
 type SessionService struct {

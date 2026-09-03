@@ -10,13 +10,42 @@ import (
 )
 
 var (
-	ErrOwnerNotFound = errors.New("owner not found")
-	ErrOwnerConflict = errors.New("owner username or email already exists")
+	ErrOwnerNotFound    = errors.New("owner not found")
+	ErrOwnerConflict    = errors.New("owner username or email already exists")
+	ErrOwnerNotLocked   = errors.New("owner is not locked")
+	ErrOwnerNotDisabled = errors.New("owner is not disabled")
 )
 
 type OwnerRepository struct{ db *sql.DB }
 
 func NewOwnerRepository(db *sql.DB) *OwnerRepository { return &OwnerRepository{db: db} }
+
+func (r *OwnerRepository) PasswordHashes(ctx context.Context, ownerID string, historyLimit int) ([]string, error) {
+	var current string
+	if err := r.db.QueryRowContext(ctx, `SELECT password_hash FROM users WHERE id=? AND role='OWNER_LIBRARY'`, ownerID).Scan(&current); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrOwnerNotFound
+		}
+		return nil, fmt.Errorf("find owner password: %w", err)
+	}
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT password_hash FROM password_history WHERE user_id=?
+		ORDER BY created_at DESC, id DESC LIMIT ?
+	`, ownerID, historyLimit)
+	if err != nil {
+		return nil, fmt.Errorf("list owner password history: %w", err)
+	}
+	defer rows.Close()
+	hashes := []string{current}
+	for rows.Next() {
+		var hash string
+		if err = rows.Scan(&hash); err != nil {
+			return nil, fmt.Errorf("scan owner password history: %w", err)
+		}
+		hashes = append(hashes, hash)
+	}
+	return hashes, rows.Err()
+}
 
 func (r *OwnerRepository) Create(ctx context.Context, owner models.OwnerAccount, passwordHash, actorID, auditID string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -26,8 +55,8 @@ func (r *OwnerRepository) Create(ctx context.Context, owner models.OwnerAccount,
 	defer tx.Rollback()
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO users(id, username, email, password_hash, role, status, password_changed_at, created_at, updated_at)
-		VALUES (?, ?, NULLIF(?, ''), ?, 'OWNER_LIBRARY', ?, ?, ?, ?)
+		INSERT INTO users(id, username, email, password_hash, role, status, must_change_password, password_changed_at, created_at, updated_at)
+		VALUES (?, ?, NULLIF(?, ''), ?, 'OWNER_LIBRARY', ?, 1, ?, ?, ?)
 	`, owner.ID, owner.Username, owner.Email, passwordHash, owner.Status,
 		owner.CreatedAt, owner.CreatedAt, owner.UpdatedAt)
 	if isUniqueViolation(err) {
@@ -75,6 +104,49 @@ func (r *OwnerRepository) List(ctx context.Context) ([]models.OwnerAccount, erro
 	return owners, nil
 }
 
+func (r *OwnerRepository) Search(ctx context.Context, query, userStatus, libraryStatus string, offset, limit int) ([]models.OwnerAccount, int, error) {
+	where := ""
+	args := make([]interface{}, 0, 8)
+	if query != "" {
+		pattern := "%" + query + "%"
+		where += ` AND (u.username LIKE ? OR COALESCE(u.email, '') LIKE ? OR l.name LIKE ? OR COALESCE(l.description, '') LIKE ?)`
+		args = append(args, pattern, pattern, pattern, pattern)
+	}
+	if userStatus != "" {
+		where += " AND u.status = ?"
+		args = append(args, userStatus)
+	}
+	if libraryStatus != "" {
+		where += " AND l.status = ?"
+		args = append(args, libraryStatus)
+	}
+
+	var total int
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM users u JOIN libraries l ON l.owner_user_id = u.id
+		WHERE u.role = 'OWNER_LIBRARY'`+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count owners: %w", err)
+	}
+	queryArgs := append(append([]interface{}{}, args...), limit, offset)
+	rows, err := r.db.QueryContext(ctx, ownerSelect+where+` ORDER BY u.created_at DESC LIMIT ? OFFSET ?`, queryArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("search owners: %w", err)
+	}
+	defer rows.Close()
+	owners := make([]models.OwnerAccount, 0)
+	for rows.Next() {
+		owner, scanErr := scanOwner(rows)
+		if scanErr != nil {
+			return nil, 0, fmt.Errorf("scan searched owner: %w", scanErr)
+		}
+		owners = append(owners, owner)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("iterate searched owners: %w", err)
+	}
+	return owners, total, nil
+}
+
 func (r *OwnerRepository) FindByID(ctx context.Context, id string) (models.OwnerAccount, error) {
 	owner, err := scanOwner(r.db.QueryRowContext(ctx, ownerSelect+` AND u.id = ?`, id))
 	if errors.Is(err, sql.ErrNoRows) {
@@ -96,7 +168,13 @@ func (r *OwnerRepository) Update(ctx context.Context, owner models.OwnerAccount,
 	query := `UPDATE users SET username=?, email=NULLIF(?, ''), status=?, updated_at=?`
 	args := []interface{}{owner.Username, owner.Email, owner.Status, now}
 	if passwordHash != "" {
-		query += `, password_hash=?, password_changed_at=?`
+		if _, err = tx.ExecContext(ctx, `
+			INSERT INTO password_history(user_id, password_hash, created_at)
+			SELECT id, password_hash, ? FROM users WHERE id=? AND role='OWNER_LIBRARY'
+		`, now, owner.ID); err != nil {
+			return fmt.Errorf("archive owner password: %w", err)
+		}
+		query += `, password_hash=?, must_change_password=1, password_changed_at=?`
 		args = append(args, passwordHash, now)
 	}
 	query += ` WHERE id=? AND role='OWNER_LIBRARY'`
@@ -110,6 +188,11 @@ func (r *OwnerRepository) Update(ctx context.Context, owner models.OwnerAccount,
 	}
 	if rows, rowsErr := result.RowsAffected(); rowsErr != nil || rows != 1 {
 		return ErrOwnerNotFound
+	}
+	if passwordHash != "" {
+		if err = prunePasswordHistory(ctx, tx, owner.ID); err != nil {
+			return err
+		}
 	}
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE libraries SET name=?, description=NULLIF(?, ''), status=?, updated_at=?
@@ -165,6 +248,145 @@ func (r *OwnerRepository) Disable(ctx context.Context, ownerID, actorID, auditID
 	}
 	if err = tx.Commit(); err != nil {
 		return fmt.Errorf("commit owner disable: %w", err)
+	}
+	return nil
+}
+
+func (r *OwnerRepository) Unlock(ctx context.Context, ownerID, actorID, auditID, now string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin owner unlock: %w", err)
+	}
+	defer tx.Rollback()
+	result, err := tx.ExecContext(ctx, `
+		UPDATE users SET status='ACTIVE', failed_login_attempts=0, locked_until=NULL, updated_at=?
+		WHERE id=? AND role='OWNER_LIBRARY' AND status='LOCKED'
+	`, now, ownerID)
+	if err != nil {
+		return fmt.Errorf("unlock owner: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("unlock owner rows: %w", err)
+	}
+	if rows != 1 {
+		var exists int
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM users WHERE id=? AND role='OWNER_LIBRARY'`, ownerID).Scan(&exists); err != nil {
+			return fmt.Errorf("check owner before unlock: %w", err)
+		}
+		if exists == 0 {
+			return ErrOwnerNotFound
+		}
+		return ErrOwnerNotLocked
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?) WHERE user_id=?
+	`, now, ownerID); err != nil {
+		return fmt.Errorf("revoke unlocked owner sessions: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'UNLOCK_LIBRARY_OWNER', 'USER', ?, '{"status":"ACTIVE","failed_login_attempts":0}', 1, ?)
+	`, auditID, actorID, ownerID, now); err != nil {
+		return fmt.Errorf("audit owner unlock: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit owner unlock: %w", err)
+	}
+	return nil
+}
+
+func (r *OwnerRepository) Reactivate(ctx context.Context, ownerID, actorID, auditID, now string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin owner reactivation: %w", err)
+	}
+	defer tx.Rollback()
+	result, err := tx.ExecContext(ctx, `
+		UPDATE users SET status='ACTIVE', failed_login_attempts=0, locked_until=NULL, updated_at=?
+		WHERE id=? AND role='OWNER_LIBRARY' AND status='DISABLED'
+	`, now, ownerID)
+	if err != nil {
+		return fmt.Errorf("reactivate owner: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("reactivate owner rows: %w", err)
+	}
+	if rows != 1 {
+		var exists int
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM users WHERE id=? AND role='OWNER_LIBRARY'`, ownerID).Scan(&exists); err != nil {
+			return fmt.Errorf("check owner before reactivation: %w", err)
+		}
+		if exists == 0 {
+			return ErrOwnerNotFound
+		}
+		return ErrOwnerNotDisabled
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE libraries SET status='ACTIVE', updated_at=? WHERE owner_user_id=?
+	`, now, ownerID); err != nil {
+		return fmt.Errorf("reactivate owner library: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?) WHERE user_id=?
+	`, now, ownerID); err != nil {
+		return fmt.Errorf("revoke reactivated owner sessions: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'REACTIVATE_LIBRARY_OWNER', 'USER', ?, '{"status":"ACTIVE","library_status":"ACTIVE"}', 1, ?)
+	`, auditID, actorID, ownerID, now); err != nil {
+		return fmt.Errorf("audit owner reactivation: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit owner reactivation: %w", err)
+	}
+	return nil
+}
+
+func (r *OwnerRepository) ResetPassword(ctx context.Context, ownerID, passwordHash, actorID, auditID, now string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin owner password reset: %w", err)
+	}
+	defer tx.Rollback()
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO password_history(user_id, password_hash, created_at)
+		SELECT id, password_hash, ? FROM users WHERE id=? AND role='OWNER_LIBRARY'
+	`, now, ownerID); err != nil {
+		return fmt.Errorf("archive owner password: %w", err)
+	}
+	result, err := tx.ExecContext(ctx, `
+		UPDATE users
+		SET password_hash=?, must_change_password=1,
+		    status=CASE WHEN status='LOCKED' THEN 'ACTIVE' ELSE status END,
+		    failed_login_attempts=0, locked_until=NULL,
+		    password_changed_at=?, updated_at=?
+		WHERE id=? AND role='OWNER_LIBRARY'
+	`, passwordHash, now, now, ownerID)
+	if err != nil {
+		return fmt.Errorf("reset owner password: %w", err)
+	}
+	if rows, rowsErr := result.RowsAffected(); rowsErr != nil || rows != 1 {
+		return ErrOwnerNotFound
+	}
+	if err = prunePasswordHistory(ctx, tx, ownerID); err != nil {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?) WHERE user_id=?
+	`, now, ownerID); err != nil {
+		return fmt.Errorf("revoke owner sessions after password reset: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'RESET_LIBRARY_OWNER_PASSWORD', 'USER', ?, '{"password_change_required":true,"sessions_revoked":true}', 1, ?)
+	`, auditID, actorID, ownerID, now); err != nil {
+		return fmt.Errorf("audit owner password reset: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit owner password reset: %w", err)
 	}
 	return nil
 }

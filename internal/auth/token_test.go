@@ -14,7 +14,7 @@ func TestTokenManagerIssueAndParse(t *testing.T) {
 	}
 	manager.now = func() time.Time { return time.Unix(1700000000, 0) }
 
-	raw, _, err := manager.IssueForSession(models.User{ID: "user-1", Role: models.RoleOwnerLibrary, LibraryID: "library-1"}, "session-1")
+	raw, _, err := manager.IssueForSession(models.User{ID: "user-1", Role: models.RoleOwnerLibrary, LibraryID: "library-1", MustChangePassword: true}, "session-1")
 	if err != nil {
 		t.Fatalf("issue token: %v", err)
 	}
@@ -22,7 +22,7 @@ func TestTokenManagerIssueAndParse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse token: %v", err)
 	}
-	if claims.Subject != "user-1" || claims.Role != models.RoleOwnerLibrary || claims.LibraryID != "library-1" || claims.SessionID != "session-1" {
+	if claims.Subject != "user-1" || claims.Role != models.RoleOwnerLibrary || claims.LibraryID != "library-1" || claims.SessionID != "session-1" || !claims.PasswordChangeRequired {
 		t.Fatalf("unexpected claims: %+v", claims)
 	}
 }

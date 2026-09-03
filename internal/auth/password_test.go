@@ -33,6 +33,14 @@ func TestHashPasswordRejectsShortPassword(t *testing.T) {
 	}
 }
 
+func TestHashPasswordRejectsWeakPasswords(t *testing.T) {
+	for _, password := range []string{"lowercase-2026", "UPPERCASE-2026", "No-Digit-Here!", "NoSpecial2026"} {
+		if _, err := HashPassword(password); !errors.Is(err, ErrPasswordTooWeak) {
+			t.Fatalf("password %q: expected ErrPasswordTooWeak, got %v", password, err)
+		}
+	}
+}
+
 func TestVerifyPasswordRejectsMalformedHash(t *testing.T) {
 	_, err := VerifyPassword("Correct-Horse-2026", "$argon2id$invalid")
 	if !errors.Is(err, ErrInvalidPasswordHash) {

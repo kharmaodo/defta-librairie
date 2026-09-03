@@ -13,3 +13,22 @@ type RefreshSession struct {
 	CreatedAt    string
 	LastUsedAt   string
 }
+
+type ActiveSession struct {
+	ID         string `json:"id"`
+	UserID     string `json:"userId"`
+	Username   string `json:"username"`
+	Role       string `json:"role"`
+	IPAddress  string `json:"ipAddress,omitempty"`
+	UserAgent  string `json:"userAgent,omitempty"`
+	CreatedAt  string `json:"createdAt"`
+	LastUsedAt string `json:"lastUsedAt,omitempty"`
+	ExpiresAt  string `json:"expiresAt"`
+}
+
+type SessionFilter struct {
+	Username  string
+	Role      string
+	IPAddress string
+	UserAgent string
+}

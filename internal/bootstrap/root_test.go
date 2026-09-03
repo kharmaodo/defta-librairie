@@ -35,6 +35,10 @@ func TestCreateRoot(t *testing.T) {
 			token_family TEXT NOT NULL, expires_at TEXT NOT NULL, revoked_at TEXT,
 			replaced_by_id TEXT, ip_address TEXT, user_agent TEXT, created_at TEXT NOT NULL, last_used_at TEXT
 		);
+		CREATE TABLE password_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
+			password_hash TEXT NOT NULL, created_at TEXT NOT NULL
+		);
 	`)
 	if err != nil {
 		t.Fatalf("create schema: %v", err)
@@ -77,13 +81,16 @@ func TestResetRootPassword(t *testing.T) {
 		CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE, email TEXT,
 		password_hash TEXT NOT NULL, role TEXT NOT NULL, status TEXT NOT NULL,
 		failed_login_attempts INTEGER NOT NULL DEFAULT 0, locked_until TEXT, last_login_at TEXT,
-		password_changed_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
+		password_changed_at TEXT, must_change_password INTEGER NOT NULL DEFAULT 0,
+		created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
 		CREATE TABLE audit_logs (id TEXT PRIMARY KEY, actor_user_id TEXT, action TEXT NOT NULL,
 		resource_type TEXT NOT NULL, resource_id TEXT, old_values TEXT, new_values TEXT,
 		ip_address TEXT, success INTEGER NOT NULL, created_at TEXT NOT NULL);
 		CREATE TABLE refresh_sessions (id TEXT PRIMARY KEY, user_id TEXT NOT NULL, token_hash TEXT NOT NULL UNIQUE,
 		token_family TEXT NOT NULL, expires_at TEXT NOT NULL, revoked_at TEXT, replaced_by_id TEXT,
 		ip_address TEXT, user_agent TEXT, created_at TEXT NOT NULL, last_used_at TEXT);
+		CREATE TABLE password_history (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL,
+		password_hash TEXT NOT NULL, created_at TEXT NOT NULL);
 		INSERT INTO users(id,username,password_hash,role,status,failed_login_attempts,locked_until,created_at,updated_at)
 		VALUES('root','kharmaodo','old-hash','SUPER_ADMIN_ROOT','LOCKED',5,'2099-01-01T00:00:00Z','now','now');
 		INSERT INTO refresh_sessions(id,user_id,token_hash,token_family,expires_at,created_at)

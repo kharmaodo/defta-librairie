@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"unicode"
 
 	"golang.org/x/crypto/argon2"
 )
@@ -16,6 +17,7 @@ const MinPasswordLength = 12
 var (
 	ErrInvalidPasswordHash = errors.New("invalid password hash")
 	ErrPasswordTooShort    = fmt.Errorf("password must contain at least %d characters", MinPasswordLength)
+	ErrPasswordTooWeak     = errors.New("password must contain an uppercase letter, a lowercase letter, a digit and a special character")
 )
 
 type Argon2Params struct {
@@ -37,6 +39,16 @@ var DefaultArgon2Params = Argon2Params{
 func HashPassword(password string) (string, error) {
 	if len([]rune(password)) < MinPasswordLength {
 		return "", ErrPasswordTooShort
+	}
+	var upper, lower, digit, special bool
+	for _, character := range password {
+		upper = upper || unicode.IsUpper(character)
+		lower = lower || unicode.IsLower(character)
+		digit = digit || unicode.IsDigit(character)
+		special = special || (!unicode.IsLetter(character) && !unicode.IsDigit(character))
+	}
+	if !upper || !lower || !digit || !special {
+		return "", ErrPasswordTooWeak
 	}
 
 	p := DefaultArgon2Params
