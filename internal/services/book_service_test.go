@@ -35,6 +35,9 @@ func TestBookLifecycleAndLibraryIsolation(t *testing.T) {
 		CREATE TABLE audit_logs (id TEXT PRIMARY KEY, actor_user_id TEXT, action TEXT,
 		resource_type TEXT, resource_id TEXT, old_values TEXT, new_values TEXT, ip_address TEXT,
 		success INTEGER, created_at TEXT);
+		CREATE TABLE book_inventory (book_id INTEGER PRIMARY KEY, library_id TEXT NOT NULL,
+		quantity INTEGER NOT NULL DEFAULT 0, low_stock_threshold INTEGER NOT NULL DEFAULT 5,
+		version INTEGER NOT NULL DEFAULT 1, updated_at TEXT NOT NULL);
 		CREATE VIRTUAL TABLE defta_fts USING fts5(
 			title, editeur, auteur, tags, categorie, content='defta', content_rowid='id'
 		);

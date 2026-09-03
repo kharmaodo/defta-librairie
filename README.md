@@ -120,7 +120,15 @@ Toutes les variables sont optionnelles :
 | `AUTH_RATE_LIMIT_WINDOW_SECONDS` | `60` | Fenêtre du rate limit d'authentification |
 | `AUTH_COOKIE_SECURE` | `false` | Mettre à `true` derrière HTTPS pour le cookie de refresh du navigateur |
 
-Exemple `.env` :
+Créer la configuration locale, qui reste ignorée par Git, puis générer un secret propre à l'environnement :
+
+```bash
+cp .env.example .env
+sed -i "s|^JWT_SECRET=.*$|JWT_SECRET=$(openssl rand -base64 48)|" .env
+chmod 600 .env
+```
+
+Contenu de référence de `.env.example` :
 
 ```dotenv
 PORT=8080
@@ -128,7 +136,7 @@ DB_PATH=./data/defta.db
 PAGE_SIZE=30
 VERSION=0.2.0-dev
 BUILD_DATE=2026-09-01
-JWT_SECRET=remplacer-par-un-secret-aleatoire-d-au-moins-32-octets
+JWT_SECRET=
 JWT_ISSUER=defta-librairie
 JWT_AUDIENCE=defta-librairie-web
 JWT_ACCESS_TTL_SECONDS=900
@@ -137,6 +145,8 @@ AUTH_RATE_LIMIT_REQUESTS=10
 AUTH_RATE_LIMIT_WINDOW_SECONDS=60
 AUTH_COOKIE_SECURE=false
 ```
+
+Ne jamais commiter `.env`, une sauvegarde de ce fichier, ni une valeur réelle de `JWT_SECRET`.
 
 Sous Linux ou WSL, si `.env` a été modifié sous Windows, supprimer les retours chariot avant le lancement avec `sed -i 's/\r$//' .env`. Le chargeur neutralise également ces fins de ligne pour éviter qu'une valeur telle que `PORT=8080\r` soit transmise au serveur HTTP.
 
@@ -223,6 +233,38 @@ curl -fsS 'http://localhost:8080/api/manage/books?q=fiqh&offset=0&limit=10' \
 | `GET` | `/api/manage/books/{id}/history?offset=0&limit=30` | Consulter l'historique commercial autorisé du livre |
 | `PUT` | `/api/manage/books/{id}` | Remplacer les données, prix, tags et statut |
 | `DELETE` | `/api/manage/books/{id}` | Supprimer logiquement un livre |
+
+### Gestion des stocks
+
+Chaque livre possède un état de stock versionné et un seuil d'alerte. Tous les changements produisent un mouvement immuable. Un `OWNER_LIBRARY` reste limité aux livres de sa librairie ; le `SUPER_ADMIN_ROOT` peut préciser `libraryId`. Une sortie qui rendrait le stock négatif est refusée et les écritures concurrentes utilisent le champ `version`.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/inventory?status=LOW_STOCK&offset=0&limit=30&libraryId=...` | Lister le stock autorisé |
+| `GET` | `/api/manage/books/{id}/inventory` | Consulter le stock d'un livre |
+| `POST` | `/api/manage/books/{id}/inventory/entries` | Enregistrer une entrée positive |
+| `POST` | `/api/manage/books/{id}/inventory/exits` | Enregistrer une sortie positive |
+| `PUT` | `/api/manage/books/{id}/inventory` | Ajuster le stock à une quantité absolue |
+| `PATCH` | `/api/manage/books/{id}/inventory/threshold` | Modifier le seuil de stock faible |
+| `GET` | `/api/manage/books/{id}/inventory/movements` | Consulter l'historique paginé |
+
+Les entrées et sorties reçoivent `{ "quantity": 5, "reason": "...", "version": 1 }`. L'ajustement reçoit `{ "quantity": 12, "reason": "inventaire physique", "version": 2 }`. Le seuil reçoit `{ "lowStockThreshold": 3, "version": 3 }`. Une version périmée répondra `409 inventory_version_conflict` et une sortie excessive `409 insufficient_stock`.
+
+L'historique des mouvements est paginé avec `offset` et `limit` (maximum 100), trié du plus récent au plus ancien. Une modification du seuil incrémente également la version du stock et écrit l'événement `UPDATE_INVENTORY_THRESHOLD` dans le journal d'audit, sans créer de faux mouvement de quantité.
+
+La liste des stocks accepte `LOW_STOCK` (quantité positive inférieure ou égale au seuil), `OUT_OF_STOCK` (quantité nulle) et `IN_STOCK` (quantité supérieure au seuil). Sans filtre, elle retourne tous les stocks autorisés, en présentant d'abord les ruptures puis les alertes. Seul le root peut utiliser `libraryId` pour limiter la liste à une librairie précise.
+
+Le tableau de bord affiche cette liste avec les mêmes filtres et codes visuels. Depuis une ligne, un utilisateur autorisé peut enregistrer une entrée, une sortie, un ajustement absolu ou un nouveau seuil, puis consulter l'historique immuable des mouvements. Après chaque opération, le stock et le journal d'audit sont actualisés sans rechargement complet de la page.
+
+```bash
+curl -fsS "http://localhost:8080/api/manage/books/$BOOK_ID/inventory" \
+  -H "Authorization: Bearer $OWNER_TOKEN" | jq .
+
+jq -n '{quantity:10,reason:"Réception fournisseur",version:1}' |
+curl -fsS -X POST "http://localhost:8080/api/manage/books/$BOOK_ID/inventory/entries" \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  -H 'Content-Type: application/json' --data-binary @- | jq .
+```
 
 Les mises à jour utilisent le champ `version`. Une version périmée produit `409 Conflict` afin d'éviter l'écrasement silencieux d'une modification concurrente. Les suppressions logiques disparaissent également du catalogue public et de la recherche FTS5.
 

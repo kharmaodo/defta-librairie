@@ -39,6 +39,24 @@
       <article class="metric"><span>État de session</span><strong class="status-good">Active</strong></article>
     </section>
 
+    <section class="panel">
+      <div class="panel-heading inventory-heading">
+        <div><p class="eyebrow">Gestion opérationnelle</p><h2>Stocks</h2></div>
+        <form id="inventory-filters" class="filters">
+          <label>État<select name="status"><option value="">Tous</option><option value="OUT_OF_STOCK">Rupture</option><option value="LOW_STOCK">Stock faible</option><option value="IN_STOCK">En stock</option></select></label>
+          <label class="root-only-field" hidden>Librairie<select name="libraryId" id="inventory-library"></select></label>
+          <button class="button ghost" type="submit">Filtrer</button>
+        </form>
+      </div>
+      <p class="scope-note">Les ruptures et alertes de stock sont affichées en priorité.</p>
+      <div class="table-wrap">
+        <table><thead><tr><th>Livre</th><th>Quantité</th><th>Seuil</th><th>État</th><th>Mise à jour</th><th>Actions</th></tr></thead>
+          <tbody id="inventory-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="pagination"><button id="inventory-previous" class="button ghost" type="button">Précédent</button><span id="inventory-page-label" class="hint">Page 1</span><button id="inventory-next" class="button ghost" type="button">Suivant</button></div>
+    </section>
+
     <section id="owners-section" class="panel root-only" hidden>
       <div class="panel-heading owner-heading"><div><p class="eyebrow">Administration globale</p><h2>Propriétaires et librairies</h2></div><div class="heading-actions"><form id="owner-filters" class="filters"><label>Recherche<input name="q" maxlength="200" placeholder="Compte ou librairie"></label><label>Compte<select name="status"><option value="">Tous</option><option value="ACTIVE">Actif</option><option value="LOCKED">Verrouillé</option><option value="DISABLED">Désactivé</option></select></label><label>Librairie<select name="libraryStatus"><option value="">Toutes</option><option value="ACTIVE">Active</option><option value="DISABLED">Désactivée</option></select></label><button class="button ghost" type="submit">Filtrer</button></form><button id="add-owner-button" class="button primary" type="button">Nouveau propriétaire</button></div></div>
       <div class="table-wrap">
@@ -159,6 +177,31 @@
         <table><thead><tr><th>Date</th><th>Acteur</th><th>Action</th><th>Avant</th><th>Après</th></tr></thead><tbody id="book-history-body"></tbody></table>
       </div>
       <div class="modal-actions"><button class="button ghost" type="button" data-close="book-history-dialog">Fermer</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="inventory-dialog" class="modal narrow">
+    <form id="inventory-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Mouvement de stock</p><h2 id="inventory-form-title">Modifier le stock</h2></div><button class="icon-button" type="button" data-close="inventory-dialog" aria-label="Fermer">×</button></div>
+      <input name="bookId" type="hidden"><input name="version" type="hidden">
+      <div class="form-grid single">
+        <label>Opération<select name="operation"><option value="ENTRY">Entrée</option><option value="EXIT">Sortie</option><option value="ADJUSTMENT">Ajustement absolu</option><option value="THRESHOLD">Seuil d’alerte</option></select></label>
+        <label>Quantité ou seuil<input name="quantity" type="number" min="0" step="1" required></label>
+        <label>Motif<textarea name="reason" maxlength="500" rows="3" placeholder="Obligatoire pour un ajustement"></textarea></label>
+      </div>
+      <p class="hint">Version courante : <strong id="inventory-version-label">—</strong></p>
+      <p id="inventory-form-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="inventory-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="inventory-history-dialog" class="modal history-modal">
+    <div class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Traçabilité du stock</p><h2 id="inventory-history-title">Mouvements</h2></div><button class="icon-button" type="button" data-close="inventory-history-dialog" aria-label="Fermer">×</button></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Date</th><th>Type</th><th>Variation</th><th>Avant</th><th>Après</th><th>Motif</th></tr></thead><tbody id="inventory-history-body"></tbody></table>
+      </div>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="inventory-history-dialog">Fermer</button></div>
     </div>
   </dialog>
 

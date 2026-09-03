@@ -43,9 +43,9 @@ func TestRequirePasswordChanged(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
 	protected := RequirePasswordChanged(next)
 	for _, test := range []struct {
-		name string
+		name   string
 		claims *auth.Claims
-		want int
+		want   int
 	}{
 		{name: "missing identity", want: http.StatusUnauthorized},
 		{name: "temporary password forbidden", claims: &auth.Claims{PasswordChangeRequired: true}, want: http.StatusForbidden},
