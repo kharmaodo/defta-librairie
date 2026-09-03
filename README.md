@@ -67,6 +67,8 @@ set +a
 
 Le script utilise l'API de sauvegarde de SQLite, contrôle `PRAGMA integrity_check` et affiche le SHA-256 du fichier placé dans `data/backups/`. Ce répertoire est exclu de Git.
 
+Lors de chaque démarrage sur une base existante, le serveur crée également une sauvegarde cohérente par `VACUUM INTO` dans `data/backups/` et contrôle son intégrité avant toute migration. Une impossibilité de sauvegarder interrompt le démarrage : aucune migration n'est alors exécutée. Le seed local utilisé lors d'une toute première initialisation n'est pas sauvegardé avant sa copie, puisqu'il reste lui-même inchangé.
+
 ## Prérequis
 
 Le pilote SQLite utilise CGO. Il faut donc disposer de :
