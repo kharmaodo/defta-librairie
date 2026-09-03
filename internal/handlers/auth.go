@@ -81,7 +81,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		"user": map[string]interface{}{
 			"id": result.User.ID, "username": result.User.Username,
 			"email": result.User.Email, "role": result.User.Role,
-			"libraryId": nullableValue(result.User.LibraryID),
+			"libraryId":              nullableValue(result.User.LibraryID),
 			"passwordChangeRequired": result.User.MustChangePassword,
 		},
 	}

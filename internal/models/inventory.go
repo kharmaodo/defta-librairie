@@ -26,6 +26,6 @@ type InventoryMovement struct {
 	QuantityDelta  int                   `json:"quantityDelta"`
 	QuantityBefore int                   `json:"quantityBefore"`
 	QuantityAfter  int                   `json:"quantityAfter"`
-	Reason          string                `json:"reason,omitempty"`
-	CreatedAt       string                `json:"createdAt"`
+	Reason         string                `json:"reason,omitempty"`
+	CreatedAt      string                `json:"createdAt"`
 }

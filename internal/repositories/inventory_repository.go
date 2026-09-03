@@ -10,10 +10,10 @@ import (
 )
 
 var (
-	ErrInventoryNotFound     = errors.New("inventory not found")
-	ErrInventoryConflict     = errors.New("inventory was modified by another request")
-	ErrInsufficientStock     = errors.New("insufficient stock")
-	ErrInventoryUnchanged    = errors.New("inventory quantity is unchanged")
+	ErrInventoryNotFound  = errors.New("inventory not found")
+	ErrInventoryConflict  = errors.New("inventory was modified by another request")
+	ErrInsufficientStock  = errors.New("insufficient stock")
+	ErrInventoryUnchanged = errors.New("inventory quantity is unchanged")
 )
 
 type InventoryRepository struct{ db *sql.DB }
