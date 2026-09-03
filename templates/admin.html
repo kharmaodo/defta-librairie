@@ -107,7 +107,7 @@
       <div class="form-grid">
         <label>Nom d’utilisateur<input name="username" minlength="3" maxlength="64" pattern="[a-zA-Z0-9._-]+" required></label>
         <label>E-mail<input name="email" type="email"></label>
-        <label class="full">Mot de passe <small id="owner-password-help">12 caractères minimum</small><input name="password" type="password" minlength="12" autocomplete="new-password"></label>
+        <label class="full create-only">Mot de passe <small id="owner-password-help">12 caractères minimum</small><input name="password" type="password" minlength="12" autocomplete="new-password"></label>
         <label class="full">Nom de la librairie<input name="libraryName" minlength="2" maxlength="120" required></label>
         <label class="full">Description<textarea name="libraryDescription" maxlength="1000" rows="3"></textarea></label>
         <label class="edit-only">État du compte<select name="status"><option value="ACTIVE">Actif</option><option value="DISABLED">Désactivé</option></select></label>
@@ -115,6 +115,20 @@
       </div>
       <p id="owner-form-error" class="alert" role="alert" hidden></p>
       <div class="modal-actions"><button class="button ghost" type="button" data-close="owner-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="owner-password-reset-dialog" class="modal">
+    <form id="owner-password-reset-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Sécurité du propriétaire</p><h2 id="owner-password-reset-title">Nouveau mot de passe temporaire</h2></div><button class="icon-button" type="button" data-close="owner-password-reset-dialog" aria-label="Fermer">×</button></div>
+      <input name="id" type="hidden">
+      <div class="form-grid">
+        <label class="full">Mot de passe temporaire<input name="password" type="password" minlength="12" autocomplete="new-password" required></label>
+        <label class="full">Confirmation<input name="confirmation" type="password" minlength="12" autocomplete="new-password" required></label>
+      </div>
+      <p class="hint">Toutes les sessions seront révoquées. Le propriétaire devra remplacer ce mot de passe à sa prochaine connexion.</p>
+      <p id="owner-password-reset-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="owner-password-reset-dialog">Annuler</button><button class="button primary" type="submit">Réinitialiser</button></div>
     </form>
   </dialog>
 

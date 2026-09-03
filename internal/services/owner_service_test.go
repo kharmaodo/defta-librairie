@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"defta-librairie/internal/auth"
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"errors"
@@ -89,6 +90,32 @@ func TestOwnerLifecycle(t *testing.T) {
 		t.Fatalf("unlock active owner error=%v", err)
 	}
 
+	_, err = db.Exec(`
+		UPDATE users SET status='LOCKED', failed_login_attempts=5, locked_until='2099-01-01T00:00:00Z' WHERE id=?;
+		INSERT INTO refresh_sessions(id, user_id, token_hash, token_family, expires_at, created_at)
+		VALUES('reset-session', ?, 'reset-hash', 'reset-family', '2099-01-01T00:00:00Z', 'now');
+	`, owner.ID, owner.ID)
+	if err != nil {
+		t.Fatalf("prepare owner password reset: %v", err)
+	}
+	if err = service.ResetPassword(context.Background(), owner.ID, "New-Temporary-2026", "root"); err != nil {
+		t.Fatalf("reset owner password: %v", err)
+	}
+	var resetHash, resetStatus string
+	var resetRequired bool
+	if err = db.QueryRow(`
+		SELECT password_hash, status, must_change_password FROM users WHERE id=?
+	`, owner.ID).Scan(&resetHash, &resetStatus, &resetRequired); err != nil {
+		t.Fatalf("read reset owner: %v", err)
+	}
+	passwordMatches, verifyErr := auth.VerifyPassword("New-Temporary-2026", resetHash)
+	if verifyErr != nil || !passwordMatches || resetStatus != "ACTIVE" || !resetRequired {
+		t.Fatalf("matches=%t status=%s required=%t err=%v", passwordMatches, resetStatus, resetRequired, verifyErr)
+	}
+	if err = db.QueryRow(`SELECT revoked_at FROM refresh_sessions WHERE id='reset-session'`).Scan(&revokedAt); err != nil || !revokedAt.Valid {
+		t.Fatalf("reset session revokedAt=%v err=%v", revokedAt, err)
+	}
+
 	newName := "Librairie Modifiée"
 	disabled := models.UserStatusDisabled
 	updated, err := service.Update(context.Background(), owner.ID, models.OwnerUpdateInput{
@@ -99,6 +126,12 @@ func TestOwnerLifecycle(t *testing.T) {
 	}
 	if updated.Status != disabled || updated.Library.Name != newName {
 		t.Fatalf("unexpected updated owner: %+v", updated)
+	}
+	if err = service.ResetPassword(context.Background(), owner.ID, "Disabled-Temporary-2026", "root"); err != nil {
+		t.Fatalf("reset disabled owner password: %v", err)
+	}
+	if err = db.QueryRow(`SELECT status FROM users WHERE id=?`, owner.ID).Scan(&resetStatus); err != nil || resetStatus != "DISABLED" {
+		t.Fatalf("disabled owner status=%s err=%v", resetStatus, err)
 	}
 
 	owners, err := service.List(context.Background())
@@ -144,7 +177,7 @@ func TestOwnerLifecycle(t *testing.T) {
 		t.Fatalf("reactivate active owner error=%v", err)
 	}
 	var audits int
-	if err = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE actor_user_id='root'`).Scan(&audits); err != nil || audits != 5 {
+	if err = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE actor_user_id='root'`).Scan(&audits); err != nil || audits != 7 {
 		t.Fatalf("audits=%d err=%v", audits, err)
 	}
 }

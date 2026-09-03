@@ -307,6 +307,43 @@ func (r *OwnerRepository) Reactivate(ctx context.Context, ownerID, actorID, audi
 	return nil
 }
 
+func (r *OwnerRepository) ResetPassword(ctx context.Context, ownerID, passwordHash, actorID, auditID, now string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin owner password reset: %w", err)
+	}
+	defer tx.Rollback()
+	result, err := tx.ExecContext(ctx, `
+		UPDATE users
+		SET password_hash=?, must_change_password=1,
+		    status=CASE WHEN status='LOCKED' THEN 'ACTIVE' ELSE status END,
+		    failed_login_attempts=0, locked_until=NULL,
+		    password_changed_at=?, updated_at=?
+		WHERE id=? AND role='OWNER_LIBRARY'
+	`, passwordHash, now, now, ownerID)
+	if err != nil {
+		return fmt.Errorf("reset owner password: %w", err)
+	}
+	if rows, rowsErr := result.RowsAffected(); rowsErr != nil || rows != 1 {
+		return ErrOwnerNotFound
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE refresh_sessions SET revoked_at=COALESCE(revoked_at, ?) WHERE user_id=?
+	`, now, ownerID); err != nil {
+		return fmt.Errorf("revoke owner sessions after password reset: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'RESET_LIBRARY_OWNER_PASSWORD', 'USER', ?, '{"password_change_required":true,"sessions_revoked":true}', 1, ?)
+	`, auditID, actorID, ownerID, now); err != nil {
+		return fmt.Errorf("audit owner password reset: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit owner password reset: %w", err)
+	}
+	return nil
+}
+
 const ownerSelect = `
 	SELECT u.id, u.username, COALESCE(u.email, ''), u.status, u.created_at, u.updated_at,
 	       l.id, l.name, COALESCE(l.description, ''), l.status, l.created_at, l.updated_at

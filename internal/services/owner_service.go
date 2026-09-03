@@ -149,6 +149,19 @@ func (s *OwnerService) Reactivate(ctx context.Context, id, actorID string) error
 	return s.repository.Reactivate(ctx, id, actorID, auditID, s.now().UTC().Format(time.RFC3339Nano))
 }
 
+func (s *OwnerService) ResetPassword(ctx context.Context, id, password, actorID string) error {
+	passwordHash, err := auth.HashPassword(password)
+	if err != nil {
+		return err
+	}
+	auditID, err := identity.NewID()
+	if err != nil {
+		return err
+	}
+	return s.repository.ResetPassword(ctx, id, passwordHash, actorID, auditID,
+		s.now().UTC().Format(time.RFC3339Nano))
+}
+
 func normalizeCreateInput(input *models.OwnerCreateInput) {
 	input.Username = strings.TrimSpace(input.Username)
 	input.Email = strings.TrimSpace(input.Email)

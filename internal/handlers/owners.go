@@ -40,6 +40,10 @@ type updateOwnerRequest struct {
 	} `json:"library"`
 }
 
+type resetOwnerPasswordRequest struct {
+	Password string `json:"password"`
+}
+
 func (h *OwnerHandler) List(w http.ResponseWriter, r *http.Request) {
 	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
 	owners, total, err := h.service.Search(r.Context(), r.URL.Query().Get("q"),
@@ -130,6 +134,20 @@ func (h *OwnerHandler) Unlock(w http.ResponseWriter, r *http.Request) {
 func (h *OwnerHandler) Reactivate(w http.ResponseWriter, r *http.Request) {
 	claims, _ := auth.ClaimsFromContext(r.Context())
 	if err := h.service.Reactivate(r.Context(), r.PathValue("id"), claims.Subject); err != nil {
+		writeOwnerError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *OwnerHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var request resetOwnerPasswordRequest
+	if err := decodeOwnerJSON(w, r, &request); err != nil || strings.TrimSpace(request.Password) == "" {
+		writeOwnerError(w, services.ErrInvalidOwner)
+		return
+	}
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	if err := h.service.ResetPassword(r.Context(), r.PathValue("id"), request.Password, claims.Subject); err != nil {
 		writeOwnerError(w, err)
 		return
 	}

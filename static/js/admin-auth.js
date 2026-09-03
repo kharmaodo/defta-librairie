@@ -120,11 +120,11 @@
       const actions = textCell(row, "");
       actions.className = "row-actions";
       if (owner.status === "LOCKED") {
-        actions.replaceChildren(actionButton("Déverrouiller", "unlock-owner", owner.id));
+        actions.replaceChildren(actionButton("Réinitialiser le mot de passe", "reset-owner-password", owner.id), actionButton("Déverrouiller", "unlock-owner", owner.id));
       } else if (owner.status === "DISABLED") {
-        actions.replaceChildren(actionButton("Réactiver", "reactivate-owner", owner.id));
+        actions.replaceChildren(actionButton("Réinitialiser le mot de passe", "reset-owner-password", owner.id), actionButton("Réactiver", "reactivate-owner", owner.id));
       } else {
-        actions.replaceChildren(actionButton("Modifier", "edit-owner", owner.id), actionButton("Désactiver", "disable-owner", owner.id, true));
+        actions.replaceChildren(actionButton("Modifier", "edit-owner", owner.id), actionButton("Réinitialiser le mot de passe", "reset-owner-password", owner.id), actionButton("Désactiver", "disable-owner", owner.id, true));
       }
     });
     const page = Math.floor(payload.offset / payload.limit) + 1;
@@ -263,7 +263,18 @@
     document.querySelector("#owner-form-title").textContent = owner ? "Modifier le propriétaire" : "Nouveau propriétaire";
     document.querySelector("#owner-password-help").textContent = owner ? "laisser vide pour conserver l’actuel" : "12 caractères minimum";
     form.querySelectorAll(".edit-only").forEach((element) => { element.hidden = !owner; });
+    form.querySelectorAll(".create-only").forEach((element) => { element.hidden = Boolean(owner); });
     document.querySelector("#owner-form-error").hidden = true;
+    dialog.showModal();
+  }
+
+  function openOwnerPasswordReset(owner) {
+    const dialog = document.querySelector("#owner-password-reset-dialog");
+    const form = document.querySelector("#owner-password-reset-form");
+    form.reset();
+    form.elements.id.value = owner.id;
+    document.querySelector("#owner-password-reset-title").textContent = `Mot de passe temporaire · ${owner.username}`;
+    document.querySelector("#owner-password-reset-error").hidden = true;
     dialog.showModal();
   }
 
@@ -586,6 +597,25 @@
       } catch (error) { showError(formError, error); }
     });
 
+    document.querySelector("#owner-password-reset-form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formError = document.querySelector("#owner-password-reset-error");
+      formError.hidden = true;
+      if (form.elements.password.value !== form.elements.confirmation.value) {
+        showError(formError, new Error("La confirmation ne correspond pas au mot de passe temporaire."));
+        return;
+      }
+      try {
+        await apiFetch(`/api/admin/owners/${form.elements.id.value}/reset-password`, {
+          method: "POST", headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({password: form.elements.password.value})
+        });
+        document.querySelector("#owner-password-reset-dialog").close();
+        await Promise.all([reloadOwners(), reloadAudit(), reloadSessions()]);
+      } catch (error) { showError(formError, error); }
+    });
+
     document.querySelector("#book-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
@@ -610,6 +640,7 @@
       if (!button) return;
       const owner = state.owners.find((item) => item.id === button.dataset.id);
       if (button.dataset.action === "edit-owner") openOwnerForm(owner);
+      if (button.dataset.action === "reset-owner-password") openOwnerPasswordReset(owner);
       if (button.dataset.action === "disable-owner" && window.confirm(`Désactiver ${owner.username} et sa librairie ?`)) {
         try { await apiFetch(`/api/admin/owners/${owner.id}`, {method: "DELETE"}); await Promise.all([reloadOwners(), reloadOwnerOptions()]); }
         catch (error) { showError(errorBox, error); }

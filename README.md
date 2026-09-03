@@ -282,6 +282,19 @@ Le mot de passe doit contenir au moins 12 caractères et il est stocké avec Arg
 
 Tout propriétaire nouvellement créé, ou dont le mot de passe est réinitialisé par le root, reçoit un mot de passe temporaire. Le JWT porte alors `password_change_required=true`. Seuls `/api/auth/me`, `/api/auth/change-password`, les opérations de session, le refresh et la déconnexion restent accessibles ; les routes de gestion répondent `403 password_change_required` jusqu'au changement du mot de passe. Le tableau de bord ouvre automatiquement le formulaire obligatoire sans possibilité de le fermer.
 
+Le root utilise la route dédiée `POST /api/admin/owners/{id}/reset-password` avec `{ "password": "..." }`. L'opération révoque toutes les sessions, remet à zéro les échecs de connexion, déverrouille un compte `LOCKED`, mais conserve un compte `DISABLED` dans cet état. Aucun mot de passe n'est écrit dans l'audit `RESET_LIBRARY_OWNER_PASSWORD`.
+
+```bash
+read -rsp 'Nouveau mot de passe temporaire : ' DEFTA_TEMP_PASSWORD
+echo
+jq -n --arg password "$DEFTA_TEMP_PASSWORD" '{password:$password}' |
+curl -i -X POST "http://localhost:8080/api/admin/owners/$OWNER_ID/reset-password" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  --data-binary @-
+unset DEFTA_TEMP_PASSWORD
+```
+
 ```bash
 export DEFTA_ROOT_USERNAME='kharmaodo'
 export DEFTA_ROOT_EMAIL='root@example.com'
