@@ -4,9 +4,38 @@ package database
 
 import (
 	"database/sql"
+	"os"
 	"path/filepath"
 	"testing"
 )
+
+func TestEnsureDatabaseFileCopiesSeedWithoutOverwritingRuntimeData(t *testing.T) {
+	directory := t.TempDir()
+	seedPath := filepath.Join(directory, "catalogue.seed.db")
+	runtimePath := filepath.Join(directory, "defta.db")
+	if err := os.WriteFile(seedPath, []byte("catalogue"), 0o600); err != nil {
+		t.Fatalf("write seed: %v", err)
+	}
+	seeded, err := ensureDatabaseFile(runtimePath)
+	if err != nil || !seeded {
+		t.Fatalf("seeded=%t err=%v", seeded, err)
+	}
+	content, err := os.ReadFile(runtimePath)
+	if err != nil || string(content) != "catalogue" {
+		t.Fatalf("runtime content=%q err=%v", content, err)
+	}
+	if err = os.WriteFile(runtimePath, []byte("private runtime data"), 0o600); err != nil {
+		t.Fatalf("write runtime data: %v", err)
+	}
+	seeded, err = ensureDatabaseFile(runtimePath)
+	if err != nil || seeded {
+		t.Fatalf("second seeded=%t err=%v", seeded, err)
+	}
+	content, err = os.ReadFile(runtimePath)
+	if err != nil || string(content) != "private runtime data" {
+		t.Fatalf("overwritten runtime content=%q err=%v", content, err)
+	}
+}
 
 func TestSearchBooksUsesFTS5AndKeepsTotal(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "catalogue.db")

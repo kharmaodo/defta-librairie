@@ -28,7 +28,9 @@ L’application propose une recherche classée par pertinence sur les titres, au
 ```text
 .
 ├── cmd/main.go                  # Point d’entrée HTTP
-├── data/defta.db                # Catalogue SQLite
+├── data/
+│   ├── catalogue.seed.db       # Catalogue initial local et ignoré par Git
+│   └── defta.db                # Base privée d’exécution, ignorée par Git
 ├── internal/
 │   ├── config/                  # Configuration
 │   ├── database/                # Accès SQLite et recherche FTS5
@@ -37,8 +39,33 @@ L’application propose une recherche classée par pertinence sur les titres, au
 ├── static/
 │   ├── css/style.css
 │   └── js/main.js
+├── scripts/backup-db.sh         # Sauvegarde SQLite cohérente et contrôlée
 └── templates/                   # Templates Go RTL
 ```
+
+`data/catalogue.seed.db` est un seed local facultatif contenant uniquement le catalogue historique initial. Il n'est jamais publié. Si `data/defta.db` est absent, l'application le copie automatiquement lorsqu'il existe, puis applique les migrations. Sans seed, une base vide est créée normalement. Les deux fichiers sont ignorés par Git afin de protéger le catalogue privé, les comptes, hashes de mots de passe, sessions et audits.
+
+Créer localement le seed depuis une sauvegarde validée, sans le commiter :
+
+```bash
+cp data/defta.db.backup-YYYYMMDD-HHMMSS data/catalogue.seed.db
+
+git check-ignore -v data/catalogue.seed.db
+```
+
+### Sauvegarde obligatoire avant intervention
+
+Avant un `git pull`, un changement de branche, l'application d'un stash, une migration ou un test modifiant les données, créer une sauvegarde SQLite cohérente :
+
+```bash
+set -a
+. ./.env
+set +a
+
+./scripts/backup-db.sh
+```
+
+Le script utilise l'API de sauvegarde de SQLite, contrôle `PRAGMA integrity_check` et affiche le SHA-256 du fichier placé dans `data/backups/`. Ce répertoire est exclu de Git.
 
 ## Prérequis
 
