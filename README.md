@@ -244,6 +244,8 @@ L'historique des mouvements est paginé avec `offset` et `limit` (maximum 100), 
 
 La liste des stocks accepte `LOW_STOCK` (quantité positive inférieure ou égale au seuil), `OUT_OF_STOCK` (quantité nulle) et `IN_STOCK` (quantité supérieure au seuil). Sans filtre, elle retourne tous les stocks autorisés, en présentant d'abord les ruptures puis les alertes. Seul le root peut utiliser `libraryId` pour limiter la liste à une librairie précise.
 
+Le tableau de bord affiche cette liste avec les mêmes filtres et codes visuels. Depuis une ligne, un utilisateur autorisé peut enregistrer une entrée, une sortie, un ajustement absolu ou un nouveau seuil, puis consulter l'historique immuable des mouvements. Après chaque opération, le stock et le journal d'audit sont actualisés sans rechargement complet de la page.
+
 ```bash
 curl -fsS "http://localhost:8080/api/manage/books/$BOOK_ID/inventory" \
   -H "Authorization: Bearer $OWNER_TOKEN" | jq .
