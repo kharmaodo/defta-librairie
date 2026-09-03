@@ -232,3 +232,118 @@ func (r *SaleRepository) Update(ctx context.Context, id, libraryID, customer str
 	}
 	return r.Find(ctx, id, libraryID)
 }
+
+func (r *SaleRepository) Transition(ctx context.Context, id, libraryID, actorID string, expectedVersion int,
+	target models.SaleStatus, movementIDs, inventoryAuditIDs []string, saleAuditID, now string) (models.Sale, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return models.Sale{}, fmt.Errorf("begin sale transition: %w", err)
+	}
+	defer tx.Rollback()
+	query := "SELECT library_id,reference,status,version FROM sales WHERE id=?"
+	args := []interface{}{id}
+	if libraryID != "" {
+		query += " AND library_id=?"
+		args = append(args, libraryID)
+	}
+	var actualLibrary, reference string
+	var current models.SaleStatus
+	var version int
+	if err = tx.QueryRowContext(ctx, query, args...).Scan(&actualLibrary, &reference, &current, &version); errors.Is(err, sql.ErrNoRows) {
+		return models.Sale{}, ErrSaleNotFound
+	} else if err != nil {
+		return models.Sale{}, fmt.Errorf("read sale before transition: %w", err)
+	}
+	if version != expectedVersion {
+		return models.Sale{}, ErrSaleConflict
+	}
+	if (target == models.SaleStatusConfirmed && current != models.SaleStatusDraft) ||
+		(target == models.SaleStatusCancelled && current != models.SaleStatusConfirmed) {
+		return models.Sale{}, ErrSaleState
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT book_id,quantity FROM sale_lines WHERE sale_id=? ORDER BY id`, id)
+	if err != nil {
+		return models.Sale{}, fmt.Errorf("read sale lines before transition: %w", err)
+	}
+	type transitionLine struct{ bookID int64; quantity int }
+	lines := make([]transitionLine, 0)
+	for rows.Next() {
+		var line transitionLine
+		if err = rows.Scan(&line.bookID, &line.quantity); err != nil {
+			rows.Close()
+			return models.Sale{}, fmt.Errorf("scan sale transition line: %w", err)
+		}
+		lines = append(lines, line)
+	}
+	if err = rows.Close(); err != nil {
+		return models.Sale{}, fmt.Errorf("close sale transition lines: %w", err)
+	}
+	if len(lines) == 0 || len(lines) != len(movementIDs) || len(lines) != len(inventoryAuditIDs) {
+		return models.Sale{}, ErrSaleConflict
+	}
+	for index, line := range lines {
+		var before, inventoryVersion int
+		if err = tx.QueryRowContext(ctx, `SELECT quantity,version FROM book_inventory
+			WHERE book_id=? AND library_id=?`, line.bookID, actualLibrary).Scan(&before, &inventoryVersion); errors.Is(err, sql.ErrNoRows) {
+			return models.Sale{}, ErrSaleBook
+		} else if err != nil {
+			return models.Sale{}, fmt.Errorf("read inventory for sale transition: %w", err)
+		}
+		after, delta, movementType := before-line.quantity, -line.quantity, models.InventoryMovementExit
+		if target == models.SaleStatusCancelled {
+			after, delta, movementType = before+line.quantity, line.quantity, models.InventoryMovementEntry
+		}
+		if after < 0 {
+			return models.Sale{}, ErrInsufficientStock
+		}
+		result, updateErr := tx.ExecContext(ctx, `UPDATE book_inventory SET quantity=?,version=version+1,updated_at=?
+			WHERE book_id=? AND library_id=? AND version=? AND quantity=?`,
+			after, now, line.bookID, actualLibrary, inventoryVersion, before)
+		if updateErr != nil {
+			return models.Sale{}, fmt.Errorf("update inventory for sale: %w", updateErr)
+		}
+		if affected, rowsErr := result.RowsAffected(); rowsErr != nil || affected != 1 {
+			return models.Sale{}, ErrInventoryConflict
+		}
+		reason := "Vente " + reference
+		if target == models.SaleStatusCancelled {
+			reason = "Annulation vente " + reference
+		}
+		if _, err = tx.ExecContext(ctx, `INSERT INTO inventory_movements(id,book_id,library_id,actor_user_id,
+			movement_type,quantity_delta,quantity_before,quantity_after,reason,created_at)
+			VALUES(?,?,?,?,?,?,?,?,?,?)`, movementIDs[index], line.bookID, actualLibrary, actorID,
+			movementType, delta, before, after, reason, now); err != nil {
+			return models.Sale{}, fmt.Errorf("insert sale inventory movement: %w", err)
+		}
+		inventoryPayload, _ := json.Marshal(map[string]interface{}{"saleId": id, "movementType": movementType,
+			"quantityBefore": before, "quantityAfter": after, "quantityDelta": delta, "version": inventoryVersion + 1})
+		if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)
+			VALUES(?,?,'UPDATE_INVENTORY','BOOK',?,?,1,?)`, inventoryAuditIDs[index], actorID,
+			line.bookID, string(inventoryPayload), now); err != nil {
+			return models.Sale{}, fmt.Errorf("audit sale inventory movement: %w", err)
+		}
+	}
+	action := "CONFIRM_SALE"
+	setClause := "status='CONFIRMED',confirmed_by=?,confirmed_at=?"
+	if target == models.SaleStatusCancelled {
+		action = "CANCEL_SALE"
+		setClause = "status='CANCELLED',cancelled_by=?,cancelled_at=?"
+	}
+	result, err := tx.ExecContext(ctx, "UPDATE sales SET "+setClause+",version=version+1,updated_at=? WHERE id=? AND version=?",
+		actorID, now, now, id, expectedVersion)
+	if err != nil {
+		return models.Sale{}, fmt.Errorf("transition sale: %w", err)
+	}
+	if affected, rowsErr := result.RowsAffected(); rowsErr != nil || affected != 1 {
+		return models.Sale{}, ErrSaleConflict
+	}
+	payload, _ := json.Marshal(map[string]interface{}{"status": target, "lines": len(lines), "version": expectedVersion + 1})
+	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)
+		VALUES(?,?,?,'SALE',?,?,1,?)`, saleAuditID, actorID, action, id, string(payload), now); err != nil {
+		return models.Sale{}, fmt.Errorf("audit sale transition: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return models.Sale{}, fmt.Errorf("commit sale transition: %w", err)
+	}
+	return r.Find(ctx, id, libraryID)
+}

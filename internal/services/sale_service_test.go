@@ -32,10 +32,16 @@ func TestSaleDraftLifecycleAndIsolation(t *testing.T) {
 			quantity INTEGER NOT NULL,unit_price REAL NOT NULL,line_total REAL NOT NULL,created_at TEXT NOT NULL,UNIQUE(sale_id,book_id));
 		CREATE TABLE audit_logs(id TEXT PRIMARY KEY,actor_user_id TEXT,action TEXT,resource_type TEXT,
 			resource_id TEXT,new_values TEXT,success INTEGER,created_at TEXT);
+		CREATE TABLE book_inventory(book_id INTEGER PRIMARY KEY,library_id TEXT NOT NULL,quantity INTEGER NOT NULL,
+			low_stock_threshold INTEGER NOT NULL,version INTEGER NOT NULL,updated_at TEXT NOT NULL);
+		CREATE TABLE inventory_movements(id TEXT PRIMARY KEY,book_id INTEGER,library_id TEXT,actor_user_id TEXT,
+			movement_type TEXT,quantity_delta INTEGER,quantity_before INTEGER,quantity_after INTEGER,reason TEXT,created_at TEXT);
 		INSERT INTO users VALUES('owner-1'),('owner-2');
 		INSERT INTO libraries VALUES('library-1'),('library-2');
 		INSERT INTO defta VALUES(1,'Livre un',2500,'library-1',NULL),(2,'Livre deux',3000,'library-1',NULL),
 			(3,'Livre tiers',1000,'library-2',NULL);
+		INSERT INTO book_inventory VALUES(1,'library-1',10,5,1,'now'),(2,'library-1',10,5,1,'now'),
+			(3,'library-2',10,5,1,'now');
 	`)
 	if err != nil {
 		t.Fatal(err)
@@ -80,5 +86,81 @@ func TestSaleDraftLifecycleAndIsolation(t *testing.T) {
 	_ = db.QueryRow("SELECT COUNT(*) FROM audit_logs WHERE action IN ('CREATE_SALE','UPDATE_SALE')").Scan(&audits)
 	if audits != 2 {
 		t.Fatalf("sale audits=%d", audits)
+	}
+
+	sale, err = service.Confirm(context.Background(), owner, sale.ID, sale.Version)
+	if err != nil || sale.Status != models.SaleStatusConfirmed || sale.Version != 3 {
+		t.Fatalf("confirm sale=%+v err=%v", sale, err)
+	}
+	var stock int
+	_ = db.QueryRow("SELECT quantity FROM book_inventory WHERE book_id=2").Scan(&stock)
+	if stock != 8 {
+		t.Fatalf("stock after confirmation=%d", stock)
+	}
+	if _, err = service.Confirm(context.Background(), owner, sale.ID, sale.Version); !errors.Is(err, repositories.ErrSaleState) {
+		t.Fatalf("repeated confirmation=%v", err)
+	}
+	sale, err = service.Cancel(context.Background(), owner, sale.ID, sale.Version)
+	if err != nil || sale.Status != models.SaleStatusCancelled || sale.Version != 4 {
+		t.Fatalf("cancel sale=%+v err=%v", sale, err)
+	}
+	_ = db.QueryRow("SELECT quantity FROM book_inventory WHERE book_id=2").Scan(&stock)
+	if stock != 10 {
+		t.Fatalf("stock after cancellation=%d", stock)
+	}
+	var movements int
+	_ = db.QueryRow("SELECT COUNT(*) FROM inventory_movements WHERE book_id=2").Scan(&movements)
+	if movements != 2 {
+		t.Fatalf("sale inventory movements=%d", movements)
+	}
+}
+
+func TestSaleConfirmationRollsBackOnInsufficientStock(t *testing.T) {
+	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "sales-stock.db")+"?_foreign_keys=on")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	_, err = db.Exec(`
+		CREATE TABLE users(id TEXT PRIMARY KEY); CREATE TABLE libraries(id TEXT PRIMARY KEY);
+		CREATE TABLE defta(id INTEGER PRIMARY KEY,title TEXT,price REAL,library_id TEXT,deleted_at TEXT);
+		CREATE TABLE sales(id TEXT PRIMARY KEY,library_id TEXT,reference TEXT,customer_name TEXT,status TEXT,total_amount REAL,
+			version INTEGER,created_by TEXT,confirmed_by TEXT,cancelled_by TEXT,created_at TEXT,updated_at TEXT,confirmed_at TEXT,cancelled_at TEXT);
+		CREATE TABLE sale_lines(id TEXT PRIMARY KEY,sale_id TEXT,book_id INTEGER,title_snapshot TEXT,quantity INTEGER,
+			unit_price REAL,line_total REAL,created_at TEXT,UNIQUE(sale_id,book_id));
+		CREATE TABLE book_inventory(book_id INTEGER PRIMARY KEY,library_id TEXT,quantity INTEGER,low_stock_threshold INTEGER,
+			version INTEGER,updated_at TEXT);
+		CREATE TABLE inventory_movements(id TEXT PRIMARY KEY,book_id INTEGER,library_id TEXT,actor_user_id TEXT,
+			movement_type TEXT,quantity_delta INTEGER,quantity_before INTEGER,quantity_after INTEGER,reason TEXT,created_at TEXT);
+		CREATE TABLE audit_logs(id TEXT PRIMARY KEY,actor_user_id TEXT,action TEXT,resource_type TEXT,resource_id TEXT,
+			new_values TEXT,success INTEGER,created_at TEXT);
+		INSERT INTO users VALUES('owner-1'); INSERT INTO libraries VALUES('library-1');
+		INSERT INTO defta VALUES(1,'Disponible',1000,'library-1',NULL),(2,'Épuisé',2000,'library-1',NULL);
+		INSERT INTO book_inventory VALUES(1,'library-1',5,2,1,'now'),(2,'library-1',0,2,1,'now');
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	service := NewSaleService(repositories.NewSaleRepository(db))
+	owner := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-1"}
+	owner.Subject = "owner-1"
+	sale, err := service.Create(context.Background(), owner, models.SaleInput{Lines: []models.SaleLineInput{
+		{BookID: 1, Quantity: 1}, {BookID: 2, Quantity: 1},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.Confirm(context.Background(), owner, sale.ID, sale.Version); !errors.Is(err, repositories.ErrInsufficientStock) {
+		t.Fatalf("insufficient stock=%v", err)
+	}
+	var firstStock, movements int
+	_ = db.QueryRow("SELECT quantity FROM book_inventory WHERE book_id=1").Scan(&firstStock)
+	_ = db.QueryRow("SELECT COUNT(*) FROM inventory_movements").Scan(&movements)
+	if firstStock != 5 || movements != 0 {
+		t.Fatalf("partial write stock=%d movements=%d", firstStock, movements)
+	}
+	stored, err := service.Find(context.Background(), owner, sale.ID)
+	if err != nil || stored.Status != models.SaleStatusDraft || stored.Version != 1 {
+		t.Fatalf("sale changed after rollback=%+v err=%v", stored, err)
 	}
 }

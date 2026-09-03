@@ -104,6 +104,45 @@ func (s *SaleService) Update(ctx context.Context, claims *auth.Claims, id string
 		lineIDs, input.Version, claims.Subject, auditID, s.now().UTC().Format(time.RFC3339Nano))
 }
 
+func (s *SaleService) Confirm(ctx context.Context, claims *auth.Claims, id string, version int) (models.Sale, error) {
+	return s.transition(ctx, claims, id, version, models.SaleStatusConfirmed)
+}
+
+func (s *SaleService) Cancel(ctx context.Context, claims *auth.Claims, id string, version int) (models.Sale, error) {
+	return s.transition(ctx, claims, id, version, models.SaleStatusCancelled)
+}
+
+func (s *SaleService) transition(ctx context.Context, claims *auth.Claims, id string, version int,
+	target models.SaleStatus) (models.Sale, error) {
+	if strings.TrimSpace(id) == "" || version < 1 {
+		return models.Sale{}, ErrInvalidSale
+	}
+	libraryID, err := resolveBookScope(claims, "", false)
+	if err != nil {
+		return models.Sale{}, err
+	}
+	sale, err := s.repository.Find(ctx, id, libraryID)
+	if err != nil {
+		return models.Sale{}, err
+	}
+	movementIDs := make([]string, len(sale.Lines))
+	inventoryAuditIDs := make([]string, len(sale.Lines))
+	for index := range sale.Lines {
+		if movementIDs[index], err = identity.NewID(); err != nil {
+			return models.Sale{}, err
+		}
+		if inventoryAuditIDs[index], err = identity.NewID(); err != nil {
+			return models.Sale{}, err
+		}
+	}
+	saleAuditID, err := identity.NewID()
+	if err != nil {
+		return models.Sale{}, err
+	}
+	return s.repository.Transition(ctx, id, libraryID, claims.Subject, version, target,
+		movementIDs, inventoryAuditIDs, saleAuditID, s.now().UTC().Format(time.RFC3339Nano))
+}
+
 func validateSaleInput(input models.SaleInput, update bool) error {
 	if len([]rune(strings.TrimSpace(input.CustomerName))) > 200 || len(input.Lines) < 1 || len(input.Lines) > 100 ||
 		(update && input.Version < 1) {

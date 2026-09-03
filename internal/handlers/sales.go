@@ -12,6 +12,10 @@ import (
 
 type SaleHandler struct{ service *services.SaleService }
 
+type saleTransitionRequest struct {
+	Version int `json:"version"`
+}
+
 func NewSaleHandler(service *services.SaleService) *SaleHandler { return &SaleHandler{service: service} }
 
 func (h *SaleHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -71,6 +75,35 @@ func (h *SaleHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeAuthJSON(w, http.StatusOK, sale)
 }
 
+func (h *SaleHandler) Confirm(w http.ResponseWriter, r *http.Request) {
+	h.transition(w, r, true)
+}
+
+func (h *SaleHandler) Cancel(w http.ResponseWriter, r *http.Request) {
+	h.transition(w, r, false)
+}
+
+func (h *SaleHandler) transition(w http.ResponseWriter, r *http.Request, confirm bool) {
+	var request saleTransitionRequest
+	if decodeOwnerJSON(w, r, &request) != nil {
+		writeSaleError(w, services.ErrInvalidSale)
+		return
+	}
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	var sale models.Sale
+	var err error
+	if confirm {
+		sale, err = h.service.Confirm(r.Context(), claims, r.PathValue("id"), request.Version)
+	} else {
+		sale, err = h.service.Cancel(r.Context(), claims, r.PathValue("id"), request.Version)
+	}
+	if err != nil {
+		writeSaleError(w, err)
+		return
+	}
+	writeAuthJSON(w, http.StatusOK, sale)
+}
+
 func writeSaleError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, repositories.ErrSaleNotFound):
@@ -81,6 +114,10 @@ func writeSaleError(w http.ResponseWriter, err error) {
 		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "sale_not_editable", "message": err.Error()})
 	case errors.Is(err, repositories.ErrSaleBook):
 		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_sale_book", "message": err.Error()})
+	case errors.Is(err, repositories.ErrInsufficientStock):
+		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "insufficient_stock", "message": err.Error()})
+	case errors.Is(err, repositories.ErrInventoryConflict):
+		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "inventory_version_conflict", "message": err.Error()})
 	case errors.Is(err, services.ErrInvalidSale):
 		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_sale", "message": err.Error()})
 	case errors.Is(err, services.ErrBookForbidden):
