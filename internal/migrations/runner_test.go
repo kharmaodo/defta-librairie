@@ -54,8 +54,8 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	if err = db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&migrationsCount); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if migrationsCount != 9 {
-		t.Fatalf("expected 9 migrations, got %d", migrationsCount)
+	if migrationsCount != 10 {
+		t.Fatalf("expected 10 migrations, got %d", migrationsCount)
 	}
 
 	var assignedBooks int
@@ -70,6 +70,13 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	}
 	if assignedBooks != 2 {
 		t.Fatalf("expected 2 assigned legacy books, got %d", assignedBooks)
+	}
+	var initializedInventory int
+	if err = db.QueryRow(`SELECT COUNT(*) FROM book_inventory WHERE quantity=0 AND version=1`).Scan(&initializedInventory); err != nil {
+		t.Fatalf("count initialized inventory: %v", err)
+	}
+	if initializedInventory != 2 {
+		t.Fatalf("expected inventory for 2 legacy books, got %d", initializedInventory)
 	}
 
 	if _, err = db.Exec("UPDATE defta SET library_id = 'missing-library' WHERE id = 1"); err == nil {

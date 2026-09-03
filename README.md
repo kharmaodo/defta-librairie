@@ -224,6 +224,22 @@ curl -fsS 'http://localhost:8080/api/manage/books?q=fiqh&offset=0&limit=10' \
 | `PUT` | `/api/manage/books/{id}` | Remplacer les données, prix, tags et statut |
 | `DELETE` | `/api/manage/books/{id}` | Supprimer logiquement un livre |
 
+### Gestion des stocks
+
+Chaque livre possède un état de stock versionné et un seuil d'alerte. Tous les changements produisent un mouvement immuable. Un `OWNER_LIBRARY` reste limité aux livres de sa librairie ; le `SUPER_ADMIN_ROOT` peut préciser `libraryId`. Une sortie qui rendrait le stock négatif est refusée et les écritures concurrentes utilisent le champ `version`.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/inventory?status=LOW_STOCK&offset=0&limit=30` | Lister le stock autorisé |
+| `GET` | `/api/manage/books/{id}/inventory` | Consulter le stock d'un livre |
+| `POST` | `/api/manage/books/{id}/inventory/entries` | Enregistrer une entrée positive |
+| `POST` | `/api/manage/books/{id}/inventory/exits` | Enregistrer une sortie positive |
+| `PUT` | `/api/manage/books/{id}/inventory` | Ajuster le stock à une quantité absolue |
+| `PATCH` | `/api/manage/books/{id}/inventory/threshold` | Modifier le seuil de stock faible |
+| `GET` | `/api/manage/books/{id}/inventory/movements` | Consulter l'historique paginé |
+
+Les entrées et sorties reçoivent `{ "quantity": 5, "reason": "...", "version": 1 }`. L'ajustement reçoit `{ "quantity": 12, "reason": "inventaire physique", "version": 2 }`. Le seuil reçoit `{ "lowStockThreshold": 3, "version": 3 }`. Une version périmée répondra `409 inventory_version_conflict` et une sortie excessive `409 insufficient_stock`.
+
 Les mises à jour utilisent le champ `version`. Une version périmée produit `409 Conflict` afin d'éviter l'écrasement silencieux d'une modification concurrente. Les suppressions logiques disparaissent également du catalogue public et de la recherche FTS5.
 
 Chaque création, modification ou suppression conserve un instantané JSON du prix, du statut, des tags et de la version. L'historique reste consultable après une suppression logique ; un propriétaire ne peut toutefois consulter que les livres rattachés à sa propre librairie.
