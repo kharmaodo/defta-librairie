@@ -203,7 +203,7 @@
       textCell(row, formatDate(sale.createdAt));
       const actions = textCell(row, "");
       actions.className = "row-actions";
-      if (sale.status === "DRAFT") actions.replaceChildren(actionButton("Modifier", "edit-sale", sale.id), actionButton("Confirmer", "confirm-sale", sale.id));
+      if (sale.status === "DRAFT") actions.replaceChildren(actionButton("Modifier", "edit-sale", sale.id), actionButton("Confirmer", "confirm-sale", sale.id), actionButton("Supprimer", "delete-sale", sale.id, true));
       if (sale.status === "CONFIRMED") actions.replaceChildren(actionButton("Annuler", "cancel-sale", sale.id, true));
       if (sale.status === "CANCELLED") actions.textContent = "Terminée";
     });
@@ -956,6 +956,16 @@
       if (!sale) return;
       if (button.dataset.action === "edit-sale") {
         try { await openSaleForm(sale); } catch (error) { showError(errorBox, error); }
+        return;
+      }
+      if (button.dataset.action === "delete-sale") {
+        if (!window.confirm(`Supprimer définitivement le brouillon ${sale.reference} ?`)) return;
+        button.disabled = true;
+        try {
+          await apiFetch(`/api/manage/sales/${sale.id}`, {method: "DELETE"});
+          await Promise.all([reloadSales(), reloadAudit()]);
+        } catch (error) { showError(errorBox, error); }
+        finally { button.disabled = false; }
         return;
       }
       const confirm = button.dataset.action === "confirm-sale";

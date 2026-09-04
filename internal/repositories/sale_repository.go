@@ -52,18 +52,27 @@ func (r *SaleRepository) List(ctx context.Context, libraryID string, filter mode
 	if err != nil {
 		return nil, 0, fmt.Errorf("list sales: %w", err)
 	}
-	defer rows.Close()
 	sales := make([]models.Sale, 0)
 	for rows.Next() {
 		sale, scanErr := scanSale(rows)
 		if scanErr != nil {
+			rows.Close()
 			return nil, 0, scanErr
 		}
 		sale.Lines = make([]models.SaleLine, 0)
 		sales = append(sales, sale)
 	}
 	if err = rows.Err(); err != nil {
+		rows.Close()
 		return nil, 0, fmt.Errorf("iterate sales: %w", err)
+	}
+	if err = rows.Close(); err != nil {
+		return nil, 0, fmt.Errorf("close sales: %w", err)
+	}
+	for index := range sales {
+		if sales[index].Lines, err = r.listLines(ctx, sales[index].ID); err != nil {
+			return nil, 0, err
+		}
 	}
 	return sales, total, nil
 }
@@ -97,22 +106,27 @@ func (r *SaleRepository) Find(ctx context.Context, id, libraryID string) (models
 	if err != nil {
 		return models.Sale{}, err
 	}
+	sale.Lines, err = r.listLines(ctx, id)
+	return sale, err
+}
+
+func (r *SaleRepository) listLines(ctx context.Context, saleID string) ([]models.SaleLine, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id, sale_id, book_id, title_snapshot, quantity,
-		unit_price, line_total, created_at FROM sale_lines WHERE sale_id=? ORDER BY id`, id)
+		unit_price, line_total, created_at FROM sale_lines WHERE sale_id=? ORDER BY id`, saleID)
 	if err != nil {
-		return models.Sale{}, fmt.Errorf("list sale lines: %w", err)
+		return nil, fmt.Errorf("list sale lines: %w", err)
 	}
 	defer rows.Close()
-	sale.Lines = make([]models.SaleLine, 0)
+	lines := make([]models.SaleLine, 0)
 	for rows.Next() {
 		var line models.SaleLine
 		if err = rows.Scan(&line.ID, &line.SaleID, &line.BookID, &line.TitleSnapshot, &line.Quantity,
 			&line.UnitPrice, &line.LineTotal, &line.CreatedAt); err != nil {
-			return models.Sale{}, fmt.Errorf("scan sale line: %w", err)
+			return nil, fmt.Errorf("scan sale line: %w", err)
 		}
-		sale.Lines = append(sale.Lines, line)
+		lines = append(lines, line)
 	}
-	return sale, rows.Err()
+	return lines, rows.Err()
 }
 
 func (r *SaleRepository) Create(ctx context.Context, sale models.Sale, inputs []models.SaleLineInput,
@@ -231,6 +245,50 @@ func (r *SaleRepository) Update(ctx context.Context, id, libraryID, customer str
 		return models.Sale{}, fmt.Errorf("commit sale update: %w", err)
 	}
 	return r.Find(ctx, id, libraryID)
+}
+
+func (r *SaleRepository) Delete(ctx context.Context, id, libraryID, actorID, auditID, now string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin sale deletion: %w", err)
+	}
+	defer tx.Rollback()
+	query := "SELECT reference,status,total_amount,version FROM sales WHERE id=?"
+	args := []interface{}{id}
+	if libraryID != "" {
+		query += " AND library_id=?"
+		args = append(args, libraryID)
+	}
+	var reference string
+	var status models.SaleStatus
+	var total float64
+	var version int
+	if err = tx.QueryRowContext(ctx, query, args...).Scan(&reference, &status, &total, &version); errors.Is(err, sql.ErrNoRows) {
+		return ErrSaleNotFound
+	} else if err != nil {
+		return fmt.Errorf("read sale before deletion: %w", err)
+	}
+	if status != models.SaleStatusDraft {
+		return ErrSaleState
+	}
+	result, err := tx.ExecContext(ctx, "DELETE FROM sales WHERE id=? AND status='DRAFT' AND version=?", id, version)
+	if err != nil {
+		return fmt.Errorf("delete sale: %w", err)
+	}
+	if affected, rowsErr := result.RowsAffected(); rowsErr != nil || affected != 1 {
+		return ErrSaleConflict
+	}
+	payload, _ := json.Marshal(map[string]interface{}{
+		"reference": reference, "status": status, "totalAmount": total, "version": version,
+	})
+	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)
+		VALUES(?,?,'DELETE_SALE','SALE',?,?,1,?)`, auditID, actorID, id, string(payload), now); err != nil {
+		return fmt.Errorf("audit sale deletion: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit sale deletion: %w", err)
+	}
+	return nil
 }
 
 func (r *SaleRepository) Transition(ctx context.Context, id, libraryID, actorID string, expectedVersion int,

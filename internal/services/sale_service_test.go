@@ -79,13 +79,34 @@ func TestSaleDraftLifecycleAndIsolation(t *testing.T) {
 		t.Fatalf("cross-library book=%v", err)
 	}
 	sales, total, err := service.List(context.Background(), owner, "", models.SaleFilter{Status: models.SaleStatusDraft}, 0, 30)
-	if err != nil || total != 1 || len(sales) != 1 {
+	if err != nil || total != 1 || len(sales) != 1 || len(sales[0].Lines) != 1 {
 		t.Fatalf("list sales=%+v total=%d err=%v", sales, total, err)
 	}
 	var audits int
 	_ = db.QueryRow("SELECT COUNT(*) FROM audit_logs WHERE action IN ('CREATE_SALE','UPDATE_SALE')").Scan(&audits)
 	if audits != 2 {
 		t.Fatalf("sale audits=%d", audits)
+	}
+	deletable, err := service.Create(context.Background(), owner, models.SaleInput{
+		Lines: []models.SaleLineInput{{BookID: 1, Quantity: 1}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = service.Delete(context.Background(), other, deletable.ID); !errors.Is(err, repositories.ErrSaleNotFound) {
+		t.Fatalf("cross-library delete=%v", err)
+	}
+	if err = service.Delete(context.Background(), owner, deletable.ID); err != nil {
+		t.Fatalf("delete draft=%v", err)
+	}
+	if _, err = service.Find(context.Background(), owner, deletable.ID); !errors.Is(err, repositories.ErrSaleNotFound) {
+		t.Fatalf("find deleted draft=%v", err)
+	}
+	var deletedLines, deleteAudits int
+	_ = db.QueryRow("SELECT COUNT(*) FROM sale_lines WHERE sale_id=?", deletable.ID).Scan(&deletedLines)
+	_ = db.QueryRow("SELECT COUNT(*) FROM audit_logs WHERE action='DELETE_SALE' AND resource_id=?", deletable.ID).Scan(&deleteAudits)
+	if deletedLines != 0 || deleteAudits != 1 {
+		t.Fatalf("delete draft lines=%d audits=%d", deletedLines, deleteAudits)
 	}
 
 	sale, err = service.Confirm(context.Background(), owner, sale.ID, sale.Version)
@@ -99,6 +120,9 @@ func TestSaleDraftLifecycleAndIsolation(t *testing.T) {
 	}
 	if _, err = service.Confirm(context.Background(), owner, sale.ID, sale.Version); !errors.Is(err, repositories.ErrSaleState) {
 		t.Fatalf("repeated confirmation=%v", err)
+	}
+	if err = service.Delete(context.Background(), owner, sale.ID); !errors.Is(err, repositories.ErrSaleState) {
+		t.Fatalf("delete confirmed sale=%v", err)
 	}
 	sale, err = service.Cancel(context.Background(), owner, sale.ID, sale.Version)
 	if err != nil || sale.Status != models.SaleStatusCancelled || sale.Version != 4 {

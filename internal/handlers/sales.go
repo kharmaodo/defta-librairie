@@ -75,6 +75,15 @@ func (h *SaleHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeAuthJSON(w, http.StatusOK, sale)
 }
 
+func (h *SaleHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	if err := h.service.Delete(r.Context(), claims, r.PathValue("id")); err != nil {
+		writeSaleError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *SaleHandler) Confirm(w http.ResponseWriter, r *http.Request) {
 	h.transition(w, r, true)
 }

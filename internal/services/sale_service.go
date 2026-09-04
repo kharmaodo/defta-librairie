@@ -104,6 +104,22 @@ func (s *SaleService) Update(ctx context.Context, claims *auth.Claims, id string
 		lineIDs, input.Version, claims.Subject, auditID, s.now().UTC().Format(time.RFC3339Nano))
 }
 
+func (s *SaleService) Delete(ctx context.Context, claims *auth.Claims, id string) error {
+	if strings.TrimSpace(id) == "" {
+		return ErrInvalidSale
+	}
+	libraryID, err := resolveBookScope(claims, "", false)
+	if err != nil {
+		return err
+	}
+	auditID, err := identity.NewID()
+	if err != nil {
+		return err
+	}
+	return s.repository.Delete(ctx, id, libraryID, claims.Subject, auditID,
+		s.now().UTC().Format(time.RFC3339Nano))
+}
+
 func (s *SaleService) Confirm(ctx context.Context, claims *auth.Claims, id string, version int) (models.Sale, error) {
 	return s.transition(ctx, claims, id, version, models.SaleStatusConfirmed)
 }
