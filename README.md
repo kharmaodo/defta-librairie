@@ -637,6 +637,16 @@ Le CRUD fournisseur est accessible à `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. Le 
 - `DELETE /api/manage/suppliers/{id}?version={version}` ;
 - `POST /api/manage/suppliers/{id}/reactivate?version={version}`.
 
+Les bons d'achat sont gérés sous forme de brouillons sans modifier le stock. Le backend contrôle le fournisseur actif, vérifie que chaque livre appartient à la même librairie, fige son titre et recalcule les montants à partir des quantités et coûts unitaires. Les doublons de livre sont refusés.
+
+- `GET /api/manage/purchases?status=&supplierId=&from=&to=&libraryId=&offset=0&limit=30` ;
+- `POST /api/manage/purchases` ;
+- `GET /api/manage/purchases/{id}` ;
+- `PUT /api/manage/purchases/{id}` ;
+- `DELETE /api/manage/purchases/{id}?version={version}`.
+
+Seul un achat `DRAFT` peut être modifié ou supprimé. Les actions créent respectivement les audits `CREATE_PURCHASE`, `UPDATE_PURCHASE` et `DELETE_PURCHASE`.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
