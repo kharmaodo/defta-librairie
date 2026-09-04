@@ -271,6 +271,9 @@ func (r *SaleRepository) Delete(ctx context.Context, id, libraryID, actorID, aud
 	if status != models.SaleStatusDraft {
 		return ErrSaleState
 	}
+	if _, err = tx.ExecContext(ctx, "DELETE FROM sale_lines WHERE sale_id=?", id); err != nil {
+		return fmt.Errorf("delete sale lines: %w", err)
+	}
 	result, err := tx.ExecContext(ctx, "DELETE FROM sales WHERE id=? AND status='DRAFT' AND version=?", id, version)
 	if err != nil {
 		return fmt.Errorf("delete sale: %w", err)
