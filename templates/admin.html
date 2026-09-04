@@ -43,13 +43,13 @@
     <section class="panel">
       <div class="panel-heading sales-heading">
         <div><p class="eyebrow">Activité commerciale</p><h2>Ventes</h2></div>
-        <form id="sale-filters" class="filters">
+        <div class="heading-actions"><form id="sale-filters" class="filters">
           <label>État<select name="status"><option value="">Tous</option><option value="DRAFT">Brouillon</option><option value="CONFIRMED">Confirmée</option><option value="CANCELLED">Annulée</option></select></label>
           <label class="root-only-field" hidden>Librairie<select name="libraryId" id="sale-library"></select></label>
           <label>Du<input name="from" type="datetime-local"></label>
           <label>Au<input name="to" type="datetime-local"></label>
           <button class="button ghost" type="submit">Filtrer</button>
-        </form>
+        </form><button id="add-sale-button" class="button primary" type="button">Nouvelle vente</button></div>
       </div>
       <p class="scope-note">Confirmer une vente retire son stock. L’annuler restitue exactement les quantités vendues.</p>
       <div class="table-wrap">
@@ -215,6 +215,31 @@
       <div class="modal-actions"><button class="button ghost" type="button" data-close="inventory-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
     </form>
   </dialog>
+
+  <dialog id="sale-dialog" class="modal sale-modal">
+    <form id="sale-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Vente</p><h2 id="sale-form-title">Nouvelle vente</h2></div><button class="icon-button" type="button" data-close="sale-dialog" aria-label="Fermer">×</button></div>
+      <input name="id" type="hidden"><input name="version" type="hidden">
+      <div class="form-grid">
+        <label class="full root-only-field" hidden>Librairie<select name="libraryId"></select></label>
+        <label class="full">Client<input name="customerName" maxlength="200" placeholder="Client comptoir"></label>
+      </div>
+      <div class="sale-lines-heading"><div><strong>Articles</strong><p class="hint">Les prix sont figés par le serveur à l’enregistrement.</p></div><button id="add-sale-line-button" class="button ghost" type="button">Ajouter un article</button></div>
+      <div id="sale-lines" class="sale-lines"></div>
+      <div class="sale-summary"><span>Total prévisionnel</span><strong id="sale-estimated-total">0 F CFA</strong></div>
+      <p id="sale-form-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-close="sale-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer le brouillon</button></div>
+    </form>
+  </dialog>
+
+  <template id="sale-line-template">
+    <div class="sale-line">
+      <label>Livre<select name="bookId" required></select></label>
+      <label>Quantité<input name="quantity" type="number" min="1" max="100000" step="1" value="1" required></label>
+      <span class="sale-line-price">—</span>
+      <button class="icon-button remove-sale-line" type="button" aria-label="Retirer cet article">×</button>
+    </div>
+  </template>
 
   <dialog id="inventory-history-dialog" class="modal history-modal">
     <div class="entity-form">

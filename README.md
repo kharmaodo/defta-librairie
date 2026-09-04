@@ -610,6 +610,8 @@ Le tableau de bord `/admin` affiche les ventes accessibles au compte connecté. 
 
 Après chaque transition, l'interface actualise ensemble les ventes, les stocks et le journal d'audit. La version courante de la vente est transmise au backend afin de détecter une modification concurrente.
 
+Le bouton **Nouvelle vente** ouvre un brouillon composé d'un client facultatif et d'une à cent lignes. Chaque livre ne peut apparaître qu'une fois et sa quantité doit être positive. Le total affiché dans le navigateur est prévisionnel : le backend relit et fige toujours le titre et le prix courants lors de l'enregistrement. Seules les ventes `DRAFT` restent modifiables.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
