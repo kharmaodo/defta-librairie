@@ -270,6 +270,36 @@ Les mises à jour utilisent le champ `version`. Une version périmée produit `4
 
 Chaque création, modification ou suppression conserve un instantané JSON du prix, du statut, des tags et de la version. L'historique reste consultable après une suppression logique ; un propriétaire ne peut toutefois consulter que les livres rattachés à sa propre librairie.
 
+### Gestion des ventes
+
+Une vente appartient à une seule librairie et contient une ou plusieurs lignes. Le prix et le titre du livre sont copiés dans la ligne afin de préserver la valeur commerciale au moment de la vente. Le cycle de vie autorisé est `DRAFT → CONFIRMED → CANCELLED`.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/sales?status=CONFIRMED&from=...&to=...&offset=0&limit=30&libraryId=...` | Lister les ventes autorisées |
+| `POST` | `/api/manage/sales` | Créer un brouillon avec ses lignes |
+| `GET` | `/api/manage/sales/{id}` | Consulter une vente et ses lignes |
+| `PUT` | `/api/manage/sales/{id}` | Modifier un brouillon versionné |
+| `POST` | `/api/manage/sales/{id}/confirm` | Confirmer et déduire atomiquement le stock |
+| `POST` | `/api/manage/sales/{id}/cancel` | Annuler et remettre atomiquement le stock |
+
+Le propriétaire ne peut créer ou consulter que les ventes de la librairie portée par son JWT. Le root précise `libraryId` pour une création et peut filtrer la liste globale. Une confirmation vérifie toutes les quantités avant la moindre écriture : si une ligne manque de stock, la vente, les mouvements et les quantités restent inchangés. Une annulation n'est possible qu'après confirmation et crée les mouvements inverses. Les modifications utilisent `version` et les transitions répétées sont refusées.
+
+Exemple de brouillon :
+
+~~~json
+{
+  "customerName": "Client comptoir",
+  "lines": [
+    {"bookId": 470, "quantity": 2}
+  ]
+}
+~~~
+
+La création répond `201 Created`, génère une référence `V-AAAAMMJJ-XXXXXXXX` et calcule `totalAmount` depuis les prix actuels des livres. Une modification de brouillon remplace atomiquement ses lignes, recalcule le total et incrémente `version`. Les actions `CREATE_SALE` et `UPDATE_SALE` sont enregistrées dans l'audit.
+
+La confirmation et l'annulation reçoivent `{"version": 2}`. Elles mettent à jour tous les stocks, créent un mouvement immuable par ligne et changent le statut de la vente dans une seule transaction SQLite. Une erreur de stock ou de concurrence annule donc l'ensemble de l'opération. Les audits associés sont `CONFIRM_SALE`, `CANCEL_SALE` et `UPDATE_INVENTORY`.
+
 ### Référentiel des tags
 
 Les tags réutilisables sont définis par librairie. Leur unicité est insensible à la casse (`Fiqh` et `fiqh` représentent le même tag). Un propriétaire utilise toujours la librairie signée dans son JWT ; le root précise `libraryId` lors de la création.
@@ -569,6 +599,22 @@ jq -n --arg token "$REFRESH_TOKEN" '{refreshToken:$token}' \
 
 unset TOKEN REFRESH_TOKEN LOGIN_RESPONSE REFRESH_RESPONSE
 ```
+
+### Tableau de bord des ventes
+
+Le tableau de bord `/admin` affiche les ventes accessibles au compte connecté. Il permet de filtrer par état et par période ; le `SUPER_ADMIN_ROOT` peut également sélectionner une librairie. Les actions proposées respectent le cycle métier :
+
+- une vente `DRAFT` peut être confirmée et retire atomiquement les quantités du stock ;
+- une vente `CONFIRMED` peut être annulée et restitue atomiquement les quantités ;
+- une vente `CANCELLED` est terminale et ne propose plus d'action.
+
+Après chaque transition, l'interface actualise ensemble les ventes, les stocks et le journal d'audit. La version courante de la vente est transmise au backend afin de détecter une modification concurrente.
+
+Le bouton **Nouvelle vente** ouvre un brouillon composé d'un client facultatif et d'une à cent lignes. Chaque livre ne peut apparaître qu'une fois et sa quantité doit être positive. Le total affiché dans le navigateur est prévisionnel : le backend relit et fige toujours le titre et le prix courants lors de l'enregistrement. Seules les ventes `DRAFT` restent modifiables.
+
+`DELETE /api/manage/sales/{id}` supprime uniquement une vente `DRAFT` et ses lignes explicitement dans une transaction, puis conserve un audit `DELETE_SALE`. Cette suppression ne dépend donc pas de l'activation des cascades SQLite. Une vente confirmée ou annulée retourne `409 Conflict` afin de préserver l'historique commercial. La liste restitue les lignes de chaque vente afin que le nombre d'articles et le formulaire de modification utilisent toujours les données enregistrées.
+
+L'action **Détails** relit la vente depuis `GET /api/manage/sales/{id}` et affiche une fiche imprimable : référence, client, statut, dates, titres et prix figés, quantités et total. L'impression utilise les fonctions natives du navigateur et ne transmet aucune donnée à un service externe.
 
 ## Tester FTS5 directement
 
