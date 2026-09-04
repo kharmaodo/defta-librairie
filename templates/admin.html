@@ -31,6 +31,26 @@
 
     <p id="dashboard-error" class="alert" role="alert" hidden></p>
 
+    <section class="panel">
+      <div class="panel-heading"><div><p class="eyebrow">Approvisionnement</p><h2>Fournisseurs</h2></div><button id="add-supplier-button" class="button primary" type="button">Nouveau fournisseur</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Nom</th><th>Contact</th><th>Téléphone</th><th>État</th><th>Actions</th></tr></thead>
+        <tbody id="suppliers-body"><tr><td colspan="5" class="empty">Chargement…</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading purchase-heading"><div><p class="eyebrow">Approvisionnement</p><h2>Bons d'achat</h2></div><div class="heading-actions"><form id="purchase-filters" class="filters">
+        <label>État<select name="status"><option value="">Tous</option><option value="DRAFT">Brouillon</option><option value="RECEIVED">Réceptionné</option><option value="CANCELLED">Annulé</option></select></label>
+        <label>Fournisseur<select name="supplierId"><option value="">Tous</option></select></label>
+        <label class="root-only-field" hidden>Librairie<select name="libraryId" id="purchase-filter-library"><option value="">Toutes</option></select></label>
+        <label>Du<input name="from" type="date"></label><label>Au<input name="to" type="date"></label>
+        <button class="button ghost" type="submit">Filtrer</button><button id="reset-purchase-filters" class="button ghost" type="button">Réinitialiser</button>
+      </form><button id="add-purchase-button" class="button primary" type="button">Nouvel achat</button></div></div>
+      <p class="scope-note">La réception augmente atomiquement le stock de chaque article.</p>
+      <div class="table-wrap"><table><thead><tr><th>Référence</th><th>Fournisseur</th><th>Articles</th><th>Total</th><th>État</th><th>Actions</th></tr></thead>
+        <tbody id="purchases-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody></table></div>
+      <div class="pagination"><button id="purchases-previous" class="button ghost" type="button">Précédent</button><span id="purchases-page-label" class="hint">Page 1</span><button id="purchases-next" class="button ghost" type="button">Suivant</button></div>
+    </section>
+
     <section class="metrics" aria-label="Indicateurs">
       <article class="metric"><span>Livres visibles</span><strong id="book-total">—</strong></article>
       <article class="metric"><span>Ventes visibles</span><strong id="sale-total">—</strong></article>
@@ -288,7 +308,48 @@
     </form>
   </dialog>
 
+  <dialog id="supplier-dialog" class="modal narrow">
+    <form id="supplier-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Approvisionnement</p><h2>Fournisseur</h2></div><button class="icon-button" type="button" data-procurement-close="supplier-dialog">×</button></div>
+      <input name="id" type="hidden"><input name="version" type="hidden">
+      <div class="form-grid single"><label class="procurement-root" hidden>Librairie<select name="libraryId"></select></label><label>Nom<input name="name" minlength="2" maxlength="160" required></label><label>Contact<input name="contactName" maxlength="160"></label><label>Téléphone<input name="phone" maxlength="40"></label><label>E-mail<input name="email" type="email"></label><label>Adresse<textarea name="address" maxlength="500"></textarea></label></div>
+      <p id="supplier-error" class="alert" hidden></p><div class="modal-actions"><button class="button ghost" type="button" data-procurement-close="supplier-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="purchase-dialog" class="modal narrow">
+    <form id="purchase-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Approvisionnement</p><h2>Bon d'achat</h2></div><button class="icon-button" type="button" data-procurement-close="purchase-dialog">×</button></div>
+      <input name="id" type="hidden"><input name="version" type="hidden">
+      <div class="form-grid single"><label class="procurement-root" hidden>Librairie<select name="libraryId"></select></label><label>Fournisseur<select name="supplierId" required></select></label></div>
+      <div class="sale-lines-heading"><div><strong>Livres commandés</strong><p class="hint">Chaque livre ne peut apparaître qu'une fois.</p></div><button id="add-purchase-line-button" class="button ghost" type="button">Ajouter une ligne</button></div>
+      <div id="purchase-lines" class="sale-lines"></div>
+      <div class="sale-summary"><span>Total prévisionnel</span><strong id="purchase-estimated-total">0 F CFA</strong></div>
+      <p id="purchase-error" class="alert" hidden></p><div class="modal-actions"><button class="button ghost" type="button" data-procurement-close="purchase-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer le brouillon</button></div>
+    </form>
+  </dialog>
+
+  <template id="purchase-line-template">
+    <div class="sale-line purchase-line">
+      <label>Livre<select name="bookId" required></select></label>
+      <label>Quantité<input name="quantity" type="number" min="1" max="100000" value="1" required></label>
+      <label>Coût unitaire<input name="unitCost" type="number" min="0" step="0.01" value="0" required></label>
+      <button class="icon-button remove-purchase-line" type="button" aria-label="Retirer cette ligne">×</button>
+    </div>
+  </template>
+
+  <dialog id="purchase-detail-dialog" class="modal receipt-modal">
+    <div class="entity-form"><div id="purchase-receipt" class="sale-receipt">
+      <div class="receipt-header"><div><p class="eyebrow">Bon d'achat</p><h2 id="purchase-detail-reference">Achat</h2></div><span id="purchase-detail-status" class="pill">—</span></div>
+      <div class="receipt-meta"><p><span>Fournisseur</span><strong id="purchase-detail-supplier">—</strong></p><p><span>Créé le</span><strong id="purchase-detail-created">—</strong></p><p><span>Traité le</span><strong id="purchase-detail-transition">—</strong></p></div>
+      <div class="table-wrap"><table><thead><tr><th>Livre</th><th>Quantité</th><th>Coût unitaire</th><th>Total</th></tr></thead><tbody id="purchase-detail-lines"></tbody></table></div>
+      <div class="receipt-total"><span>Total</span><strong id="purchase-detail-total">0 F CFA</strong></div>
+      <p class="receipt-note">Les titres et coûts correspondent aux valeurs enregistrées dans le bon d'achat.</p>
+    </div><p id="purchase-detail-error" class="alert" hidden></p><div class="modal-actions no-print"><button class="button ghost" type="button" data-procurement-close="purchase-detail-dialog">Fermer</button><button id="print-purchase-button" class="button primary" type="button">Imprimer</button></div></div>
+  </dialog>
+
   <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
   <script src="/static/js/admin-auth.js" defer></script>
+  <script src="/static/js/admin-procurement.js" defer></script>
 </body>
 </html>

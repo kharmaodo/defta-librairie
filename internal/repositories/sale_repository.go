@@ -326,7 +326,10 @@ func (r *SaleRepository) Transition(ctx context.Context, id, libraryID, actorID 
 	if err != nil {
 		return models.Sale{}, fmt.Errorf("read sale lines before transition: %w", err)
 	}
-	type transitionLine struct{ bookID int64; quantity int }
+	type transitionLine struct {
+		bookID   int64
+		quantity int
+	}
 	lines := make([]transitionLine, 0)
 	for rows.Next() {
 		var line transitionLine

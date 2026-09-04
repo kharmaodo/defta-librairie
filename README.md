@@ -616,6 +616,51 @@ Le bouton **Nouvelle vente** ouvre un brouillon composé d'un client facultatif 
 
 L'action **Détails** relit la vente depuis `GET /api/manage/sales/{id}` et affiche une fiche imprimable : référence, client, statut, dates, titres et prix figés, quantités et total. L'impression utilise les fonctions natives du navigateur et ne transmet aucune donnée à un service externe.
 
+### Fournisseurs et achats
+
+La migration `011_create_suppliers_purchases.sql` pose la fondation de l'approvisionnement avec trois tables :
+
+- `suppliers` : fournisseurs actifs ou désactivés, uniques par nom dans une librairie ;
+- `purchases` : bons d'achat `DRAFT`, `RECEIVED` ou `CANCELLED` ;
+- `purchase_lines` : livres, quantités, coûts unitaires et titres figés.
+
+Toutes les données sont rattachées à une librairie. Une contrainte composite interdit notamment d'associer un fournisseur d'une autre librairie à un achat. Les montants et quantités sont contrôlés par SQLite, les références sont uniques par librairie et les versions préparent la gestion des écritures concurrentes.
+
+La migration `012_normalize_supplier_names.sql` ajoute une clé de nom normalisée. Elle garantit l'unicité Unicode calculée par Go, notamment pour empêcher des doublons comme `Éditions Defta` et `éditions defta`, que la collation SQLite `NOCASE` seule ne détecte pas.
+
+Le cycle prévu est `DRAFT → RECEIVED` ou `DRAFT → CANCELLED`. La réception sera implémentée comme une transaction atomique qui augmentera les stocks, créera les mouvements `ENTRY` et inscrira les audits correspondants.
+
+Le CRUD fournisseur est accessible à `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. Le propriétaire ne voit que les fournisseurs de sa librairie ; le root peut utiliser `libraryId`. Chaque mutation utilise `version` et crée un audit. La suppression est logique (`DISABLED`) afin de conserver les achats historiques.
+
+- `GET|POST /api/manage/suppliers` ;
+- `GET|PUT /api/manage/suppliers/{id}` ;
+- `DELETE /api/manage/suppliers/{id}?version={version}` ;
+- `POST /api/manage/suppliers/{id}/reactivate?version={version}`.
+
+Les bons d'achat sont gérés sous forme de brouillons sans modifier le stock. Le backend contrôle le fournisseur actif, vérifie que chaque livre appartient à la même librairie, fige son titre et recalcule les montants à partir des quantités et coûts unitaires. Les doublons de livre sont refusés.
+
+- `GET /api/manage/purchases?status=&supplierId=&from=&to=&libraryId=&offset=0&limit=30` ;
+- `POST /api/manage/purchases` ;
+- `GET /api/manage/purchases/{id}` ;
+- `PUT /api/manage/purchases/{id}` ;
+- `DELETE /api/manage/purchases/{id}?version={version}`.
+
+Seul un achat `DRAFT` peut être modifié ou supprimé. Les actions créent respectivement les audits `CREATE_PURCHASE`, `UPDATE_PURCHASE` et `DELETE_PURCHASE`.
+
+La réception utilise `POST /api/manage/purchases/{id}/receive` avec la `version` dans le corps JSON. Dans une transaction unique, elle passe le bon à `RECEIVED`, augmente chaque stock, crée les mouvements `ENTRY`, les audits `UPDATE_INVENTORY` et l'audit `RECEIVE_PURCHASE`. Toute erreur annule l'ensemble de la réception.
+
+Un brouillon peut être abandonné avec `POST /api/manage/purchases/{id}/cancel`. Cette transition vers `CANCELLED` crée l'audit `CANCEL_PURCHASE` sans modifier le stock. Une réception ou annulation répétée retourne `409 Conflict`.
+
+Le tableau de bord `/admin` expose désormais les fournisseurs et les bons d'achat. Les formulaires utilisent les mêmes routes protégées ; après une réception, les achats et stocks sont relus depuis le serveur.
+
+Le formulaire de bon d'achat accepte jusqu'à cent lignes dynamiques. Il calcule un total prévisionnel, refuse les livres en double et permet de retirer une ligne avant l'enregistrement ; le serveur conserve la validation finale des quantités, coûts et montants.
+
+Pour le `SUPER_ADMIN_ROOT`, changer la librairie du formulaire filtre les fournisseurs et les livres proposés. Après une réception réussie, le tableau de bord recharge également les stocks afin d'afficher immédiatement les nouvelles quantités.
+
+L’action **Détails** ouvre une fiche imprimable du bon d’achat avec son fournisseur, son état, ses dates, ses lignes et son total.
+
+La liste des achats peut être filtrée par état, fournisseur et période. Le `SUPER_ADMIN_ROOT` peut en plus sélectionner une librairie. Les résultats sont paginés par dix afin de conserver un tableau de bord lisible lorsque l’historique grandit.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
