@@ -657,7 +657,9 @@ Le formulaire de bon d'achat accepte jusqu'à cent lignes dynamiques. Il calcule
 
 Pour le `SUPER_ADMIN_ROOT`, changer la librairie du formulaire filtre les fournisseurs et les livres proposés. Après une réception réussie, le tableau de bord recharge également les stocks afin d'afficher immédiatement les nouvelles quantités.
 
-L'action **Détails** ouvre une fiche imprimable du bon d'achat avec son fournisseur, son état, ses dates, ses lignes et son total.
+L’action **Détails** ouvre une fiche imprimable du bon d’achat avec son fournisseur, son état, ses dates, ses lignes et son total.
+
+La liste des achats peut être filtrée par état, fournisseur et période. Le `SUPER_ADMIN_ROOT` peut en plus sélectionner une librairie. Les résultats sont paginés par dix afin de conserver un tableau de bord lisible lorsque l’historique grandit.
 
 ## Tester FTS5 directement
 

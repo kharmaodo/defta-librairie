@@ -38,10 +38,17 @@
     </section>
 
     <section class="panel">
-      <div class="panel-heading"><div><p class="eyebrow">Approvisionnement</p><h2>Bons d'achat</h2></div><button id="add-purchase-button" class="button primary" type="button">Nouvel achat</button></div>
+      <div class="panel-heading purchase-heading"><div><p class="eyebrow">Approvisionnement</p><h2>Bons d'achat</h2></div><div class="heading-actions"><form id="purchase-filters" class="filters">
+        <label>État<select name="status"><option value="">Tous</option><option value="DRAFT">Brouillon</option><option value="RECEIVED">Réceptionné</option><option value="CANCELLED">Annulé</option></select></label>
+        <label>Fournisseur<select name="supplierId"><option value="">Tous</option></select></label>
+        <label class="root-only-field" hidden>Librairie<select name="libraryId" id="purchase-filter-library"><option value="">Toutes</option></select></label>
+        <label>Du<input name="from" type="date"></label><label>Au<input name="to" type="date"></label>
+        <button class="button ghost" type="submit">Filtrer</button><button id="reset-purchase-filters" class="button ghost" type="button">Réinitialiser</button>
+      </form><button id="add-purchase-button" class="button primary" type="button">Nouvel achat</button></div></div>
       <p class="scope-note">La réception augmente atomiquement le stock de chaque article.</p>
       <div class="table-wrap"><table><thead><tr><th>Référence</th><th>Fournisseur</th><th>Articles</th><th>Total</th><th>État</th><th>Actions</th></tr></thead>
         <tbody id="purchases-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody></table></div>
+      <div class="pagination"><button id="purchases-previous" class="button ghost" type="button">Précédent</button><span id="purchases-page-label" class="hint">Page 1</span><button id="purchases-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
     <section class="metrics" aria-label="Indicateurs">

@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const token = () => sessionStorage.getItem("defta.accessToken") || "";
-  const state = {suppliers: [], purchases: [], books: [], libraries: [], isRoot: false};
+  const state = {suppliers: [], purchases: [], books: [], libraries: [], isRoot: false, purchaseOffset: 0, purchaseLimit: 10, purchaseTotal: 0};
   const money = (value) => new Intl.NumberFormat("fr-FR", {style: "currency", currency: "XOF", maximumFractionDigits: 0}).format(value || 0);
   async function api(path, options = {}) {
     const headers = new Headers(options.headers || {}); headers.set("Authorization", `Bearer ${token()}`);
@@ -20,10 +20,13 @@
     if (!payload.results.length) { const row=body.insertRow(); const td=cell(row,"Aucun fournisseur","empty"); td.colSpan=5; }
   }
   async function loadPurchases() {
-    const payload = await api("/api/manage/purchases?limit=100"); state.purchases = payload.results;
+    const form=document.querySelector("#purchase-filters"),params=new URLSearchParams({offset:String(state.purchaseOffset),limit:String(state.purchaseLimit)});
+    for(const name of ["status","supplierId","libraryId","from","to"]){const value=form.elements[name]?.value?.trim();if(value)params.set(name,value);}
+    const payload = await api(`/api/manage/purchases?${params}`); state.purchases = payload.results; state.purchaseTotal=payload.total;
     const names = new Map(state.suppliers.map((s) => [s.id,s.name])); const body=document.querySelector("#purchases-body"); body.replaceChildren();
     payload.results.forEach((item) => { const row=body.insertRow(); cell(row,item.reference); cell(row,names.get(item.supplierId)); cell(row,item.lines.reduce((n,l)=>n+l.quantity,0)); cell(row,money(item.totalAmount)); cell(row,item.status,"pill"); const actions=cell(row,""); actions.className="row-actions"; const list=[button("Détails","detail-purchase",item.id)]; if(item.status==="DRAFT") list.push(button("Modifier","edit-purchase",item.id),button("Réceptionner","receive",item.id),button("Annuler","cancel",item.id,true)); actions.replaceChildren(...list); });
     if (!payload.results.length) { const row=body.insertRow(); const td=cell(row,"Aucun bon d'achat","empty"); td.colSpan=6; }
+    const page=Math.floor(state.purchaseOffset/state.purchaseLimit)+1,totalPages=Math.max(1,Math.ceil(state.purchaseTotal/state.purchaseLimit));document.querySelector("#purchases-page-label").textContent=`Page ${page} sur ${totalPages} · ${state.purchaseTotal} résultat${state.purchaseTotal>1?"s":""}`;document.querySelector("#purchases-previous").disabled=state.purchaseOffset===0;document.querySelector("#purchases-next").disabled=state.purchaseOffset+state.purchaseLimit>=state.purchaseTotal;
   }
   async function loadBooks() { state.books=(await api("/api/manage/books?limit=100")).results; }
   function fill(select, items, label) { select.replaceChildren(...items.map((item)=>{const o=document.createElement("option");o.value=item.id;o.textContent=label(item);return o;})); }
@@ -38,9 +41,13 @@
   async function openPurchaseDetail(id) { const item=await api(`/api/manage/purchases/${id}`),supplier=state.suppliers.find(s=>s.id===item.supplierId);document.querySelector("#purchase-detail-reference").textContent=item.reference;document.querySelector("#purchase-detail-status").textContent=item.status;document.querySelector("#purchase-detail-supplier").textContent=supplier?.name||item.supplierId;document.querySelector("#purchase-detail-created").textContent=new Date(item.createdAt).toLocaleString("fr-FR");document.querySelector("#purchase-detail-transition").textContent=item.receivedAt?new Date(item.receivedAt).toLocaleString("fr-FR"):item.cancelledAt?new Date(item.cancelledAt).toLocaleString("fr-FR"):"—";const body=document.querySelector("#purchase-detail-lines");body.replaceChildren();item.lines.forEach(line=>{const row=body.insertRow();cell(row,line.title);cell(row,line.quantity);cell(row,money(line.unitCost));cell(row,money(line.lineTotal));});document.querySelector("#purchase-detail-total").textContent=money(item.totalAmount);document.querySelector("#purchase-detail-dialog").showModal(); }
   async function init() {
     if (!document.querySelector("#suppliers-body")) return;
-    try { const me=await api("/api/auth/me"); state.isRoot=me.role==="SUPER_ADMIN_ROOT"; if(state.isRoot){const owners=await api("/api/admin/owners?status=ACTIVE&libraryStatus=ACTIVE&limit=100");state.libraries=owners.results.map(o=>o.library);document.querySelectorAll(".procurement-root").forEach(x=>x.hidden=false);} await Promise.all([loadSuppliers(),loadBooks()]); await loadPurchases(); } catch (_) { return; }
+    try { const me=await api("/api/auth/me"); state.isRoot=me.role==="SUPER_ADMIN_ROOT"; if(state.isRoot){const owners=await api("/api/admin/owners?status=ACTIVE&libraryStatus=ACTIVE&limit=100");state.libraries=owners.results.map(o=>o.library);document.querySelectorAll(".procurement-root").forEach(x=>x.hidden=false);const libraryFilter=document.querySelector("#purchase-filter-library");fill(libraryFilter,[{id:"",name:"Toutes"},...state.libraries],l=>l.name);libraryFilter.closest("label").hidden=false;} await Promise.all([loadSuppliers(),loadBooks()]);const supplierFilter=document.querySelector("#purchase-filters [name=supplierId]");fill(supplierFilter,[{id:"",name:"Tous"},...state.suppliers],s=>s.name);await loadPurchases(); } catch (_) { return; }
     document.querySelector("#add-supplier-button").onclick=()=>openSupplier(); document.querySelector("#add-purchase-button").onclick=()=>openPurchase();
     document.querySelector("#add-purchase-line-button").onclick=()=>addPurchaseLine();
+    document.querySelector("#purchase-filters").onsubmit=async(e)=>{e.preventDefault();state.purchaseOffset=0;await loadPurchases();};
+    document.querySelector("#reset-purchase-filters").onclick=async()=>{document.querySelector("#purchase-filters").reset();state.purchaseOffset=0;await loadPurchases();};
+    document.querySelector("#purchases-previous").onclick=async()=>{state.purchaseOffset=Math.max(0,state.purchaseOffset-state.purchaseLimit);await loadPurchases();};
+    document.querySelector("#purchases-next").onclick=async()=>{if(state.purchaseOffset+state.purchaseLimit<state.purchaseTotal){state.purchaseOffset+=state.purchaseLimit;await loadPurchases();}};
     document.querySelector("#print-purchase-button").onclick=()=>{document.body.classList.add("printing-purchase");const done=()=>document.body.classList.remove("printing-purchase");window.addEventListener("afterprint",done,{once:true});window.print();setTimeout(done,1000);};
     if(state.isRoot)document.querySelector("#purchase-form [name=libraryId]").onchange=resetPurchaseScope;
     document.querySelectorAll("[data-procurement-close]").forEach(b=>b.onclick=()=>document.querySelector(`#${b.dataset.procurementClose}`).close());
