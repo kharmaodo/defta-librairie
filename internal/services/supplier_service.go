@@ -59,7 +59,7 @@ func (s *SupplierService) Create(ctx context.Context, claims *auth.Claims, input
 		Version:1, CreatedBy:claims.Subject, CreatedAt:now, UpdatedAt:now}
 	snapshot, err := supplierSnapshot(supplier)
 	if err != nil { return models.Supplier{}, err }
-	if err = s.repository.Create(ctx, supplier, claims.Subject, auditID, snapshot); err != nil { return models.Supplier{}, err }
+	if err = s.repository.Create(ctx, supplier, strings.ToLower(supplier.Name), claims.Subject, auditID, snapshot); err != nil { return models.Supplier{}, err }
 	return supplier, nil
 }
 

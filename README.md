@@ -626,6 +626,8 @@ La migration `011_create_suppliers_purchases.sql` pose la fondation de l'approvi
 
 Toutes les données sont rattachées à une librairie. Une contrainte composite interdit notamment d'associer un fournisseur d'une autre librairie à un achat. Les montants et quantités sont contrôlés par SQLite, les références sont uniques par librairie et les versions préparent la gestion des écritures concurrentes.
 
+La migration `012_normalize_supplier_names.sql` ajoute une clé de nom normalisée. Elle garantit l'unicité Unicode calculée par Go, notamment pour empêcher des doublons comme `Éditions Defta` et `éditions defta`, que la collation SQLite `NOCASE` seule ne détecte pas.
+
 Le cycle prévu est `DRAFT → RECEIVED` ou `DRAFT → CANCELLED`. La réception sera implémentée comme une transaction atomique qui augmentera les stocks, créera les mouvements `ENTRY` et inscrira les audits correspondants.
 
 Le CRUD fournisseur est accessible à `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. Le propriétaire ne voit que les fournisseurs de sa librairie ; le root peut utiliser `libraryId`. Chaque mutation utilise `version` et crée un audit. La suppression est logique (`DISABLED`) afin de conserver les achats historiques.

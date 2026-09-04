@@ -21,10 +21,10 @@ func TestSupplierLifecycleIsolationAndAudit(t *testing.T) {
 		CREATE TABLE users(id TEXT PRIMARY KEY);
 		CREATE TABLE libraries(id TEXT PRIMARY KEY, status TEXT NOT NULL);
 		CREATE TABLE suppliers(
-			id TEXT PRIMARY KEY, library_id TEXT NOT NULL, name TEXT NOT NULL, contact_name TEXT,
+			id TEXT PRIMARY KEY, library_id TEXT NOT NULL, name TEXT NOT NULL, normalized_name TEXT NOT NULL, contact_name TEXT,
 			phone TEXT, email TEXT, address TEXT, status TEXT NOT NULL, version INTEGER NOT NULL,
 			created_by TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
-			UNIQUE(library_id, name COLLATE NOCASE), FOREIGN KEY(library_id) REFERENCES libraries(id)
+			UNIQUE(library_id, normalized_name), FOREIGN KEY(library_id) REFERENCES libraries(id)
 		);
 		CREATE TABLE audit_logs(id TEXT PRIMARY KEY,actor_user_id TEXT,action TEXT,resource_type TEXT,
 			resource_id TEXT,old_values TEXT,new_values TEXT,success INTEGER,created_at TEXT);

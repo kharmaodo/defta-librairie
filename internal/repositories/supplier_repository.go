@@ -98,13 +98,13 @@ func scanSupplier(scanner supplierScanner, supplier *models.Supplier) error {
 		&supplier.CreatedBy, &supplier.CreatedAt, &supplier.UpdatedAt)
 }
 
-func (r *SupplierRepository) Create(ctx context.Context, supplier models.Supplier, actorID, auditID, snapshot string) error {
+func (r *SupplierRepository) Create(ctx context.Context, supplier models.Supplier, normalizedName, actorID, auditID, snapshot string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil { return fmt.Errorf("begin supplier creation: %w", err) }
 	defer tx.Rollback()
 	_, err = tx.ExecContext(ctx, `INSERT INTO suppliers
-		(id,library_id,name,contact_name,phone,email,address,status,version,created_by,created_at,updated_at)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, supplier.ID, supplier.LibraryID, supplier.Name, supplier.ContactName,
+		(id,library_id,name,normalized_name,contact_name,phone,email,address,status,version,created_by,created_at,updated_at)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, supplier.ID, supplier.LibraryID, supplier.Name, normalizedName, supplier.ContactName,
 		supplier.Phone, supplier.Email, supplier.Address, supplier.Status, supplier.Version,
 		supplier.CreatedBy, supplier.CreatedAt, supplier.UpdatedAt)
 	if isUniqueViolation(err) { return ErrSupplierConflict }
@@ -122,9 +122,9 @@ func (r *SupplierRepository) Update(ctx context.Context, supplier models.Supplie
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil { return fmt.Errorf("begin supplier update: %w", err) }
 	defer tx.Rollback()
-	result, err := tx.ExecContext(ctx, `UPDATE suppliers SET name=?,contact_name=?,phone=?,email=?,address=?,
+	result, err := tx.ExecContext(ctx, `UPDATE suppliers SET name=?,normalized_name=?,contact_name=?,phone=?,email=?,address=?,
 		version=version+1,updated_at=? WHERE id=? AND library_id=? AND version=?`, supplier.Name,
-		supplier.ContactName, supplier.Phone, supplier.Email, supplier.Address, supplier.UpdatedAt,
+		strings.ToLower(supplier.Name), supplier.ContactName, supplier.Phone, supplier.Email, supplier.Address, supplier.UpdatedAt,
 		supplier.ID, supplier.LibraryID, expectedVersion)
 	if isUniqueViolation(err) { return ErrSupplierConflict }
 	if err != nil { return fmt.Errorf("update supplier: %w", err) }

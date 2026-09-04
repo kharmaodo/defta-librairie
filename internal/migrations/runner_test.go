@@ -54,8 +54,8 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	if err = db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&migrationsCount); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if migrationsCount != 12 {
-		t.Fatalf("expected 12 migrations, got %d", migrationsCount)
+	if migrationsCount != 13 {
+		t.Fatalf("expected 13 migrations, got %d", migrationsCount)
 	}
 
 	var assignedBooks int
