@@ -241,6 +241,29 @@
     </div>
   </template>
 
+  <dialog id="sale-detail-dialog" class="modal receipt-modal">
+    <div class="entity-form">
+      <div id="sale-receipt" class="sale-receipt">
+        <div class="receipt-header">
+          <div><p class="eyebrow">Defta Librairie</p><h2 id="sale-detail-reference">Vente</h2></div>
+          <span id="sale-detail-status" class="pill">—</span>
+        </div>
+        <div class="receipt-meta">
+          <p><span>Client</span><strong id="sale-detail-customer">—</strong></p>
+          <p><span>Créée le</span><strong id="sale-detail-created">—</strong></p>
+          <p id="sale-detail-transition-row" hidden><span id="sale-detail-transition-label">Traitée le</span><strong id="sale-detail-transition-date">—</strong></p>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Article</th><th>Quantité</th><th>Prix unitaire</th><th>Total</th></tr></thead><tbody id="sale-detail-lines"></tbody></table>
+        </div>
+        <div class="receipt-total"><span>Total</span><strong id="sale-detail-total">0 F CFA</strong></div>
+        <p class="receipt-note">Les titres et prix correspondent aux valeurs figées lors de l’enregistrement de la vente.</p>
+      </div>
+      <p id="sale-detail-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions no-print"><button class="button ghost" type="button" data-close="sale-detail-dialog">Fermer</button><button id="print-sale-button" class="button primary" type="button">Imprimer le reçu</button></div>
+    </div>
+  </dialog>
+
   <dialog id="inventory-history-dialog" class="modal history-modal">
     <div class="entity-form">
       <div class="modal-heading"><div><p class="eyebrow">Traçabilité du stock</p><h2 id="inventory-history-title">Mouvements</h2></div><button class="icon-button" type="button" data-close="inventory-history-dialog" aria-label="Fermer">×</button></div>

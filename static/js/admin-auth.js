@@ -203,9 +203,10 @@
       textCell(row, formatDate(sale.createdAt));
       const actions = textCell(row, "");
       actions.className = "row-actions";
-      if (sale.status === "DRAFT") actions.replaceChildren(actionButton("Modifier", "edit-sale", sale.id), actionButton("Confirmer", "confirm-sale", sale.id), actionButton("Supprimer", "delete-sale", sale.id, true));
-      if (sale.status === "CONFIRMED") actions.replaceChildren(actionButton("Annuler", "cancel-sale", sale.id, true));
-      if (sale.status === "CANCELLED") actions.textContent = "Terminée";
+      const buttons = [actionButton("Détails", "detail-sale", sale.id)];
+      if (sale.status === "DRAFT") buttons.push(actionButton("Modifier", "edit-sale", sale.id), actionButton("Confirmer", "confirm-sale", sale.id), actionButton("Supprimer", "delete-sale", sale.id, true));
+      if (sale.status === "CONFIRMED") buttons.push(actionButton("Annuler", "cancel-sale", sale.id, true));
+      actions.replaceChildren(...buttons);
     });
     const page = Math.floor(payload.offset / payload.limit) + 1;
     const pages = Math.max(1, Math.ceil(payload.total / payload.limit));
@@ -494,6 +495,35 @@
     return payload;
   }
 
+  async function openSaleDetails(saleID) {
+    const sale = await apiFetch(`/api/manage/sales/${saleID}`);
+    const statusLabel = sale.status === "DRAFT" ? "Brouillon" : sale.status === "CONFIRMED" ? "Confirmée" : "Annulée";
+    document.querySelector("#sale-detail-reference").textContent = sale.reference;
+    document.querySelector("#sale-detail-customer").textContent = sale.customerName || "Client comptoir";
+    document.querySelector("#sale-detail-created").textContent = formatDate(sale.createdAt);
+    document.querySelector("#sale-detail-total").textContent = formatMoney(sale.totalAmount);
+    const status = document.querySelector("#sale-detail-status");
+    status.textContent = statusLabel;
+    status.className = `pill sale-${sale.status.toLowerCase()}`;
+    const transitionRow = document.querySelector("#sale-detail-transition-row");
+    transitionRow.hidden = sale.status === "DRAFT";
+    if (!transitionRow.hidden) {
+      document.querySelector("#sale-detail-transition-label").textContent = sale.status === "CONFIRMED" ? "Confirmée le" : "Annulée le";
+      document.querySelector("#sale-detail-transition-date").textContent = formatDate(sale.status === "CONFIRMED" ? sale.confirmedAt : sale.cancelledAt);
+    }
+    const body = document.querySelector("#sale-detail-lines");
+    body.replaceChildren();
+    sale.lines.forEach((line) => {
+      const row = body.insertRow();
+      textCell(row, line.title);
+      textCell(row, line.quantity);
+      textCell(row, formatMoney(line.unitPrice));
+      textCell(row, formatMoney(line.lineTotal));
+    });
+    document.querySelector("#sale-detail-error").hidden = true;
+    document.querySelector("#sale-detail-dialog").showModal();
+  }
+
   async function openInventoryHistory(item) {
     const payload = await apiFetch(`/api/manage/books/${item.bookId}/inventory/movements?offset=0&limit=100`);
     document.querySelector("#inventory-history-title").textContent = `Mouvements · ${item.title}`;
@@ -691,6 +721,13 @@
       } catch (error) { showError(document.querySelector("#sale-form-error"), error); }
     });
     document.querySelector("#add-sale-line-button").addEventListener("click", () => addSaleLine());
+    document.querySelector("#print-sale-button").addEventListener("click", () => {
+      document.body.classList.add("printing-sale");
+      const cleanup = () => document.body.classList.remove("printing-sale");
+      window.addEventListener("afterprint", cleanup, {once: true});
+      window.print();
+      window.setTimeout(cleanup, 1000);
+    });
     document.querySelector("#sale-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
@@ -954,6 +991,10 @@
       if (!button) return;
       const sale = state.sales.find((item) => item.id === button.dataset.id);
       if (!sale) return;
+      if (button.dataset.action === "detail-sale") {
+        try { await openSaleDetails(sale.id); } catch (error) { showError(errorBox, error); }
+        return;
+      }
       if (button.dataset.action === "edit-sale") {
         try { await openSaleForm(sale); } catch (error) { showError(errorBox, error); }
         return;

@@ -614,6 +614,8 @@ Le bouton **Nouvelle vente** ouvre un brouillon composé d'un client facultatif 
 
 `DELETE /api/manage/sales/{id}` supprime uniquement une vente `DRAFT` et ses lignes explicitement dans une transaction, puis conserve un audit `DELETE_SALE`. Cette suppression ne dépend donc pas de l'activation des cascades SQLite. Une vente confirmée ou annulée retourne `409 Conflict` afin de préserver l'historique commercial. La liste restitue les lignes de chaque vente afin que le nombre d'articles et le formulaire de modification utilisent toujours les données enregistrées.
 
+L'action **Détails** relit la vente depuis `GET /api/manage/sales/{id}` et affiche une fiche imprimable : référence, client, statut, dates, titres et prix figés, quantités et total. L'impression utilise les fonctions natives du navigateur et ne transmet aucune donnée à un service externe.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
