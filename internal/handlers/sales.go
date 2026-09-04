@@ -16,14 +16,16 @@ type saleTransitionRequest struct {
 	Version int `json:"version"`
 }
 
-func NewSaleHandler(service *services.SaleService) *SaleHandler { return &SaleHandler{service: service} }
+func NewSaleHandler(service *services.SaleService) *SaleHandler {
+	return &SaleHandler{service: service}
+}
 
 func (h *SaleHandler) List(w http.ResponseWriter, r *http.Request) {
 	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
 	claims, _ := auth.ClaimsFromContext(r.Context())
 	sales, total, err := h.service.List(r.Context(), claims, r.URL.Query().Get("libraryId"), models.SaleFilter{
 		Status: models.SaleStatus(r.URL.Query().Get("status")),
-		From: strings.TrimSpace(r.URL.Query().Get("from")), To: strings.TrimSpace(r.URL.Query().Get("to")),
+		From:   strings.TrimSpace(r.URL.Query().Get("from")), To: strings.TrimSpace(r.URL.Query().Get("to")),
 	}, offset, limit)
 	if err != nil {
 		writeSaleError(w, err)

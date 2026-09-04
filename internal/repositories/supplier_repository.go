@@ -100,15 +100,21 @@ func scanSupplier(scanner supplierScanner, supplier *models.Supplier) error {
 
 func (r *SupplierRepository) Create(ctx context.Context, supplier models.Supplier, normalizedName, actorID, auditID, snapshot string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil { return fmt.Errorf("begin supplier creation: %w", err) }
+	if err != nil {
+		return fmt.Errorf("begin supplier creation: %w", err)
+	}
 	defer tx.Rollback()
 	_, err = tx.ExecContext(ctx, `INSERT INTO suppliers
 		(id,library_id,name,normalized_name,contact_name,phone,email,address,status,version,created_by,created_at,updated_at)
 		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, supplier.ID, supplier.LibraryID, supplier.Name, normalizedName, supplier.ContactName,
 		supplier.Phone, supplier.Email, supplier.Address, supplier.Status, supplier.Version,
 		supplier.CreatedBy, supplier.CreatedAt, supplier.UpdatedAt)
-	if isUniqueViolation(err) { return ErrSupplierConflict }
-	if err != nil { return fmt.Errorf("insert supplier: %w", err) }
+	if isUniqueViolation(err) {
+		return ErrSupplierConflict
+	}
+	if err != nil {
+		return fmt.Errorf("insert supplier: %w", err)
+	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs
 		(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)
 		VALUES (?,?,'CREATE_SUPPLIER','SUPPLIER',?,?,1,?)`, auditID, actorID, supplier.ID, snapshot, supplier.CreatedAt); err != nil {
@@ -120,36 +126,54 @@ func (r *SupplierRepository) Create(ctx context.Context, supplier models.Supplie
 func (r *SupplierRepository) Update(ctx context.Context, supplier models.Supplier, expectedVersion int,
 	actorID, auditID, oldValues, newValues string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil { return fmt.Errorf("begin supplier update: %w", err) }
+	if err != nil {
+		return fmt.Errorf("begin supplier update: %w", err)
+	}
 	defer tx.Rollback()
 	result, err := tx.ExecContext(ctx, `UPDATE suppliers SET name=?,normalized_name=?,contact_name=?,phone=?,email=?,address=?,
 		version=version+1,updated_at=? WHERE id=? AND library_id=? AND version=?`, supplier.Name,
 		strings.ToLower(supplier.Name), supplier.ContactName, supplier.Phone, supplier.Email, supplier.Address, supplier.UpdatedAt,
 		supplier.ID, supplier.LibraryID, expectedVersion)
-	if isUniqueViolation(err) { return ErrSupplierConflict }
-	if err != nil { return fmt.Errorf("update supplier: %w", err) }
-	if rows, rowsErr := result.RowsAffected(); rowsErr != nil || rows != 1 { return ErrSupplierVersion }
+	if isUniqueViolation(err) {
+		return ErrSupplierConflict
+	}
+	if err != nil {
+		return fmt.Errorf("update supplier: %w", err)
+	}
+	if rows, rowsErr := result.RowsAffected(); rowsErr != nil || rows != 1 {
+		return ErrSupplierVersion
+	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs
 		(id,actor_user_id,action,resource_type,resource_id,old_values,new_values,success,created_at)
 		VALUES (?,?,'UPDATE_SUPPLIER','SUPPLIER',?,?,?,1,?)`, auditID, actorID, supplier.ID,
-		oldValues, newValues, supplier.UpdatedAt); err != nil { return fmt.Errorf("audit supplier update: %w", err) }
+		oldValues, newValues, supplier.UpdatedAt); err != nil {
+		return fmt.Errorf("audit supplier update: %w", err)
+	}
 	return tx.Commit()
 }
 
 func (r *SupplierRepository) ChangeStatus(ctx context.Context, supplier models.Supplier, expected, next models.SupplierStatus,
 	expectedVersion int, actorID, auditID, now string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil { return fmt.Errorf("begin supplier status change: %w", err) }
+	if err != nil {
+		return fmt.Errorf("begin supplier status change: %w", err)
+	}
 	defer tx.Rollback()
 	result, err := tx.ExecContext(ctx, `UPDATE suppliers SET status=?,version=version+1,updated_at=?
 		WHERE id=? AND library_id=? AND status=? AND version=?`, next, now, supplier.ID, supplier.LibraryID, expected, expectedVersion)
-	if err != nil { return fmt.Errorf("change supplier status: %w", err) }
+	if err != nil {
+		return fmt.Errorf("change supplier status: %w", err)
+	}
 	if rows, rowsErr := result.RowsAffected(); rowsErr != nil || rows != 1 {
-		if supplier.Status != expected { return ErrSupplierState }
+		if supplier.Status != expected {
+			return ErrSupplierState
+		}
 		return ErrSupplierVersion
 	}
 	action := "DISABLE_SUPPLIER"
-	if next == models.SupplierStatusActive { action = "REACTIVATE_SUPPLIER" }
+	if next == models.SupplierStatusActive {
+		action = "REACTIVATE_SUPPLIER"
+	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs
 		(id,actor_user_id,action,resource_type,resource_id,old_values,new_values,success,created_at)
 		VALUES (?,?,?,'SUPPLIER',?,?,?,1,?)`, auditID, actorID, action, supplier.ID, expected, next, now); err != nil {
@@ -161,7 +185,11 @@ func (r *SupplierRepository) ChangeStatus(ctx context.Context, supplier models.S
 func (r *SupplierRepository) LibraryActive(ctx context.Context, id string) (bool, error) {
 	var status string
 	err := r.db.QueryRowContext(ctx, `SELECT status FROM libraries WHERE id=?`, id).Scan(&status)
-	if errors.Is(err, sql.ErrNoRows) { return false, ErrLibraryUnavailable }
-	if err != nil { return false, fmt.Errorf("find supplier library: %w", err) }
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, ErrLibraryUnavailable
+	}
+	if err != nil {
+		return false, fmt.Errorf("find supplier library: %w", err)
+	}
 	return status == string(models.LibraryStatusActive), nil
 }
