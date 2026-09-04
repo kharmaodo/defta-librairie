@@ -678,6 +678,8 @@ Le CRUD client est accessible aux rôles `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. 
 
 La désactivation est logique et conserve le client pour les futurs historiques de vente. Plusieurs clients peuvent porter le même nom ; chacun reçoit une référence générée au format `C-AAAAMMJJ-XXXXXXXX`.
 
+Le tableau de bord `/admin` expose le référentiel client avec recherche, filtre de statut et pagination. Il permet la création, la modification, la désactivation et la réactivation. Pour le root, les filtres et le formulaire de création proposent uniquement les librairies actives.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
