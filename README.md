@@ -667,6 +667,17 @@ La migration `013_create_customers.sql` crée le référentiel client propre à 
 
 La suppression fonctionnelle utilisera le statut `DISABLED` afin de préserver l’historique commercial. Les contraintes empêchent le rattachement d’un client à une librairie inexistante et les index préparent la recherche par nom, téléphone ou e-mail. Le rattachement facultatif aux ventes sera ajouté après validation du CRUD client.
 
+Le CRUD client est accessible aux rôles `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. Le propriétaire reste limité aux clients de sa librairie ; le root peut préciser `libraryId`. La recherche couvre la référence, le nom, le téléphone et l’e-mail. Chaque mutation contrôle la version et produit un audit de type `CUSTOMER`.
+
+- `GET /api/manage/customers?q=&status=&libraryId=&offset=0&limit=30` ;
+- `POST /api/manage/customers` ;
+- `GET /api/manage/customers/{id}` ;
+- `PUT /api/manage/customers/{id}` ;
+- `DELETE /api/manage/customers/{id}?version={version}` ;
+- `POST /api/manage/customers/{id}/reactivate?version={version}`.
+
+La désactivation est logique et conserve le client pour les futurs historiques de vente. Plusieurs clients peuvent porter le même nom ; chacun reçoit une référence générée au format `C-AAAAMMJJ-XXXXXXXX`.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
