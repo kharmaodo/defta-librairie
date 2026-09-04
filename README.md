@@ -628,6 +628,13 @@ Toutes les données sont rattachées à une librairie. Une contrainte composite 
 
 Le cycle prévu est `DRAFT → RECEIVED` ou `DRAFT → CANCELLED`. La réception sera implémentée comme une transaction atomique qui augmentera les stocks, créera les mouvements `ENTRY` et inscrira les audits correspondants.
 
+Le CRUD fournisseur est accessible à `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. Le propriétaire ne voit que les fournisseurs de sa librairie ; le root peut utiliser `libraryId`. Chaque mutation utilise `version` et crée un audit. La suppression est logique (`DISABLED`) afin de conserver les achats historiques.
+
+- `GET|POST /api/manage/suppliers` ;
+- `GET|PUT /api/manage/suppliers/{id}` ;
+- `DELETE /api/manage/suppliers/{id}?version={version}` ;
+- `POST /api/manage/suppliers/{id}/reactivate?version={version}`.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
