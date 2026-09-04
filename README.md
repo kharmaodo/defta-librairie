@@ -616,6 +616,18 @@ Le bouton **Nouvelle vente** ouvre un brouillon composé d'un client facultatif 
 
 L'action **Détails** relit la vente depuis `GET /api/manage/sales/{id}` et affiche une fiche imprimable : référence, client, statut, dates, titres et prix figés, quantités et total. L'impression utilise les fonctions natives du navigateur et ne transmet aucune donnée à un service externe.
 
+### Fournisseurs et achats
+
+La migration `011_create_suppliers_purchases.sql` pose la fondation de l'approvisionnement avec trois tables :
+
+- `suppliers` : fournisseurs actifs ou désactivés, uniques par nom dans une librairie ;
+- `purchases` : bons d'achat `DRAFT`, `RECEIVED` ou `CANCELLED` ;
+- `purchase_lines` : livres, quantités, coûts unitaires et titres figés.
+
+Toutes les données sont rattachées à une librairie. Une contrainte composite interdit notamment d'associer un fournisseur d'une autre librairie à un achat. Les montants et quantités sont contrôlés par SQLite, les références sont uniques par librairie et les versions préparent la gestion des écritures concurrentes.
+
+Le cycle prévu est `DRAFT → RECEIVED` ou `DRAFT → CANCELLED`. La réception sera implémentée comme une transaction atomique qui augmentera les stocks, créera les mouvements `ENTRY` et inscrira les audits correspondants.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
