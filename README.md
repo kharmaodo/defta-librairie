@@ -651,6 +651,8 @@ La réception utilise `POST /api/manage/purchases/{id}/receive` avec la `version
 
 Un brouillon peut être abandonné avec `POST /api/manage/purchases/{id}/cancel`. Cette transition vers `CANCELLED` crée l'audit `CANCEL_PURCHASE` sans modifier le stock. Une réception ou annulation répétée retourne `409 Conflict`.
 
+Le tableau de bord `/admin` expose désormais les fournisseurs et les bons d'achat. Les formulaires utilisent les mêmes routes protégées ; après une réception, les achats et stocks sont relus depuis le serveur.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
