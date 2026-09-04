@@ -653,6 +653,8 @@ Un brouillon peut être abandonné avec `POST /api/manage/purchases/{id}/cancel`
 
 Le tableau de bord `/admin` expose désormais les fournisseurs et les bons d'achat. Les formulaires utilisent les mêmes routes protégées ; après une réception, les achats et stocks sont relus depuis le serveur.
 
+Le formulaire de bon d'achat accepte jusqu'à cent lignes dynamiques. Il calcule un total prévisionnel, refuse les livres en double et permet de retirer une ligne avant l'enregistrement ; le serveur conserve la validation finale des quantités, coûts et montants.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
