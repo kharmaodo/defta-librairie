@@ -88,6 +88,37 @@ func (s *PurchaseService) Delete(ctx context.Context, claims *auth.Claims, id st
 		s.now().UTC().Format(time.RFC3339Nano))
 }
 
+func (s *PurchaseService) Receive(ctx context.Context, claims *auth.Claims, id string, version int) (models.Purchase, error) {
+	return s.transition(ctx, claims, id, version, models.PurchaseStatusReceived)
+}
+
+func (s *PurchaseService) Cancel(ctx context.Context, claims *auth.Claims, id string, version int) (models.Purchase, error) {
+	return s.transition(ctx, claims, id, version, models.PurchaseStatusCancelled)
+}
+
+func (s *PurchaseService) transition(ctx context.Context, claims *auth.Claims, id string, version int,
+	target models.PurchaseStatus) (models.Purchase, error) {
+	if strings.TrimSpace(id) == "" || version < 1 { return models.Purchase{}, ErrInvalidPurchase }
+	libraryID, err := resolveBookScope(claims, "", false)
+	if err != nil { return models.Purchase{}, err }
+	purchase, err := s.repository.Find(ctx, id, libraryID)
+	if err != nil { return models.Purchase{}, err }
+	movementIDs := make([]string, 0)
+	inventoryAuditIDs := make([]string, 0)
+	if target == models.PurchaseStatusReceived {
+		movementIDs = make([]string, len(purchase.Lines))
+		inventoryAuditIDs = make([]string, len(purchase.Lines))
+		for index := range purchase.Lines {
+			if movementIDs[index], err = identity.NewID(); err != nil { return models.Purchase{}, err }
+			if inventoryAuditIDs[index], err = identity.NewID(); err != nil { return models.Purchase{}, err }
+		}
+	}
+	purchaseAuditID, err := identity.NewID()
+	if err != nil { return models.Purchase{}, err }
+	return s.repository.Transition(ctx, id, libraryID, claims.Subject, version, target, movementIDs,
+		inventoryAuditIDs, purchaseAuditID, s.now().UTC().Format(time.RFC3339Nano))
+}
+
 func validatePurchaseInput(input models.PurchaseInput, update bool) error {
 	if strings.TrimSpace(input.SupplierID) == "" || len(input.Lines) < 1 || len(input.Lines) > 100 ||
 		(update && input.Version < 1) { return ErrInvalidPurchase }

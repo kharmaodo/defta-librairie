@@ -647,6 +647,10 @@ Les bons d'achat sont gérés sous forme de brouillons sans modifier le stock. L
 
 Seul un achat `DRAFT` peut être modifié ou supprimé. Les actions créent respectivement les audits `CREATE_PURCHASE`, `UPDATE_PURCHASE` et `DELETE_PURCHASE`.
 
+La réception utilise `POST /api/manage/purchases/{id}/receive` avec la `version` dans le corps JSON. Dans une transaction unique, elle passe le bon à `RECEIVED`, augmente chaque stock, crée les mouvements `ENTRY`, les audits `UPDATE_INVENTORY` et l'audit `RECEIVE_PURCHASE`. Toute erreur annule l'ensemble de la réception.
+
+Un brouillon peut être abandonné avec `POST /api/manage/purchases/{id}/cancel`. Cette transition vers `CANCELLED` crée l'audit `CANCEL_PURCHASE` sans modifier le stock. Une réception ou annulation répétée retourne `409 Conflict`.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :

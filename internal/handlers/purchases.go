@@ -13,6 +13,8 @@ import (
 
 type PurchaseHandler struct{ service *services.PurchaseService }
 
+type purchaseTransitionRequest struct { Version int `json:"version"` }
+
 func NewPurchaseHandler(service *services.PurchaseService) *PurchaseHandler {
 	return &PurchaseHandler{service: service}
 }
@@ -62,6 +64,23 @@ func (h *PurchaseHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		writePurchaseError(w, err); return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *PurchaseHandler) Receive(w http.ResponseWriter, r *http.Request) { h.transition(w, r, true) }
+
+func (h *PurchaseHandler) Cancel(w http.ResponseWriter, r *http.Request) { h.transition(w, r, false) }
+
+func (h *PurchaseHandler) transition(w http.ResponseWriter, r *http.Request, receive bool) {
+	var request purchaseTransitionRequest
+	if decodeOwnerJSON(w, r, &request) != nil { writePurchaseError(w, services.ErrInvalidPurchase); return }
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	var purchase models.Purchase
+	var err error
+	if receive { purchase, err = h.service.Receive(r.Context(), claims, r.PathValue("id"), request.Version) } else {
+		purchase, err = h.service.Cancel(r.Context(), claims, r.PathValue("id"), request.Version)
+	}
+	if err != nil { writePurchaseError(w, err); return }
+	writeAuthJSON(w, http.StatusOK, purchase)
 }
 
 func writePurchaseError(w http.ResponseWriter, err error) {

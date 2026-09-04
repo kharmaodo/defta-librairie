@@ -226,3 +226,81 @@ func (r *PurchaseRepository) Delete(ctx context.Context, id, libraryID string, e
 		actorID, id, string(payload), now); err != nil { return fmt.Errorf("audit purchase deletion: %w", err) }
 	return tx.Commit()
 }
+
+func (r *PurchaseRepository) Transition(ctx context.Context, id, libraryID, actorID string,
+	expectedVersion int, target models.PurchaseStatus, movementIDs, inventoryAuditIDs []string,
+	purchaseAuditID, now string) (models.Purchase, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil { return models.Purchase{}, fmt.Errorf("begin purchase transition: %w", err) }
+	defer tx.Rollback()
+	query := `SELECT library_id,reference,status,version FROM purchases WHERE id=?`
+	args := []interface{}{id}
+	if libraryID != "" { query += ` AND library_id=?`; args = append(args, libraryID) }
+	var actualLibrary, reference string
+	var current models.PurchaseStatus
+	var version int
+	if err = tx.QueryRowContext(ctx, query, args...).Scan(&actualLibrary, &reference, &current, &version); errors.Is(err, sql.ErrNoRows) {
+		return models.Purchase{}, ErrPurchaseNotFound
+	} else if err != nil { return models.Purchase{}, fmt.Errorf("read purchase before transition: %w", err) }
+	if version != expectedVersion { return models.Purchase{}, ErrPurchaseConflict }
+	if current != models.PurchaseStatusDraft { return models.Purchase{}, ErrPurchaseState }
+
+	type receiptLine struct { bookID int64; quantity int }
+	lines := make([]receiptLine, 0)
+	if target == models.PurchaseStatusReceived {
+		rows, rowsErr := tx.QueryContext(ctx, `SELECT book_id,quantity FROM purchase_lines WHERE purchase_id=? ORDER BY id`, id)
+		if rowsErr != nil { return models.Purchase{}, fmt.Errorf("read purchase receipt lines: %w", rowsErr) }
+		for rows.Next() {
+			var line receiptLine
+			if err = rows.Scan(&line.bookID, &line.quantity); err != nil { rows.Close(); return models.Purchase{}, fmt.Errorf("scan purchase receipt line: %w", err) }
+			lines = append(lines, line)
+		}
+		if err = rows.Close(); err != nil { return models.Purchase{}, fmt.Errorf("close purchase receipt lines: %w", err) }
+		if len(lines) == 0 || len(lines) != len(movementIDs) || len(lines) != len(inventoryAuditIDs) {
+			return models.Purchase{}, ErrPurchaseConflict
+		}
+		for index, line := range lines {
+			var before, inventoryVersion int
+			err = tx.QueryRowContext(ctx, `SELECT quantity,version FROM book_inventory WHERE book_id=? AND library_id=?`,
+				line.bookID, actualLibrary).Scan(&before, &inventoryVersion)
+			if errors.Is(err, sql.ErrNoRows) { return models.Purchase{}, ErrPurchaseBook }
+			if err != nil { return models.Purchase{}, fmt.Errorf("read inventory for purchase: %w", err) }
+			after := before + line.quantity
+			result, updateErr := tx.ExecContext(ctx, `UPDATE book_inventory SET quantity=?,version=version+1,updated_at=?
+				WHERE book_id=? AND library_id=? AND version=?`, after, now, line.bookID, actualLibrary, inventoryVersion)
+			if updateErr != nil { return models.Purchase{}, fmt.Errorf("update inventory for purchase: %w", updateErr) }
+			if affected, rowsErr := result.RowsAffected(); rowsErr != nil || affected != 1 { return models.Purchase{}, ErrInventoryConflict }
+			reason := "Réception achat " + reference
+			_, err = tx.ExecContext(ctx, `INSERT INTO inventory_movements(id,book_id,library_id,actor_user_id,
+				movement_type,quantity_delta,quantity_before,quantity_after,reason,created_at)
+				VALUES(?,?,?,?,'ENTRY',?,?,?,?,?)`, movementIDs[index], line.bookID, actualLibrary, actorID,
+				line.quantity, before, after, reason, now)
+			if err != nil { return models.Purchase{}, fmt.Errorf("insert purchase inventory movement: %w", err) }
+			payload, _ := json.Marshal(map[string]interface{}{"purchaseId":id,"movementType":"ENTRY",
+				"quantityBefore":before,"quantityAfter":after,"quantityDelta":line.quantity,"version":inventoryVersion+1})
+			_, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,
+				new_values,success,created_at) VALUES(?,?,'UPDATE_INVENTORY','BOOK',?,?,1,?)`, inventoryAuditIDs[index],
+				actorID, line.bookID, string(payload), now)
+			if err != nil { return models.Purchase{}, fmt.Errorf("audit purchase inventory: %w", err) }
+		}
+	}
+
+	action := "CANCEL_PURCHASE"
+	update := `UPDATE purchases SET status='CANCELLED',cancelled_by=?,cancelled_at=?,version=version+1,updated_at=?
+		WHERE id=? AND status='DRAFT' AND version=?`
+	if target == models.PurchaseStatusReceived {
+		action = "RECEIVE_PURCHASE"
+		update = `UPDATE purchases SET status='RECEIVED',received_by=?,received_at=?,version=version+1,updated_at=?
+			WHERE id=? AND status='DRAFT' AND version=?`
+	}
+	result, err := tx.ExecContext(ctx, update, actorID, now, now, id, expectedVersion)
+	if err != nil { return models.Purchase{}, fmt.Errorf("transition purchase: %w", err) }
+	if affected, rowsErr := result.RowsAffected(); rowsErr != nil || affected != 1 { return models.Purchase{}, ErrPurchaseConflict }
+	payload, _ := json.Marshal(map[string]interface{}{"reference":reference,"from":current,"to":target,
+		"version":expectedVersion+1,"stockEntries":len(lines)})
+	_, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,
+		new_values,success,created_at) VALUES(?,?,?,'PURCHASE',?,?,1,?)`, purchaseAuditID, actorID, action, id, string(payload), now)
+	if err != nil { return models.Purchase{}, fmt.Errorf("audit purchase transition: %w", err) }
+	if err = tx.Commit(); err != nil { return models.Purchase{}, fmt.Errorf("commit purchase transition: %w", err) }
+	return r.Find(ctx, id, libraryID)
+}

@@ -171,6 +171,8 @@ func main() {
 	mux.Handle("GET /api/manage/purchases/{id}", bookManagers(http.HandlerFunc(purchaseHandler.Get)))
 	mux.Handle("PUT /api/manage/purchases/{id}", bookManagers(http.HandlerFunc(purchaseHandler.Update)))
 	mux.Handle("DELETE /api/manage/purchases/{id}", bookManagers(http.HandlerFunc(purchaseHandler.Delete)))
+	mux.Handle("POST /api/manage/purchases/{id}/receive", bookManagers(http.HandlerFunc(purchaseHandler.Receive)))
+	mux.Handle("POST /api/manage/purchases/{id}/cancel", bookManagers(http.HandlerFunc(purchaseHandler.Cancel)))
 	mux.Handle("GET /api/manage/tags", bookManagers(http.HandlerFunc(tagHandler.List)))
 	mux.Handle("POST /api/manage/tags", bookManagers(http.HandlerFunc(tagHandler.Create)))
 	mux.Handle("PATCH /api/manage/tags/{id}", bookManagers(http.HandlerFunc(tagHandler.Update)))
