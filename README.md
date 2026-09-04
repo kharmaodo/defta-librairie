@@ -655,6 +655,8 @@ Le tableau de bord `/admin` expose désormais les fournisseurs et les bons d'ach
 
 Le formulaire de bon d'achat accepte jusqu'à cent lignes dynamiques. Il calcule un total prévisionnel, refuse les livres en double et permet de retirer une ligne avant l'enregistrement ; le serveur conserve la validation finale des quantités, coûts et montants.
 
+Pour le `SUPER_ADMIN_ROOT`, changer la librairie du formulaire filtre les fournisseurs et les livres proposés. Après une réception réussie, le tableau de bord recharge également les stocks afin d'afficher immédiatement les nouvelles quantités.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
