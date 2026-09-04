@@ -14,6 +14,7 @@ var (
 	ErrSaleConflict = errors.New("sale was modified by another request")
 	ErrSaleState    = errors.New("sale is not editable")
 	ErrSaleBook     = errors.New("sale contains an unavailable book")
+	ErrSaleCustomer = errors.New("sale customer is unavailable")
 )
 
 type SaleRepository struct{ db *sql.DB }
@@ -45,7 +46,7 @@ func (r *SaleRepository) List(ctx context.Context, libraryID string, filter mode
 		return nil, 0, fmt.Errorf("count sales: %w", err)
 	}
 	queryArgs := append(append([]interface{}{}, args...), limit, offset)
-	rows, err := r.db.QueryContext(ctx, `SELECT id, library_id, reference, COALESCE(customer_name,''),
+	rows, err := r.db.QueryContext(ctx, `SELECT id, library_id, reference, COALESCE(customer_id,''), COALESCE(customer_name,''),
 		status, total_amount, version, created_by, COALESCE(confirmed_by,''), COALESCE(cancelled_by,''),
 		created_at, updated_at, COALESCE(confirmed_at,''), COALESCE(cancelled_at,'')
 		FROM sales`+where+` ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`, queryArgs...)
@@ -81,7 +82,7 @@ type saleScanner interface{ Scan(...interface{}) error }
 
 func scanSale(row saleScanner) (models.Sale, error) {
 	var sale models.Sale
-	if err := row.Scan(&sale.ID, &sale.LibraryID, &sale.Reference, &sale.CustomerName, &sale.Status,
+	if err := row.Scan(&sale.ID, &sale.LibraryID, &sale.Reference, &sale.CustomerID, &sale.CustomerName, &sale.Status,
 		&sale.TotalAmount, &sale.Version, &sale.CreatedBy, &sale.ConfirmedBy, &sale.CancelledBy,
 		&sale.CreatedAt, &sale.UpdatedAt, &sale.ConfirmedAt, &sale.CancelledAt); err != nil {
 		return models.Sale{}, fmt.Errorf("scan sale: %w", err)
@@ -90,7 +91,7 @@ func scanSale(row saleScanner) (models.Sale, error) {
 }
 
 func (r *SaleRepository) Find(ctx context.Context, id, libraryID string) (models.Sale, error) {
-	query := `SELECT id, library_id, reference, COALESCE(customer_name,''),
+	query := `SELECT id, library_id, reference, COALESCE(customer_id,''), COALESCE(customer_name,''),
 		status, total_amount, version, created_by, COALESCE(confirmed_by,''), COALESCE(cancelled_by,''),
 		created_at, updated_at, COALESCE(confirmed_at,''), COALESCE(cancelled_at,'')
 		FROM sales WHERE id=?`
@@ -136,10 +137,10 @@ func (r *SaleRepository) Create(ctx context.Context, sale models.Sale, inputs []
 		return models.Sale{}, fmt.Errorf("begin sale creation: %w", err)
 	}
 	defer tx.Rollback()
-	if _, err = tx.ExecContext(ctx, `INSERT INTO sales(id,library_id,reference,customer_name,status,
+	if _, err = tx.ExecContext(ctx, `INSERT INTO sales(id,library_id,reference,customer_id,customer_name,status,
 		total_amount,version,created_by,created_at,updated_at)
-		VALUES(?,?,?,NULLIF(?,''),'DRAFT',0,1,?,?,?)`,
-		sale.ID, sale.LibraryID, sale.Reference, sale.CustomerName, sale.CreatedBy, now, now); err != nil {
+		VALUES(?,?,?,NULLIF(?,''),NULLIF(?,''),'DRAFT',0,1,?,?,?)`,
+		sale.ID, sale.LibraryID, sale.Reference, sale.CustomerID, sale.CustomerName, sale.CreatedBy, now, now); err != nil {
 		return models.Sale{}, fmt.Errorf("insert sale: %w", err)
 	}
 	lines, total, err := writeSaleLines(ctx, tx, sale.ID, sale.LibraryID, inputs, lineIDs, now)
@@ -149,7 +150,8 @@ func (r *SaleRepository) Create(ctx context.Context, sale models.Sale, inputs []
 	if _, err = tx.ExecContext(ctx, "UPDATE sales SET total_amount=? WHERE id=?", total, sale.ID); err != nil {
 		return models.Sale{}, fmt.Errorf("update sale total: %w", err)
 	}
-	payload, _ := json.Marshal(map[string]interface{}{"reference": sale.Reference, "totalAmount": total, "lines": len(lines), "version": 1})
+	payload, _ := json.Marshal(map[string]interface{}{"reference": sale.Reference, "customerId": sale.CustomerID,
+		"customerName": sale.CustomerName, "totalAmount": total, "lines": len(lines), "version": 1})
 	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)
 		VALUES(?,?,'CREATE_SALE','SALE',?,?,1,?)`, auditID, sale.CreatedBy, sale.ID, string(payload), now); err != nil {
 		return models.Sale{}, fmt.Errorf("audit sale creation: %w", err)
@@ -191,7 +193,7 @@ func writeSaleLines(ctx context.Context, tx *sql.Tx, saleID, libraryID string, i
 	return lines, total, nil
 }
 
-func (r *SaleRepository) Update(ctx context.Context, id, libraryID, customer string,
+func (r *SaleRepository) Update(ctx context.Context, id, libraryID, customerID, customerName string,
 	inputs []models.SaleLineInput, lineIDs []string, expectedVersion int, actorID, auditID, now string) (models.Sale, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -228,15 +230,16 @@ func (r *SaleRepository) Update(ctx context.Context, id, libraryID, customer str
 	if err != nil {
 		return models.Sale{}, err
 	}
-	result, err := tx.ExecContext(ctx, `UPDATE sales SET customer_name=NULLIF(?,''),total_amount=?,
-		version=version+1,updated_at=? WHERE id=? AND version=?`, customer, total, now, id, expectedVersion)
+	result, err := tx.ExecContext(ctx, `UPDATE sales SET customer_id=NULLIF(?,''),customer_name=NULLIF(?,''),total_amount=?,
+		version=version+1,updated_at=? WHERE id=? AND version=?`, customerID, customerName, total, now, id, expectedVersion)
 	if err != nil {
 		return models.Sale{}, fmt.Errorf("update sale: %w", err)
 	}
 	if rows, rowsErr := result.RowsAffected(); rowsErr != nil || rows != 1 {
 		return models.Sale{}, ErrSaleConflict
 	}
-	payload, _ := json.Marshal(map[string]interface{}{"totalAmount": total, "lines": len(inputs), "version": expectedVersion + 1})
+	payload, _ := json.Marshal(map[string]interface{}{"customerId": customerID, "customerName": customerName,
+		"totalAmount": total, "lines": len(inputs), "version": expectedVersion + 1})
 	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)
 		VALUES(?,?,'UPDATE_SALE','SALE',?,?,1,?)`, auditID, actorID, id, string(payload), now); err != nil {
 		return models.Sale{}, fmt.Errorf("audit sale update: %w", err)
@@ -245,6 +248,19 @@ func (r *SaleRepository) Update(ctx context.Context, id, libraryID, customer str
 		return models.Sale{}, fmt.Errorf("commit sale update: %w", err)
 	}
 	return r.Find(ctx, id, libraryID)
+}
+
+func (r *SaleRepository) CustomerForSale(ctx context.Context, id, libraryID string) (string, error) {
+	var name string
+	err := r.db.QueryRowContext(ctx, `SELECT name FROM customers
+		WHERE id=? AND library_id=? AND status='ACTIVE'`, id, libraryID).Scan(&name)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrSaleCustomer
+	}
+	if err != nil {
+		return "", fmt.Errorf("find sale customer: %w", err)
+	}
+	return name, nil
 }
 
 func (r *SaleRepository) Delete(ctx context.Context, id, libraryID, actorID, auditID, now string) error {

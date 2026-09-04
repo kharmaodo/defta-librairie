@@ -23,8 +23,9 @@ func TestSaleDraftLifecycleAndIsolation(t *testing.T) {
 	_, err = db.Exec(`
 		CREATE TABLE users(id TEXT PRIMARY KEY);
 		CREATE TABLE libraries(id TEXT PRIMARY KEY);
+		CREATE TABLE customers(id TEXT PRIMARY KEY,library_id TEXT NOT NULL,name TEXT NOT NULL,status TEXT NOT NULL);
 		CREATE TABLE defta(id INTEGER PRIMARY KEY,title TEXT NOT NULL,price REAL NOT NULL,library_id TEXT,deleted_at TEXT);
-		CREATE TABLE sales(id TEXT PRIMARY KEY,library_id TEXT NOT NULL,reference TEXT NOT NULL,customer_name TEXT,
+		CREATE TABLE sales(id TEXT PRIMARY KEY,library_id TEXT NOT NULL,reference TEXT NOT NULL,customer_id TEXT,customer_name TEXT,
 			status TEXT NOT NULL,total_amount REAL NOT NULL,version INTEGER NOT NULL,created_by TEXT NOT NULL,
 			confirmed_by TEXT,cancelled_by TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL,
 			confirmed_at TEXT,cancelled_at TEXT,UNIQUE(library_id,reference));
@@ -38,6 +39,8 @@ func TestSaleDraftLifecycleAndIsolation(t *testing.T) {
 			movement_type TEXT,quantity_delta INTEGER,quantity_before INTEGER,quantity_after INTEGER,reason TEXT,created_at TEXT);
 		INSERT INTO users VALUES('owner-1'),('owner-2');
 		INSERT INTO libraries VALUES('library-1'),('library-2');
+		INSERT INTO customers VALUES('customer-1','library-1','Aïssatou Diop','ACTIVE'),
+			('customer-2','library-2','Client tiers','ACTIVE'),('customer-disabled','library-1','Client désactivé','DISABLED');
 		INSERT INTO defta VALUES(1,'Livre un',2500,'library-1',NULL),(2,'Livre deux',3000,'library-1',NULL),
 			(3,'Livre tiers',1000,'library-2',NULL);
 		INSERT INTO book_inventory VALUES(1,'library-1',10,5,1,'now'),(2,'library-1',10,5,1,'now'),
@@ -54,16 +57,18 @@ func TestSaleDraftLifecycleAndIsolation(t *testing.T) {
 	other.Subject = "owner-2"
 
 	sale, err := service.Create(context.Background(), owner, models.SaleInput{
-		CustomerName: "Client", Lines: []models.SaleLineInput{{BookID: 1, Quantity: 2}, {BookID: 2, Quantity: 1}},
+		CustomerID: "customer-1", CustomerName: "Nom ignoré",
+		Lines: []models.SaleLineInput{{BookID: 1, Quantity: 2}, {BookID: 2, Quantity: 1}},
 	})
-	if err != nil || sale.Status != models.SaleStatusDraft || sale.TotalAmount != 8000 || len(sale.Lines) != 2 {
+	if err != nil || sale.Status != models.SaleStatusDraft || sale.TotalAmount != 8000 || len(sale.Lines) != 2 ||
+		sale.CustomerID != "customer-1" || sale.CustomerName != "Aïssatou Diop" {
 		t.Fatalf("create sale=%+v err=%v", sale, err)
 	}
 	if _, err = service.Find(context.Background(), other, sale.ID); !errors.Is(err, repositories.ErrSaleNotFound) {
 		t.Fatalf("cross-library find=%v", err)
 	}
 	sale, err = service.Update(context.Background(), owner, sale.ID, models.SaleInput{
-		CustomerName: "Client modifié", Version: 1, Lines: []models.SaleLineInput{{BookID: 2, Quantity: 2}},
+		CustomerID: "customer-1", Version: 1, Lines: []models.SaleLineInput{{BookID: 2, Quantity: 2}},
 	})
 	if err != nil || sale.Version != 2 || sale.TotalAmount != 6000 || len(sale.Lines) != 1 {
 		t.Fatalf("update sale=%+v err=%v", sale, err)
@@ -77,6 +82,16 @@ func TestSaleDraftLifecycleAndIsolation(t *testing.T) {
 		Lines: []models.SaleLineInput{{BookID: 3, Quantity: 1}},
 	}); !errors.Is(err, repositories.ErrSaleBook) {
 		t.Fatalf("cross-library book=%v", err)
+	}
+	if _, err = service.Create(context.Background(), owner, models.SaleInput{
+		CustomerID: "customer-2", Lines: []models.SaleLineInput{{BookID: 1, Quantity: 1}},
+	}); !errors.Is(err, repositories.ErrSaleCustomer) {
+		t.Fatalf("cross-library customer=%v", err)
+	}
+	if _, err = service.Create(context.Background(), owner, models.SaleInput{
+		CustomerID: "customer-disabled", Lines: []models.SaleLineInput{{BookID: 1, Quantity: 1}},
+	}); !errors.Is(err, repositories.ErrSaleCustomer) {
+		t.Fatalf("disabled customer=%v", err)
 	}
 	sales, total, err := service.List(context.Background(), owner, "", models.SaleFilter{Status: models.SaleStatusDraft}, 0, 30)
 	if err != nil || total != 1 || len(sales) != 1 || len(sales[0].Lines) != 1 {
@@ -148,7 +163,7 @@ func TestSaleConfirmationRollsBackOnInsufficientStock(t *testing.T) {
 	_, err = db.Exec(`
 		CREATE TABLE users(id TEXT PRIMARY KEY); CREATE TABLE libraries(id TEXT PRIMARY KEY);
 		CREATE TABLE defta(id INTEGER PRIMARY KEY,title TEXT,price REAL,library_id TEXT,deleted_at TEXT);
-		CREATE TABLE sales(id TEXT PRIMARY KEY,library_id TEXT,reference TEXT,customer_name TEXT,status TEXT,total_amount REAL,
+		CREATE TABLE sales(id TEXT PRIMARY KEY,library_id TEXT,reference TEXT,customer_id TEXT,customer_name TEXT,status TEXT,total_amount REAL,
 			version INTEGER,created_by TEXT,confirmed_by TEXT,cancelled_by TEXT,created_at TEXT,updated_at TEXT,confirmed_at TEXT,cancelled_at TEXT);
 		CREATE TABLE sale_lines(id TEXT PRIMARY KEY,sale_id TEXT,book_id INTEGER,title_snapshot TEXT,quantity INTEGER,
 			unit_price REAL,line_total REAL,created_at TEXT,UNIQUE(sale_id,book_id));
