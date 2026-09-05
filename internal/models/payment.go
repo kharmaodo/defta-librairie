@@ -24,6 +24,11 @@ type CashRegisterInput struct {
 	Version   int    `json:"version,omitempty"`
 }
 
+type CashRegisterFilter struct {
+	Query  string
+	Status CashRegisterStatus
+}
+
 type PaymentMethod string
 
 const (

@@ -688,6 +688,17 @@ Le formulaire de vente de `/admin` propose les clients actifs de la librairie s�
 
 La migration `015_create_payments_cash_registers.sql` pose la fondation des règlements. Les caisses sont isolées par librairie et peuvent être désactivées sans perdre leur historique. Une vente confirmée peut recevoir plusieurs paiements par espèces (`CASH`), mobile money (`MOBILE_MONEY`) ou carte (`CARD`).
 
+Le CRUD des caisses est exposé aux deux profils de gestion. Un `OWNER_LIBRARY` agit uniquement sur les caisses de la librairie portée par son JWT ; le `SUPER_ADMIN_ROOT` peut utiliser `libraryId` pour cibler une librairie. Les modifications et changements d'état sont versionnés et audités.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/cash-registers?q=...&status=ACTIVE&offset=0&limit=30&libraryId=...` | Lister les caisses autorisées |
+| `POST` | `/api/manage/cash-registers` | Créer une caisse active |
+| `GET` | `/api/manage/cash-registers/{id}` | Consulter une caisse autorisée |
+| `PUT` | `/api/manage/cash-registers/{id}` | Renommer une caisse avec sa `version` |
+| `DELETE` | `/api/manage/cash-registers/{id}?version=...` | Désactiver une caisse |
+| `POST` | `/api/manage/cash-registers/{id}/reactivate?version=...` | Réactiver une caisse |
+
 SQLite contrôle que la vente et la caisse appartiennent à la même librairie, que la caisse est active, que la vente est confirmée et que le cumul des règlements ne dépasse jamais son total. La vue `sale_payment_balances` calcule le montant payé, le reste à payer et l’état financier `UNPAID`, `PARTIALLY_PAID` ou `PAID`. Un règlement annulé conservera sa ligne avec le statut `VOIDED` pour assurer la traçabilité.
 
 ## Tester FTS5 directement
