@@ -684,6 +684,12 @@ La migration `014_attach_sales_to_customers.sql` ajoute un rattachement facultat
 
 Le formulaire de vente de `/admin` propose les clients actifs de la librairie sélectionnée. Choisir un client renseigne automatiquement le nom figé du reçu. L’option « Aucun · vente comptoir » conserve la saisie d’un nom libre et le changement de librairie réinitialise le client ainsi que les articles proposés.
 
+### Paiements et caisse
+
+La migration `015_create_payments_cash_registers.sql` pose la fondation des règlements. Les caisses sont isolées par librairie et peuvent être désactivées sans perdre leur historique. Une vente confirmée peut recevoir plusieurs paiements par espèces (`CASH`), mobile money (`MOBILE_MONEY`) ou carte (`CARD`).
+
+SQLite contrôle que la vente et la caisse appartiennent à la même librairie, que la caisse est active, que la vente est confirmée et que le cumul des règlements ne dépasse jamais son total. La vue `sale_payment_balances` calcule le montant payé, le reste à payer et l’état financier `UNPAID`, `PARTIALLY_PAID` ou `PAID`. Un règlement annulé conservera sa ligne avec le statut `VOIDED` pour assurer la traçabilité.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
