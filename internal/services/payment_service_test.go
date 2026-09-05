@@ -15,7 +15,9 @@ import (
 
 func TestPaymentLifecycleBalanceIsolationAndAudit(t *testing.T) {
 	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "payments.db")+"?_foreign_keys=on")
-	if err != nil { t.Fatalf("open database: %v", err) }
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
 	t.Cleanup(func() { _ = db.Close() })
 	_, err = db.Exec(`
 		CREATE TABLE users(id TEXT PRIMARY KEY);
@@ -48,22 +50,30 @@ func TestPaymentLifecycleBalanceIsolationAndAudit(t *testing.T) {
 		INSERT INTO sales VALUES ('sale-1','library-1','CONFIRMED',10000),('sale-2','library-2','CONFIRMED',5000);
 		INSERT INTO cash_registers VALUES ('register-1','library-1','Principale','principale','ACTIVE',1,'owner-1','now','now');
 	`)
-	if err != nil { t.Fatalf("create schema: %v", err) }
+	if err != nil {
+		t.Fatalf("create schema: %v", err)
+	}
 
 	service := NewPaymentService(repositories.NewPaymentRepository(db))
-	ownerOne := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-1"}; ownerOne.Subject = "owner-1"
-	ownerTwo := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-2"}; ownerTwo.Subject = "owner-2"
+	ownerOne := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-1"}
+	ownerOne.Subject = "owner-1"
+	ownerTwo := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-2"}
+	ownerTwo.Subject = "owner-2"
 	payment, err := service.Create(context.Background(), ownerOne, "sale-1", models.PaymentInput{
 		CashRegisterID: "register-1", Method: models.PaymentMethodCash, Amount: 4000,
 	})
-	if err != nil || payment.Version != 1 { t.Fatalf("create payment=%+v err=%v", payment, err) }
+	if err != nil || payment.Version != 1 {
+		t.Fatalf("create payment=%+v err=%v", payment, err)
+	}
 	balance, err := service.Balance(context.Background(), ownerOne, "sale-1")
 	if err != nil || balance.PaidAmount != 4000 || balance.RemainingAmount != 6000 || balance.PaymentStatus != "PARTIALLY_PAID" {
 		t.Fatalf("partial balance=%+v err=%v", balance, err)
 	}
 	if _, err = service.Create(context.Background(), ownerOne, "sale-1", models.PaymentInput{
 		CashRegisterID: "register-1", Method: models.PaymentMethodCash, Amount: 6001,
-	}); !errors.Is(err, repositories.ErrPaymentOverpaid) { t.Fatalf("expected overpayment, got %v", err) }
+	}); !errors.Is(err, repositories.ErrPaymentOverpaid) {
+		t.Fatalf("expected overpayment, got %v", err)
+	}
 	if _, err = service.Balance(context.Background(), ownerTwo, "sale-1"); !errors.Is(err, repositories.ErrPaymentSaleNotFound) {
 		t.Fatalf("cross-library sale must be hidden: %v", err)
 	}
@@ -87,6 +97,10 @@ func TestPaymentLifecycleBalanceIsolationAndAudit(t *testing.T) {
 }
 
 func TestPaymentValidation(t *testing.T) {
-	if validPaymentMethod(models.PaymentMethod("CHEQUE"), false) { t.Fatal("invalid payment method accepted") }
-	if validPaymentStatus(models.PaymentStatus("DELETED"), false) { t.Fatal("invalid payment status accepted") }
+	if validPaymentMethod(models.PaymentMethod("CHEQUE"), false) {
+		t.Fatal("invalid payment method accepted")
+	}
+	if validPaymentStatus(models.PaymentStatus("DELETED"), false) {
+		t.Fatal("invalid payment status accepted")
+	}
 }

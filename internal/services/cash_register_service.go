@@ -36,16 +36,24 @@ func (s *CashRegisterService) List(ctx context.Context, claims *auth.Claims, req
 	if err = s.ensureLibraryAccess(ctx, claims, libraryID); err != nil {
 		return nil, 0, err
 	}
-	if offset < 0 { offset = 0 }
-	if limit < 1 { limit = 30 }
-	if limit > 100 { limit = 100 }
+	if offset < 0 {
+		offset = 0
+	}
+	if limit < 1 {
+		limit = 30
+	}
+	if limit > 100 {
+		limit = 100
+	}
 	return s.repository.List(ctx, libraryID, filter, offset, limit)
 }
 
 func (s *CashRegisterService) Find(ctx context.Context, claims *auth.Claims, id string) (models.CashRegister, error) {
 	libraryID, err := resolveBookScope(claims, "", false)
 	if err != nil || strings.TrimSpace(id) == "" {
-		if err != nil { return models.CashRegister{}, err }
+		if err != nil {
+			return models.CashRegister{}, err
+		}
 		return models.CashRegister{}, ErrInvalidCashRegister
 	}
 	if err = s.ensureLibraryAccess(ctx, claims, libraryID); err != nil {
@@ -57,20 +65,32 @@ func (s *CashRegisterService) Find(ctx context.Context, claims *auth.Claims, id 
 func (s *CashRegisterService) Create(ctx context.Context, claims *auth.Claims,
 	input models.CashRegisterInput) (models.CashRegister, error) {
 	libraryID, err := resolveBookScope(claims, strings.TrimSpace(input.LibraryID), true)
-	if err != nil { return models.CashRegister{}, err }
+	if err != nil {
+		return models.CashRegister{}, err
+	}
 	name, normalized, err := normalizeCashRegisterName(input.Name)
-	if err != nil { return models.CashRegister{}, err }
-	if err = s.ensureLibraryActive(ctx, libraryID); err != nil { return models.CashRegister{}, err }
+	if err != nil {
+		return models.CashRegister{}, err
+	}
+	if err = s.ensureLibraryActive(ctx, libraryID); err != nil {
+		return models.CashRegister{}, err
+	}
 	id, err := identity.NewID()
-	if err != nil { return models.CashRegister{}, err }
+	if err != nil {
+		return models.CashRegister{}, err
+	}
 	auditID, err := identity.NewID()
-	if err != nil { return models.CashRegister{}, err }
+	if err != nil {
+		return models.CashRegister{}, err
+	}
 	now := s.now().UTC().Format(time.RFC3339Nano)
 	register := models.CashRegister{ID: id, LibraryID: libraryID, Name: name,
 		Status: models.CashRegisterStatusActive, Version: 1, CreatedBy: claims.Subject,
 		CreatedAt: now, UpdatedAt: now}
 	snapshot, err := cashRegisterSnapshot(register)
-	if err != nil { return models.CashRegister{}, err }
+	if err != nil {
+		return models.CashRegister{}, err
+	}
 	if err = s.repository.Create(ctx, register, normalized, claims.Subject, auditID, snapshot); err != nil {
 		return models.CashRegister{}, err
 	}
@@ -80,24 +100,38 @@ func (s *CashRegisterService) Create(ctx context.Context, claims *auth.Claims,
 func (s *CashRegisterService) Update(ctx context.Context, claims *auth.Claims, id string,
 	input models.CashRegisterInput) (models.CashRegister, error) {
 	existing, err := s.Find(ctx, claims, id)
-	if err != nil { return models.CashRegister{}, err }
+	if err != nil {
+		return models.CashRegister{}, err
+	}
 	if input.LibraryID != "" && strings.TrimSpace(input.LibraryID) != existing.LibraryID {
 		return models.CashRegister{}, ErrBookForbidden
 	}
-	if input.Version < 1 { return models.CashRegister{}, ErrInvalidCashRegister }
+	if input.Version < 1 {
+		return models.CashRegister{}, ErrInvalidCashRegister
+	}
 	name, normalized, err := normalizeCashRegisterName(input.Name)
-	if err != nil { return models.CashRegister{}, err }
+	if err != nil {
+		return models.CashRegister{}, err
+	}
 	updated := existing
 	updated.Name, updated.Version = name, existing.Version+1
 	updated.UpdatedAt = s.now().UTC().Format(time.RFC3339Nano)
 	oldValues, err := cashRegisterSnapshot(existing)
-	if err != nil { return models.CashRegister{}, err }
+	if err != nil {
+		return models.CashRegister{}, err
+	}
 	newValues, err := cashRegisterSnapshot(updated)
-	if err != nil { return models.CashRegister{}, err }
+	if err != nil {
+		return models.CashRegister{}, err
+	}
 	auditID, err := identity.NewID()
-	if err != nil { return models.CashRegister{}, err }
+	if err != nil {
+		return models.CashRegister{}, err
+	}
 	if err = s.repository.Update(ctx, updated, normalized, input.Version, claims.Subject,
-		auditID, oldValues, newValues); err != nil { return models.CashRegister{}, err }
+		auditID, oldValues, newValues); err != nil {
+		return models.CashRegister{}, err
+	}
 	return updated, nil
 }
 
@@ -111,26 +145,42 @@ func (s *CashRegisterService) Reactivate(ctx context.Context, claims *auth.Claim
 
 func (s *CashRegisterService) changeStatus(ctx context.Context, claims *auth.Claims, id string, version int,
 	expected, next models.CashRegisterStatus) error {
-	if version < 1 { return ErrInvalidCashRegister }
+	if version < 1 {
+		return ErrInvalidCashRegister
+	}
 	register, err := s.Find(ctx, claims, id)
-	if err != nil { return err }
-	if register.Status != expected { return repositories.ErrCashRegisterState }
+	if err != nil {
+		return err
+	}
+	if register.Status != expected {
+		return repositories.ErrCashRegisterState
+	}
 	auditID, err := identity.NewID()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	return s.repository.ChangeStatus(ctx, register, expected, next, version, claims.Subject, auditID,
 		s.now().UTC().Format(time.RFC3339Nano))
 }
 
 func (s *CashRegisterService) ensureLibraryActive(ctx context.Context, libraryID string) error {
 	active, err := s.repository.LibraryActive(ctx, libraryID)
-	if err != nil { return err }
-	if !active { return repositories.ErrLibraryUnavailable }
+	if err != nil {
+		return err
+	}
+	if !active {
+		return repositories.ErrLibraryUnavailable
+	}
 	return nil
 }
 
 func (s *CashRegisterService) ensureLibraryAccess(ctx context.Context, claims *auth.Claims, libraryID string) error {
-	if claims.Role != models.RoleOwnerLibrary { return nil }
-	if err := s.ensureLibraryActive(ctx, libraryID); err != nil { return ErrBookForbidden }
+	if claims.Role != models.RoleOwnerLibrary {
+		return nil
+	}
+	if err := s.ensureLibraryActive(ctx, libraryID); err != nil {
+		return ErrBookForbidden
+	}
 	return nil
 }
 
@@ -149,9 +199,9 @@ func validCashRegisterStatus(status models.CashRegisterStatus, empty bool) bool 
 
 func cashRegisterSnapshot(register models.CashRegister) (string, error) {
 	payload, err := json.Marshal(struct {
-		Name string `json:"name"`
-		Status models.CashRegisterStatus `json:"status"`
-		Version int `json:"version"`
+		Name    string                    `json:"name"`
+		Status  models.CashRegisterStatus `json:"status"`
+		Version int                       `json:"version"`
 	}{register.Name, register.Status, register.Version})
 	return string(payload), err
 }
