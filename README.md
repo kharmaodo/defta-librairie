@@ -682,6 +682,8 @@ Le tableau de bord `/admin` expose le référentiel client avec recherche, filtr
 
 La migration `014_attach_sales_to_customers.sql` ajoute un rattachement facultatif entre une vente et un client. Le backend n’accepte qu’un client `ACTIVE` de la même librairie et SQLite protège également cette isolation par des déclencheurs. `customerId` conserve le lien vers le référentiel tandis que `customerName` reste figé dans la vente afin que les reçus historiques ne changent pas après une modification du client.
 
+Le formulaire de vente de `/admin` propose les clients actifs de la librairie sélectionnée. Choisir un client renseigne automatiquement le nom figé du reçu. L’option « Aucun · vente comptoir » conserve la saisie d’un nom libre et le changement de librairie réinitialise le client ainsi que les articles proposés.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :

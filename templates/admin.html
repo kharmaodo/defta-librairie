@@ -259,7 +259,8 @@
       <input name="id" type="hidden"><input name="version" type="hidden">
       <div class="form-grid">
         <label class="full root-only-field" hidden>Librairie<select name="libraryId"></select></label>
-        <label class="full">Client<input name="customerName" maxlength="200" placeholder="Client comptoir"></label>
+        <label class="full">Client enregistré<select name="customerId"><option value="">Aucun · vente comptoir</option></select><small>Seuls les clients actifs de la librairie sont proposés.</small></label>
+        <label class="full">Nom sur le reçu<input name="customerName" maxlength="200" placeholder="Client comptoir"><small>Libre si aucun client enregistré n’est sélectionné.</small></label>
       </div>
       <div class="sale-lines-heading"><div><strong>Articles</strong><p class="hint">Les prix sont figés par le serveur à l’enregistrement.</p></div><button id="add-sale-line-button" class="button ghost" type="button">Ajouter un article</button></div>
       <div id="sale-lines" class="sale-lines"></div>
