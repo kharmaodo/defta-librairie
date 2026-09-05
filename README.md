@@ -712,6 +712,12 @@ L'annulation ne supprime aucune ligne : le statut devient `VOIDED`, le solde de 
 
 Le tableau de bord `/admin` contient désormais deux espaces de trésorerie. Le premier gère les caisses actives ou désactivées. Le second sélectionne une vente confirmée, affiche son total, le montant encaissé et le reste à payer, puis permet d'ajouter ou d'annuler un règlement. Pour le root, le choix de la librairie limite automatiquement les ventes et les caisses proposées.
 
+### Retours clients et remboursements
+
+La migration `016_create_customer_returns.sql` pose la fondation des retours clients. Un retour appartient à une vente confirmée et contient les lignes réellement retournées, valorisées au prix figé lors de la vente. Il suit le cycle `DRAFT`, `COMPLETED` ou `CANCELLED` et choisit dès sa création une résolution `REFUND` ou `CREDIT_NOTE`.
+
+SQLite interdit de retourner davantage d'exemplaires qu'il n'en a été vendu, en tenant compte des retours antérieurs déjà finalisés. Une finalisation vide est refusée. Les futurs règlements de retour acceptent espèces, mobile money, carte ou avoir selon la résolution choisie, sans pouvoir dépasser le montant total du retour. La vue `customer_return_balances` expose le montant traité, le reste et l'état `PENDING`, `PARTIALLY_SETTLED` ou `SETTLED`.
+
 SQLite contrôle que la vente et la caisse appartiennent à la même librairie, que la caisse est active, que la vente est confirmée et que le cumul des règlements ne dépasse jamais son total. La vue `sale_payment_balances` calcule le montant payé, le reste à payer et l’état financier `UNPAID`, `PARTIALLY_PAID` ou `PAID`. Un règlement annulé conservera sa ligne avec le statut `VOIDED` pour assurer la traçabilité.
 
 ## Tester FTS5 directement
