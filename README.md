@@ -699,6 +699,17 @@ Le CRUD des caisses est exposé aux deux profils de gestion. Un `OWNER_LIBRARY` 
 | `DELETE` | `/api/manage/cash-registers/{id}?version=...` | Désactiver une caisse |
 | `POST` | `/api/manage/cash-registers/{id}/reactivate?version=...` | Réactiver une caisse |
 
+Les règlements sont ensuite manipulés depuis une vente confirmée :
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/sales/{id}/payments?method=CASH&status=RECORDED&offset=0&limit=30` | Consulter les règlements d'une vente |
+| `POST` | `/api/manage/sales/{id}/payments` | Enregistrer un règlement partiel ou total |
+| `GET` | `/api/manage/sales/{id}/payment-balance` | Calculer le payé et le reste à payer |
+| `POST` | `/api/manage/payments/{id}/void` | Annuler un règlement avec sa `version` et un motif |
+
+L'annulation ne supprime aucune ligne : le statut devient `VOIDED`, le solde de la vente est recalculé et l'opération est inscrite dans l'audit. Les références externes permettent d'identifier les transactions mobile money ou carte et sont uniques par librairie et méthode tant que le règlement reste actif.
+
 SQLite contrôle que la vente et la caisse appartiennent à la même librairie, que la caisse est active, que la vente est confirmée et que le cumul des règlements ne dépasse jamais son total. La vue `sale_payment_balances` calcule le montant payé, le reste à payer et l’état financier `UNPAID`, `PARTIALLY_PAID` ou `PAID`. Un règlement annulé conservera sa ligne avec le statut `VOIDED` pour assurer la traçabilité.
 
 ## Tester FTS5 directement

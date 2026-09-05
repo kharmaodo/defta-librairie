@@ -70,6 +70,16 @@ type PaymentInput struct {
 	Notes             string        `json:"notes,omitempty"`
 }
 
+type PaymentVoidInput struct {
+	Version int    `json:"version"`
+	Reason  string `json:"reason"`
+}
+
+type PaymentFilter struct {
+	Method PaymentMethod
+	Status PaymentStatus
+}
+
 type SalePaymentBalance struct {
 	SaleID          string  `json:"saleId"`
 	LibraryID       string  `json:"libraryId"`
