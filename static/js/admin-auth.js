@@ -4,7 +4,7 @@
   const ACCESS_KEY = "defta.accessToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
-  const state = {isRoot: false, passwordChangeRequired: false, owners: [], ownerOptions: [], books: [], sales: [], saleBooks: [], inventory: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", saleOffset: 0, saleLimit: 10, inventoryOffset: 0, inventoryLimit: 10, auditOffset: 0, auditLimit: 20, sessionOffset: 0, sessionLimit: 20};
+  const state = {isRoot: false, passwordChangeRequired: false, owners: [], ownerOptions: [], books: [], sales: [], saleBooks: [], saleCustomers: [], inventory: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", saleOffset: 0, saleLimit: 10, inventoryOffset: 0, inventoryLimit: 10, auditOffset: 0, auditLimit: 20, sessionOffset: 0, sessionLimit: 20};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
@@ -430,6 +430,52 @@
     state.saleBooks = books;
   }
 
+  async function loadSaleCustomers(libraryID) {
+    const select = document.querySelector("#sale-form [name=customerId]");
+    select.replaceChildren();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Aucun · vente comptoir";
+    select.append(placeholder);
+    if (state.isRoot && !libraryID) {
+      state.saleCustomers = [];
+      return;
+    }
+    const customers = [];
+    let offset = 0;
+    let total = 0;
+    do {
+      const query = new URLSearchParams({status: "ACTIVE", offset: String(offset), limit: "100"});
+      if (libraryID) query.set("libraryId", libraryID);
+      const payload = await apiFetch(`/api/manage/customers?${query}`);
+      customers.push(...payload.results);
+      offset += payload.results.length;
+      total = payload.total;
+    } while (offset < total);
+    state.saleCustomers = customers;
+    customers.forEach((customer) => {
+      const option = document.createElement("option");
+      option.value = customer.id;
+      option.textContent = `${customer.reference} · ${customer.name}`;
+      select.append(option);
+    });
+  }
+
+  function syncSaleCustomerName() {
+    const form = document.querySelector("#sale-form");
+    const customer = state.saleCustomers.find((item) => item.id === form.elements.customerId.value);
+    const input = form.elements.customerName;
+    if (customer) {
+      input.value = customer.name;
+      input.readOnly = true;
+      input.dataset.linkedName = customer.name;
+      return;
+    }
+    if (input.value === input.dataset.linkedName) input.value = "";
+    input.readOnly = false;
+    delete input.dataset.linkedName;
+  }
+
   function updateSaleEstimate() {
     let total = 0;
     document.querySelectorAll("#sale-lines .sale-line").forEach((row) => {
@@ -479,7 +525,14 @@
     document.querySelector("#sale-lines").replaceChildren();
     document.querySelector("#sale-form-error").hidden = true;
     document.querySelector("#sale-form-title").textContent = sale ? `Modifier · ${sale.reference}` : "Nouvelle vente";
-    await loadSaleBooks(sale ? sale.libraryId : form.elements.libraryId.value);
+    const libraryID = sale ? sale.libraryId : form.elements.libraryId.value;
+    await Promise.all([loadSaleBooks(libraryID), loadSaleCustomers(libraryID)]);
+    form.elements.customerId.value = sale ? sale.customerId || "" : "";
+    if (form.elements.customerId.value) syncSaleCustomerName();
+    else {
+      form.elements.customerName.readOnly = false;
+      delete form.elements.customerName.dataset.linkedName;
+    }
     (sale && sale.lines.length ? sale.lines : [null]).forEach(addSaleLine);
     dialog.showModal();
   }
@@ -489,7 +542,7 @@
       bookId: Number(row.querySelector("[name=bookId]").value),
       quantity: Number(row.querySelector("[name=quantity]").value)
     }));
-    const payload = {customerName: form.elements.customerName.value.trim(), lines};
+    const payload = {customerId: form.elements.customerId.value, customerName: form.elements.customerName.value.trim(), lines};
     if (state.isRoot && form.elements.libraryId.value) payload.libraryId = form.elements.libraryId.value;
     if (form.elements.id.value) payload.version = Number(form.elements.version.value);
     return payload;
@@ -715,11 +768,16 @@
     });
     document.querySelector("#sale-form [name=libraryId]").addEventListener("change", async (event) => {
       try {
-        await loadSaleBooks(event.currentTarget.value);
+        await Promise.all([loadSaleBooks(event.currentTarget.value), loadSaleCustomers(event.currentTarget.value)]);
+        const form = document.querySelector("#sale-form");
+        form.elements.customerId.value = "";
+        form.elements.customerName.value = "";
+        form.elements.customerName.readOnly = false;
         document.querySelector("#sale-lines").replaceChildren();
         addSaleLine();
       } catch (error) { showError(document.querySelector("#sale-form-error"), error); }
     });
+    document.querySelector("#sale-form [name=customerId]").addEventListener("change", syncSaleCustomerName);
     document.querySelector("#add-sale-line-button").addEventListener("click", () => addSaleLine());
     document.querySelector("#print-sale-button").addEventListener("click", () => {
       document.body.classList.add("printing-sale");

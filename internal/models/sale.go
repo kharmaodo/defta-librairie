@@ -23,6 +23,7 @@ type Sale struct {
 	ID           string     `json:"id"`
 	LibraryID    string     `json:"libraryId"`
 	Reference    string     `json:"reference"`
+	CustomerID   string     `json:"customerId,omitempty"`
 	CustomerName string     `json:"customerName,omitempty"`
 	Status       SaleStatus `json:"status"`
 	TotalAmount  float64    `json:"totalAmount"`
@@ -44,6 +45,7 @@ type SaleLineInput struct {
 
 type SaleInput struct {
 	LibraryID    string          `json:"libraryId,omitempty"`
+	CustomerID   string          `json:"customerId,omitempty"`
 	CustomerName string          `json:"customerName,omitempty"`
 	Lines        []SaleLineInput `json:"lines"`
 	Version      int             `json:"version,omitempty"`

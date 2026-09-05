@@ -125,6 +125,8 @@ func writeSaleError(w http.ResponseWriter, err error) {
 		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "sale_not_editable", "message": err.Error()})
 	case errors.Is(err, repositories.ErrSaleBook):
 		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_sale_book", "message": err.Error()})
+	case errors.Is(err, repositories.ErrSaleCustomer):
+		writeAuthJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": "customer_unavailable", "message": "Customer is inactive or belongs to another library"})
 	case errors.Is(err, repositories.ErrInsufficientStock):
 		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "insufficient_stock", "message": err.Error()})
 	case errors.Is(err, repositories.ErrInventoryConflict):

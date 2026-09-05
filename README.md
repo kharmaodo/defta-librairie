@@ -661,6 +661,29 @@ L’action **Détails** ouvre une fiche imprimable du bon d’achat avec son fou
 
 La liste des achats peut être filtrée par état, fournisseur et période. Le `SUPER_ADMIN_ROOT` peut en plus sélectionner une librairie. Les résultats sont paginés par dix afin de conserver un tableau de bord lisible lorsque l’historique grandit.
 
+### Gestion des clients
+
+La migration `013_create_customers.sql` crée le référentiel client propre à chaque librairie. Un client possède une référence stable et unique dans sa librairie, un nom, des coordonnées facultatives, une adresse, des notes, un statut et une version pour le contrôle des écritures concurrentes.
+
+La suppression fonctionnelle utilisera le statut `DISABLED` afin de préserver l’historique commercial. Les contraintes empêchent le rattachement d’un client à une librairie inexistante et les index préparent la recherche par nom, téléphone ou e-mail. Le rattachement facultatif aux ventes sera ajouté après validation du CRUD client.
+
+Le CRUD client est accessible aux rôles `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. Le propriétaire reste limité aux clients de sa librairie ; le root peut préciser `libraryId`. La recherche couvre la référence, le nom, le téléphone et l’e-mail. Chaque mutation contrôle la version et produit un audit de type `CUSTOMER`.
+
+- `GET /api/manage/customers?q=&status=&libraryId=&offset=0&limit=30` ;
+- `POST /api/manage/customers` ;
+- `GET /api/manage/customers/{id}` ;
+- `PUT /api/manage/customers/{id}` ;
+- `DELETE /api/manage/customers/{id}?version={version}` ;
+- `POST /api/manage/customers/{id}/reactivate?version={version}`.
+
+La désactivation est logique et conserve le client pour les futurs historiques de vente. Plusieurs clients peuvent porter le même nom ; chacun reçoit une référence générée au format `C-AAAAMMJJ-XXXXXXXX`.
+
+Le tableau de bord `/admin` expose le référentiel client avec recherche, filtre de statut et pagination. Il permet la création, la modification, la désactivation et la réactivation. Pour le root, les filtres et le formulaire de création proposent uniquement les librairies actives.
+
+La migration `014_attach_sales_to_customers.sql` ajoute un rattachement facultatif entre une vente et un client. Le backend n’accepte qu’un client `ACTIVE` de la même librairie et SQLite protège également cette isolation par des déclencheurs. `customerId` conserve le lien vers le référentiel tandis que `customerName` reste figé dans la vente afin que les reçus historiques ne changent pas après une modification du client.
+
+Le formulaire de vente de `/admin` propose les clients actifs de la librairie sélectionnée. Choisir un client renseigne automatiquement le nom figé du reçu. L’option « Aucun · vente comptoir » conserve la saisie d’un nom libre et le changement de librairie réinitialise le client ainsi que les articles proposés.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :

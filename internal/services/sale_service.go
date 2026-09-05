@@ -74,6 +74,10 @@ func (s *SaleService) Create(ctx context.Context, claims *auth.Claims, input mod
 	if err = validateSaleInput(input, false); err != nil {
 		return models.Sale{}, err
 	}
+	customerName, err := s.resolveCustomer(ctx, libraryID, input.CustomerID, input.CustomerName)
+	if err != nil {
+		return models.Sale{}, err
+	}
 	saleID, lineIDs, auditID, err := saleIDs(len(input.Lines))
 	if err != nil {
 		return models.Sale{}, err
@@ -81,7 +85,7 @@ func (s *SaleService) Create(ctx context.Context, claims *auth.Claims, input mod
 	now := s.now().UTC()
 	reference := fmt.Sprintf("V-%s-%s", now.Format("20060102"), strings.ToUpper(strings.ReplaceAll(saleID, "-", "")[:8]))
 	sale := models.Sale{ID: saleID, LibraryID: libraryID, Reference: reference,
-		CustomerName: strings.TrimSpace(input.CustomerName), CreatedBy: claims.Subject}
+		CustomerID: strings.TrimSpace(input.CustomerID), CustomerName: customerName, CreatedBy: claims.Subject}
 	return s.repository.Create(ctx, sale, input.Lines, lineIDs, auditID, now.Format(time.RFC3339Nano))
 }
 
@@ -96,12 +100,28 @@ func (s *SaleService) Update(ctx context.Context, claims *auth.Claims, id string
 	if err = validateSaleInput(input, true); err != nil {
 		return models.Sale{}, err
 	}
+	existing, err := s.repository.Find(ctx, id, libraryID)
+	if err != nil {
+		return models.Sale{}, err
+	}
+	customerName, err := s.resolveCustomer(ctx, existing.LibraryID, input.CustomerID, input.CustomerName)
+	if err != nil {
+		return models.Sale{}, err
+	}
 	_, lineIDs, auditID, err := saleIDs(len(input.Lines))
 	if err != nil {
 		return models.Sale{}, err
 	}
-	return s.repository.Update(ctx, id, libraryID, strings.TrimSpace(input.CustomerName), input.Lines,
+	return s.repository.Update(ctx, id, libraryID, strings.TrimSpace(input.CustomerID), customerName, input.Lines,
 		lineIDs, input.Version, claims.Subject, auditID, s.now().UTC().Format(time.RFC3339Nano))
+}
+
+func (s *SaleService) resolveCustomer(ctx context.Context, libraryID, customerID, fallbackName string) (string, error) {
+	customerID = strings.TrimSpace(customerID)
+	if customerID == "" {
+		return strings.TrimSpace(fallbackName), nil
+	}
+	return s.repository.CustomerForSale(ctx, customerID, libraryID)
 }
 
 func (s *SaleService) Delete(ctx context.Context, claims *auth.Claims, id string) error {
@@ -160,7 +180,7 @@ func (s *SaleService) transition(ctx context.Context, claims *auth.Claims, id st
 }
 
 func validateSaleInput(input models.SaleInput, update bool) error {
-	if len([]rune(strings.TrimSpace(input.CustomerName))) > 200 || len(input.Lines) < 1 || len(input.Lines) > 100 ||
+	if len([]rune(strings.TrimSpace(input.CustomerID))) > 100 || len([]rune(strings.TrimSpace(input.CustomerName))) > 200 || len(input.Lines) < 1 || len(input.Lines) > 100 ||
 		(update && input.Version < 1) {
 		return ErrInvalidSale
 	}
