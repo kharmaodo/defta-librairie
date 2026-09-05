@@ -15,7 +15,9 @@ import (
 
 func TestPurchaseDraftLifecycleIsolationAndAudit(t *testing.T) {
 	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "purchases.db")+"?_foreign_keys=on")
-	if err != nil { t.Fatalf("open database: %v", err) }
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
 	t.Cleanup(func() { _ = db.Close() })
 	_, err = db.Exec(`
 		CREATE TABLE users(id TEXT PRIMARY KEY);
@@ -40,16 +42,22 @@ func TestPurchaseDraftLifecycleIsolationAndAudit(t *testing.T) {
 		INSERT INTO suppliers VALUES ('supplier-1','library-1','Fournisseur','ACTIVE'),
 			('supplier-2','library-2','Autre','ACTIVE'),('supplier-off','library-1','Inactif','DISABLED');
 	`)
-	if err != nil { t.Fatalf("create schema: %v", err) }
+	if err != nil {
+		t.Fatalf("create schema: %v", err)
+	}
 
 	service := NewPurchaseService(repositories.NewPurchaseRepository(db))
-	ownerOne := &auth.Claims{Role:models.RoleOwnerLibrary, LibraryID:"library-1"}; ownerOne.Subject = "owner-1"
-	ownerTwo := &auth.Claims{Role:models.RoleOwnerLibrary, LibraryID:"library-2"}; ownerTwo.Subject = "owner-2"
+	ownerOne := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-1"}
+	ownerOne.Subject = "owner-1"
+	ownerTwo := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-2"}
+	ownerTwo.Subject = "owner-2"
 
 	purchase, err := service.Create(context.Background(), ownerOne, models.PurchaseInput{
-		SupplierID:"supplier-1", Lines:[]models.PurchaseLineInput{{BookID:1,Quantity:2,UnitCost:1500},{BookID:2,Quantity:1,UnitCost:750}},
+		SupplierID: "supplier-1", Lines: []models.PurchaseLineInput{{BookID: 1, Quantity: 2, UnitCost: 1500}, {BookID: 2, Quantity: 1, UnitCost: 750}},
 	})
-	if err != nil { t.Fatalf("create purchase: %v", err) }
+	if err != nil {
+		t.Fatalf("create purchase: %v", err)
+	}
 	if purchase.Status != models.PurchaseStatusDraft || purchase.TotalAmount != 3750 || purchase.Version != 1 || len(purchase.Lines) != 2 {
 		t.Fatalf("unexpected purchase: %+v", purchase)
 	}
@@ -57,34 +65,46 @@ func TestPurchaseDraftLifecycleIsolationAndAudit(t *testing.T) {
 		t.Fatalf("cross-library purchase must be hidden: %v", err)
 	}
 	if _, err = service.Create(context.Background(), ownerOne, models.PurchaseInput{
-		SupplierID:"supplier-2", Lines:[]models.PurchaseLineInput{{BookID:1,Quantity:1,UnitCost:1}},
-	}); !errors.Is(err, repositories.ErrPurchaseSupplier) { t.Fatalf("cross-library supplier: %v", err) }
+		SupplierID: "supplier-2", Lines: []models.PurchaseLineInput{{BookID: 1, Quantity: 1, UnitCost: 1}},
+	}); !errors.Is(err, repositories.ErrPurchaseSupplier) {
+		t.Fatalf("cross-library supplier: %v", err)
+	}
 	if _, err = service.Create(context.Background(), ownerOne, models.PurchaseInput{
-		SupplierID:"supplier-off", Lines:[]models.PurchaseLineInput{{BookID:1,Quantity:1,UnitCost:1}},
-	}); !errors.Is(err, repositories.ErrPurchaseSupplier) { t.Fatalf("disabled supplier: %v", err) }
+		SupplierID: "supplier-off", Lines: []models.PurchaseLineInput{{BookID: 1, Quantity: 1, UnitCost: 1}},
+	}); !errors.Is(err, repositories.ErrPurchaseSupplier) {
+		t.Fatalf("disabled supplier: %v", err)
+	}
 
 	purchase, err = service.Update(context.Background(), ownerOne, purchase.ID, models.PurchaseInput{
-		SupplierID:"supplier-1", Version:1, Lines:[]models.PurchaseLineInput{{BookID:2,Quantity:4,UnitCost:500}},
+		SupplierID: "supplier-1", Version: 1, Lines: []models.PurchaseLineInput{{BookID: 2, Quantity: 4, UnitCost: 500}},
 	})
 	if err != nil || purchase.TotalAmount != 2000 || purchase.Version != 2 || len(purchase.Lines) != 1 {
 		t.Fatalf("update purchase=%+v err=%v", purchase, err)
 	}
 	if _, err = service.Update(context.Background(), ownerOne, purchase.ID, models.PurchaseInput{
-		SupplierID:"supplier-1", Version:1, Lines:[]models.PurchaseLineInput{{BookID:1,Quantity:1,UnitCost:1}},
-	}); !errors.Is(err, repositories.ErrPurchaseConflict) { t.Fatalf("stale update: %v", err) }
+		SupplierID: "supplier-1", Version: 1, Lines: []models.PurchaseLineInput{{BookID: 1, Quantity: 1, UnitCost: 1}},
+	}); !errors.Is(err, repositories.ErrPurchaseConflict) {
+		t.Fatalf("stale update: %v", err)
+	}
 	if err = service.Delete(context.Background(), ownerOne, purchase.ID, 1); !errors.Is(err, repositories.ErrPurchaseConflict) {
 		t.Fatalf("stale delete: %v", err)
 	}
-	if err = service.Delete(context.Background(), ownerOne, purchase.ID, 2); err != nil { t.Fatalf("delete purchase: %v", err) }
+	if err = service.Delete(context.Background(), ownerOne, purchase.ID, 2); err != nil {
+		t.Fatalf("delete purchase: %v", err)
+	}
 	var lines, audits int
 	_ = db.QueryRow(`SELECT COUNT(*) FROM purchase_lines WHERE purchase_id=?`, purchase.ID).Scan(&lines)
 	_ = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE resource_type='PURCHASE'`).Scan(&audits)
-	if lines != 0 || audits != 3 { t.Fatalf("purchase lines=%d audits=%d", lines, audits) }
+	if lines != 0 || audits != 3 {
+		t.Fatalf("purchase lines=%d audits=%d", lines, audits)
+	}
 
 	receipt, err := service.Create(context.Background(), ownerOne, models.PurchaseInput{
-		SupplierID:"supplier-1", Lines:[]models.PurchaseLineInput{{BookID:1,Quantity:5,UnitCost:1000}},
+		SupplierID: "supplier-1", Lines: []models.PurchaseLineInput{{BookID: 1, Quantity: 5, UnitCost: 1000}},
 	})
-	if err != nil { t.Fatalf("create receipt purchase: %v", err) }
+	if err != nil {
+		t.Fatalf("create receipt purchase: %v", err)
+	}
 	receipt, err = service.Receive(context.Background(), ownerOne, receipt.ID, receipt.Version)
 	if err != nil || receipt.Status != models.PurchaseStatusReceived || receipt.Version != 2 {
 		t.Fatalf("receive purchase=%+v err=%v", receipt, err)
@@ -101,23 +121,27 @@ func TestPurchaseDraftLifecycleIsolationAndAudit(t *testing.T) {
 	}
 
 	cancelled, err := service.Create(context.Background(), ownerOne, models.PurchaseInput{
-		SupplierID:"supplier-1", Lines:[]models.PurchaseLineInput{{BookID:1,Quantity:2,UnitCost:900}},
+		SupplierID: "supplier-1", Lines: []models.PurchaseLineInput{{BookID: 1, Quantity: 2, UnitCost: 900}},
 	})
-	if err != nil { t.Fatalf("create cancelled purchase: %v", err) }
+	if err != nil {
+		t.Fatalf("create cancelled purchase: %v", err)
+	}
 	cancelled, err = service.Cancel(context.Background(), ownerOne, cancelled.ID, cancelled.Version)
 	if err != nil || cancelled.Status != models.PurchaseStatusCancelled || cancelled.Version != 2 {
 		t.Fatalf("cancel purchase=%+v err=%v", cancelled, err)
 	}
 	_ = db.QueryRow(`SELECT quantity FROM book_inventory WHERE book_id=1`).Scan(&quantity)
-	if quantity != 12 { t.Fatalf("cancellation changed stock: %d", quantity) }
+	if quantity != 12 {
+		t.Fatalf("cancellation changed stock: %d", quantity)
+	}
 }
 
 func TestPurchaseValidation(t *testing.T) {
 	cases := []models.PurchaseInput{
-		{SupplierID:"",Lines:[]models.PurchaseLineInput{{BookID:1,Quantity:1,UnitCost:1}}},
-		{SupplierID:"supplier",Lines:[]models.PurchaseLineInput{{BookID:1,Quantity:0,UnitCost:1}}},
-		{SupplierID:"supplier",Lines:[]models.PurchaseLineInput{{BookID:1,Quantity:1,UnitCost:-1}}},
-		{SupplierID:"supplier",Lines:[]models.PurchaseLineInput{{BookID:1,Quantity:1},{BookID:1,Quantity:2}}},
+		{SupplierID: "", Lines: []models.PurchaseLineInput{{BookID: 1, Quantity: 1, UnitCost: 1}}},
+		{SupplierID: "supplier", Lines: []models.PurchaseLineInput{{BookID: 1, Quantity: 0, UnitCost: 1}}},
+		{SupplierID: "supplier", Lines: []models.PurchaseLineInput{{BookID: 1, Quantity: 1, UnitCost: -1}}},
+		{SupplierID: "supplier", Lines: []models.PurchaseLineInput{{BookID: 1, Quantity: 1}, {BookID: 1, Quantity: 2}}},
 	}
 	for index, input := range cases {
 		if err := validatePurchaseInput(input, false); !errors.Is(err, ErrInvalidPurchase) {

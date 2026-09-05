@@ -78,6 +78,43 @@
     </section>
 
     <section class="panel">
+      <div class="panel-heading payment-heading">
+        <div><p class="eyebrow">Trésorerie</p><h2>Caisses</h2></div>
+        <div class="heading-actions"><form id="cash-register-filters" class="filters">
+          <label>Recherche<input name="q" maxlength="80" placeholder="Nom de caisse"></label>
+          <label>État<select name="status"><option value="">Tous</option><option value="ACTIVE">Active</option><option value="DISABLED">Désactivée</option></select></label>
+          <label class="payment-root" hidden>Librairie<select name="libraryId"><option value="">Toutes</option></select></label>
+          <button class="button ghost" type="submit">Filtrer</button>
+        </form><button id="add-cash-register-button" class="button primary" type="button">Nouvelle caisse</button></div>
+      </div>
+      <p class="scope-note">Une caisse désactivée conserve son historique, mais ne peut plus recevoir de règlement.</p>
+      <div class="table-wrap"><table><thead><tr><th>Caisse</th><th>Librairie</th><th>État</th><th>Version</th><th>Actions</th></tr></thead>
+        <tbody id="cash-registers-body"><tr><td colspan="5" class="empty">Chargement…</td></tr></tbody></table></div>
+      <div class="pagination"><button id="cash-registers-previous" class="button ghost" type="button">Précédent</button><span id="cash-registers-page-label" class="hint">Page 1</span><button id="cash-registers-next" class="button ghost" type="button">Suivant</button></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading payment-heading">
+        <div><p class="eyebrow">Trésorerie</p><h2>Encaissement des ventes</h2></div>
+        <form id="payment-sale-filter" class="filters">
+          <label class="payment-root" hidden>Librairie<select name="libraryId"></select></label>
+          <label>Vente confirmée<select name="saleId" required><option value="">Choisir une vente</option></select></label>
+          <button class="button ghost" type="submit">Afficher</button>
+        </form>
+      </div>
+      <div id="payment-balance" class="payment-balance" hidden>
+        <div><span>Total</span><strong data-payment-total>—</strong></div>
+        <div><span>Payé</span><strong data-payment-paid>—</strong></div>
+        <div><span>Reste à payer</span><strong data-payment-remaining>—</strong></div>
+        <div><span>État</span><strong data-payment-status>—</strong></div>
+        <button id="add-payment-button" class="button primary" type="button">Enregistrer un règlement</button>
+      </div>
+      <p id="payment-error" class="alert" role="alert" hidden></p>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Méthode</th><th>Montant</th><th>Référence externe</th><th>État</th><th>Actions</th></tr></thead>
+        <tbody id="payments-body"><tr><td colspan="6" class="empty">Sélectionnez une vente confirmée.</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel">
       <div class="panel-heading sales-heading">
         <div><p class="eyebrow">Activité commerciale</p><h2>Ventes</h2></div>
         <div class="heading-actions"><form id="sale-filters" class="filters">
@@ -383,9 +420,38 @@
     </div><p id="purchase-detail-error" class="alert" hidden></p><div class="modal-actions no-print"><button class="button ghost" type="button" data-procurement-close="purchase-detail-dialog">Fermer</button><button id="print-purchase-button" class="button primary" type="button">Imprimer</button></div></div>
   </dialog>
 
+  <dialog id="cash-register-dialog" class="modal narrow">
+    <form id="cash-register-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Trésorerie</p><h2 id="cash-register-form-title">Nouvelle caisse</h2></div><button class="icon-button" type="button" data-payment-close="cash-register-dialog">×</button></div>
+      <input name="id" type="hidden"><input name="version" type="hidden">
+      <div class="form-grid single">
+        <label class="payment-root" hidden>Librairie<select name="libraryId"></select></label>
+        <label>Nom de la caisse<input name="name" minlength="2" maxlength="80" required></label>
+      </div>
+      <p id="cash-register-error" class="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-payment-close="cash-register-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="payment-dialog" class="modal narrow">
+    <form id="payment-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Encaissement</p><h2>Nouveau règlement</h2></div><button class="icon-button" type="button" data-payment-close="payment-dialog">×</button></div>
+      <div class="form-grid">
+        <label class="full">Caisse<select name="cashRegisterId" required></select></label>
+        <label>Méthode<select name="method" required><option value="CASH">Espèces</option><option value="MOBILE_MONEY">Mobile money</option><option value="CARD">Carte</option></select></label>
+        <label>Montant<input name="amount" type="number" min="0.01" step="0.01" required></label>
+        <label class="full">Référence externe<input name="externalReference" maxlength="160" placeholder="Transaction mobile money ou carte"></label>
+        <label class="full">Notes<textarea name="notes" maxlength="1000" rows="3"></textarea></label>
+      </div>
+      <p id="payment-form-error" class="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-payment-close="payment-dialog">Annuler</button><button class="button primary" type="submit">Encaisser</button></div>
+    </form>
+  </dialog>
+
   <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
   <script src="/static/js/admin-auth.js" defer></script>
   <script src="/static/js/admin-procurement.js" defer></script>
   <script src="/static/js/admin-customers.js" defer></script>
+  <script src="/static/js/admin-payments.js" defer></script>
 </body>
 </html>

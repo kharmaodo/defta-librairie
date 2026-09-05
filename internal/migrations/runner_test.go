@@ -54,8 +54,8 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	if err = db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&migrationsCount); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if migrationsCount != 15 {
-		t.Fatalf("expected 15 migrations, got %d", migrationsCount)
+	if migrationsCount != 16 {
+		t.Fatalf("expected 16 migrations, got %d", migrationsCount)
 	}
 
 	var assignedBooks int
@@ -117,6 +117,17 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	}
 	if customerIDColumns != 1 {
 		t.Fatalf("expected customer_id on sales, got %d", customerIDColumns)
+	}
+	var paymentObjects int
+	if err = db.QueryRow(`
+		SELECT COUNT(*) FROM sqlite_master
+		WHERE name IN ('cash_registers','payments','sale_payment_balances')
+		  AND type IN ('table','view')
+	`).Scan(&paymentObjects); err != nil {
+		t.Fatalf("inspect payment objects: %v", err)
+	}
+	if paymentObjects != 3 {
+		t.Fatalf("expected cash register, payments and balance view, got %d", paymentObjects)
 	}
 
 	if _, err = db.Exec("UPDATE defta SET library_id = 'missing-library' WHERE id = 1"); err == nil {

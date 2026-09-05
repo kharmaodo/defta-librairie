@@ -684,6 +684,36 @@ La migration `014_attach_sales_to_customers.sql` ajoute un rattachement facultat
 
 Le formulaire de vente de `/admin` propose les clients actifs de la librairie sélectionnée. Choisir un client renseigne automatiquement le nom figé du reçu. L’option « Aucun · vente comptoir » conserve la saisie d’un nom libre et le changement de librairie réinitialise le client ainsi que les articles proposés.
 
+### Paiements et caisse
+
+La migration `015_create_payments_cash_registers.sql` pose la fondation des règlements. Les caisses sont isolées par librairie et peuvent être désactivées sans perdre leur historique. Une vente confirmée peut recevoir plusieurs paiements par espèces (`CASH`), mobile money (`MOBILE_MONEY`) ou carte (`CARD`).
+
+Le CRUD des caisses est exposé aux deux profils de gestion. Un `OWNER_LIBRARY` agit uniquement sur les caisses de la librairie portée par son JWT ; le `SUPER_ADMIN_ROOT` peut utiliser `libraryId` pour cibler une librairie. Les modifications et changements d'état sont versionnés et audités.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/cash-registers?q=...&status=ACTIVE&offset=0&limit=30&libraryId=...` | Lister les caisses autorisées |
+| `POST` | `/api/manage/cash-registers` | Créer une caisse active |
+| `GET` | `/api/manage/cash-registers/{id}` | Consulter une caisse autorisée |
+| `PUT` | `/api/manage/cash-registers/{id}` | Renommer une caisse avec sa `version` |
+| `DELETE` | `/api/manage/cash-registers/{id}?version=...` | Désactiver une caisse |
+| `POST` | `/api/manage/cash-registers/{id}/reactivate?version=...` | Réactiver une caisse |
+
+Les règlements sont ensuite manipulés depuis une vente confirmée :
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/sales/{id}/payments?method=CASH&status=RECORDED&offset=0&limit=30` | Consulter les règlements d'une vente |
+| `POST` | `/api/manage/sales/{id}/payments` | Enregistrer un règlement partiel ou total |
+| `GET` | `/api/manage/sales/{id}/payment-balance` | Calculer le payé et le reste à payer |
+| `POST` | `/api/manage/payments/{id}/void` | Annuler un règlement avec sa `version` et un motif |
+
+L'annulation ne supprime aucune ligne : le statut devient `VOIDED`, le solde de la vente est recalculé et l'opération est inscrite dans l'audit. Les références externes permettent d'identifier les transactions mobile money ou carte et sont uniques par librairie et méthode tant que le règlement reste actif.
+
+Le tableau de bord `/admin` contient désormais deux espaces de trésorerie. Le premier gère les caisses actives ou désactivées. Le second sélectionne une vente confirmée, affiche son total, le montant encaissé et le reste à payer, puis permet d'ajouter ou d'annuler un règlement. Pour le root, le choix de la librairie limite automatiquement les ventes et les caisses proposées.
+
+SQLite contrôle que la vente et la caisse appartiennent à la même librairie, que la caisse est active, que la vente est confirmée et que le cumul des règlements ne dépasse jamais son total. La vue `sale_payment_balances` calcule le montant payé, le reste à payer et l’état financier `UNPAID`, `PARTIALLY_PAID` ou `PAID`. Un règlement annulé conservera sa ligne avec le statut `VOIDED` pour assurer la traçabilité.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
