@@ -137,13 +137,13 @@
     <section class="panel">
       <div class="panel-heading return-heading">
         <div><p class="eyebrow">Service après-vente</p><h2>Retours clients</h2></div>
-        <form id="return-filters" class="filters">
+        <div class="heading-actions"><form id="return-filters" class="filters">
           <label>État<select name="status"><option value="">Tous</option><option value="DRAFT">Brouillon</option><option value="COMPLETED">Finalisé</option><option value="CANCELLED">Annulé</option></select></label>
           <label class="return-root" hidden>Librairie<select name="libraryId"><option value="">Toutes</option></select></label>
           <label>Du<input name="from" type="datetime-local"></label>
           <label>Au<input name="to" type="datetime-local"></label>
           <button class="button ghost" type="submit">Filtrer</button>
-        </form>
+        </form><button id="add-return-button" class="button primary" type="button">Nouveau retour</button></div>
       </div>
       <p class="scope-note">Un retour finalisé restitue le stock ; son remboursement ou son avoir reste intégralement traçable.</p>
       <p id="return-error" class="alert" role="alert" hidden></p>
@@ -476,6 +476,21 @@
       <div class="table-wrap"><table><thead><tr><th>Date</th><th>Méthode</th><th>Montant</th><th>Référence</th><th>État</th><th>Actions</th></tr></thead><tbody id="return-settlements-body"></tbody></table></div>
       <div class="modal-actions"><button class="button ghost" type="button" data-return-close="return-detail-dialog">Fermer</button></div>
     </div>
+  </dialog>
+
+  <dialog id="return-dialog" class="modal sale-modal">
+    <form id="return-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Service après-vente</p><h2>Nouveau retour client</h2></div><button class="icon-button" type="button" data-return-close="return-dialog" aria-label="Fermer">×</button></div>
+      <div class="form-grid">
+        <label class="return-root" hidden>Librairie<select name="libraryId"></select></label>
+        <label class="full">Vente confirmée<select name="saleId" required><option value="">Choisir une vente</option></select></label>
+        <label>Résolution<select name="resolution" required><option value="REFUND">Remboursement</option><option value="CREDIT_NOTE">Avoir</option></select></label>
+        <label class="full">Motif<textarea name="reason" minlength="3" maxlength="1000" rows="3" required></textarea></label>
+      </div>
+      <div><div class="sale-lines-heading"><div><strong>Articles retournés</strong><p class="hint">Indiquez uniquement les quantités réellement reçues.</p></div></div><div id="return-lines" class="sale-lines"><p class="empty">Sélectionnez une vente.</p></div></div>
+      <p id="return-form-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-return-close="return-dialog">Annuler</button><button class="button primary" type="submit">Créer le brouillon</button></div>
+    </form>
   </dialog>
 
   <dialog id="return-settlement-dialog" class="modal narrow">
