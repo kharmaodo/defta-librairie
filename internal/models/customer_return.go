@@ -103,6 +103,23 @@ type ReturnSettlement struct {
 	VoidedAt          string                 `json:"voidedAt,omitempty"`
 }
 
+type ReturnSettlementInput struct {
+	Method            ReturnSettlementMethod `json:"method"`
+	Amount            float64                `json:"amount"`
+	ExternalReference string                 `json:"externalReference,omitempty"`
+	Notes             string                 `json:"notes,omitempty"`
+}
+
+type ReturnSettlementVoidInput struct {
+	Version int    `json:"version"`
+	Reason  string `json:"reason"`
+}
+
+type ReturnSettlementFilter struct {
+	Method ReturnSettlementMethod
+	Status ReturnSettlementStatus
+}
+
 type CustomerReturnBalance struct {
 	ReturnID        string  `json:"returnId"`
 	LibraryID       string  `json:"libraryId"`

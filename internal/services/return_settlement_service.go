@@ -1,0 +1,25 @@
+package services
+
+import (
+	"context"
+	"defta-librairie/internal/auth"
+	"defta-librairie/internal/identity"
+	"defta-librairie/internal/models"
+	"defta-librairie/internal/repositories"
+	"encoding/json"
+	"errors"
+	"math"
+	"strings"
+	"time"
+)
+
+var ErrInvalidReturnSettlement=errors.New("invalid return settlement data")
+type ReturnSettlementService struct{repository *repositories.ReturnSettlementRepository;now func()time.Time}
+func NewReturnSettlementService(repository *repositories.ReturnSettlementRepository)*ReturnSettlementService{return &ReturnSettlementService{repository:repository,now:time.Now}}
+func(s *ReturnSettlementService)List(ctx context.Context,claims *auth.Claims,returnID string,filter models.ReturnSettlementFilter,offset,limit int)([]models.ReturnSettlement,int,error){libraryID,err:=resolveBookScope(claims,"",false);if err!=nil{return nil,0,err};returnID=strings.TrimSpace(returnID);filter.Method=models.ReturnSettlementMethod(strings.ToUpper(strings.TrimSpace(string(filter.Method))));filter.Status=models.ReturnSettlementStatus(strings.ToUpper(strings.TrimSpace(string(filter.Status))));if returnID==""||!validReturnSettlementMethod(filter.Method,true)||!validReturnSettlementStatus(filter.Status,true){return nil,0,ErrInvalidReturnSettlement};if _,err=s.repository.ReturnLibrary(ctx,returnID,libraryID);err!=nil{return nil,0,err};if offset<0{offset=0};if limit<1||limit>100{limit=30};return s.repository.List(ctx,returnID,libraryID,filter,offset,limit)}
+func(s *ReturnSettlementService)Balance(ctx context.Context,claims *auth.Claims,returnID string)(models.CustomerReturnBalance,error){libraryID,err:=resolveBookScope(claims,"",false);if err!=nil{return models.CustomerReturnBalance{},err};if strings.TrimSpace(returnID)==""{return models.CustomerReturnBalance{},ErrInvalidReturnSettlement};return s.repository.Balance(ctx,returnID,libraryID)}
+func(s *ReturnSettlementService)Create(ctx context.Context,claims *auth.Claims,returnID string,input models.ReturnSettlementInput)(models.ReturnSettlement,error){libraryScope,err:=resolveBookScope(claims,"",false);if err!=nil{return models.ReturnSettlement{},err};returnID=strings.TrimSpace(returnID);input.ExternalReference=strings.TrimSpace(input.ExternalReference);input.Notes=strings.TrimSpace(input.Notes);if returnID==""||!validReturnSettlementMethod(input.Method,false)||input.Amount<=0||math.IsNaN(input.Amount)||math.IsInf(input.Amount,0)||len([]rune(input.ExternalReference))>160||len([]rune(input.Notes))>1000{return models.ReturnSettlement{},ErrInvalidReturnSettlement};libraryID,err:=s.repository.ReturnLibrary(ctx,returnID,libraryScope);if err!=nil{return models.ReturnSettlement{},err};id,err:=identity.NewID();if err!=nil{return models.ReturnSettlement{},err};auditID,err:=identity.NewID();if err!=nil{return models.ReturnSettlement{},err};now:=s.now().UTC().Format(time.RFC3339Nano);v:=models.ReturnSettlement{ID:id,LibraryID:libraryID,ReturnID:returnID,Method:input.Method,Amount:input.Amount,ExternalReference:input.ExternalReference,Notes:input.Notes,Status:models.ReturnSettlementStatusIssued,Version:1,IssuedBy:claims.Subject,CreatedAt:now,UpdatedAt:now};snapshot,err:=returnSettlementSnapshot(v);if err!=nil{return v,err};if err=s.repository.Create(ctx,v,auditID,snapshot);err!=nil{return models.ReturnSettlement{},err};return v,nil}
+func(s *ReturnSettlementService)Void(ctx context.Context,claims *auth.Claims,id string,input models.ReturnSettlementVoidInput)(models.ReturnSettlement,error){libraryID,err:=resolveBookScope(claims,"",false);if err!=nil{return models.ReturnSettlement{},err};input.Reason=strings.Join(strings.Fields(input.Reason)," ");if strings.TrimSpace(id)==""||input.Version<1||len([]rune(input.Reason))<3||len([]rune(input.Reason))>500{return models.ReturnSettlement{},ErrInvalidReturnSettlement};v,err:=s.repository.Find(ctx,id,libraryID);if err!=nil{return v,err};if v.Status!=models.ReturnSettlementStatusIssued{return v,repositories.ErrReturnSettlementState};updated:=v;updated.Status=models.ReturnSettlementStatusVoided;updated.Version++;updated.VoidedBy=claims.Subject;updated.VoidedAt=s.now().UTC().Format(time.RFC3339Nano);updated.UpdatedAt=updated.VoidedAt;if updated.Notes==""{updated.Notes=input.Reason}else{updated.Notes+=" | "+input.Reason};oldValues,_:=returnSettlementSnapshot(v);newValues,_:=returnSettlementSnapshot(updated);auditID,err:=identity.NewID();if err!=nil{return v,err};if err=s.repository.Void(ctx,v,input.Version,input.Reason,claims.Subject,auditID,oldValues,newValues,updated.UpdatedAt);err!=nil{return v,err};return updated,nil}
+func validReturnSettlementMethod(v models.ReturnSettlementMethod,empty bool)bool{return empty&&v==""||v==models.ReturnSettlementMethodCash||v==models.ReturnSettlementMethodMobileMoney||v==models.ReturnSettlementMethodCard||v==models.ReturnSettlementMethodCreditNote}
+func validReturnSettlementStatus(v models.ReturnSettlementStatus,empty bool)bool{return empty&&v==""||v==models.ReturnSettlementStatusIssued||v==models.ReturnSettlementStatusVoided}
+func returnSettlementSnapshot(v models.ReturnSettlement)(string,error){payload,err:=json.Marshal(v);return string(payload),err}

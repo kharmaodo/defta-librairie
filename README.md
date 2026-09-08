@@ -727,7 +727,16 @@ Le second incrément expose la gestion métier des retours :
 - `POST /api/manage/customer-returns/{id}/complete` finalise le retour et restitue atomiquement les quantités au stock ;
 - `POST /api/manage/customer-returns/{id}/cancel` annule un brouillon sans modifier le stock.
 
-La finalisation produit un mouvement `ENTRY` par livre, des audits `UPDATE_INVENTORY` et un audit `COMPLETE_CUSTOMER_RETURN`. Les transitions répétées, versions obsolètes et dépassements des quantités vendues retournent `409 Conflict`. Les retours d'une autre librairie restent invisibles (`404 Not Found`). Le règlement financier du remboursement ou de l'avoir sera ajouté dans l'incrément suivant.
+La finalisation produit un mouvement `ENTRY` par livre, des audits `UPDATE_INVENTORY` et un audit `COMPLETE_CUSTOMER_RETURN`. Les transitions répétées, versions obsolètes et dépassements des quantités vendues retournent `409 Conflict`. Les retours d'une autre librairie restent invisibles (`404 Not Found`).
+
+Les retours finalisés peuvent ensuite être réglés, en une ou plusieurs fois, avec les routes suivantes :
+
+- `GET /api/manage/customer-returns/{id}/settlements` liste les règlements du retour avec les filtres `method` et `status` ;
+- `POST /api/manage/customer-returns/{id}/settlements` émet un remboursement `CASH`, `MOBILE_MONEY`, `CARD` ou un avoir `CREDIT_NOTE` ;
+- `GET /api/manage/customer-returns/{id}/settlement-balance` expose le total, le montant réglé, le reste et l'état financier ;
+- `POST /api/manage/return-settlements/{id}/void` annule un règlement avec son numéro de version et un motif obligatoire.
+
+La méthode doit correspondre à la résolution du retour : `CREDIT_NOTE` pour un avoir, et une méthode monétaire pour `REFUND`. Le cumul des règlements actifs ne peut jamais dépasser le total du retour. L'annulation conserve la ligne avec le statut `VOIDED`, rétablit le solde disponible et produit les audits `ISSUE_RETURN_SETTLEMENT` et `VOID_RETURN_SETTLEMENT`.
 
 SQLite contrôle que la vente et la caisse appartiennent à la même librairie, que la caisse est active, que la vente est confirmée et que le cumul des règlements ne dépasse jamais son total. La vue `sale_payment_balances` calcule le montant payé, le reste à payer et l’état financier `UNPAID`, `PARTIALLY_PAID` ou `PAID`. Un règlement annulé conservera sa ligne avec le statut `VOIDED` pour assurer la traçabilité.
 
