@@ -54,11 +54,20 @@ type CustomerReturnLineInput struct {
 }
 
 type CustomerReturnInput struct {
+	LibraryID  string                   `json:"libraryId,omitempty"`
 	SaleID     string                   `json:"saleId"`
 	Reason     string                   `json:"reason"`
 	Resolution CustomerReturnResolution `json:"resolution"`
 	Version    int                      `json:"version,omitempty"`
 	Lines      []CustomerReturnLineInput `json:"lines"`
+}
+
+type CustomerReturnFilter struct {
+	Status     CustomerReturnStatus
+	SaleID     string
+	CustomerID string
+	From       string
+	To         string
 }
 
 type ReturnSettlementMethod string

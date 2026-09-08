@@ -718,6 +718,17 @@ La migration `016_create_customer_returns.sql` pose la fondation des retours cli
 
 SQLite interdit de retourner davantage d'exemplaires qu'il n'en a été vendu, en tenant compte des retours antérieurs déjà finalisés. Une finalisation vide est refusée. Les futurs règlements de retour acceptent espèces, mobile money, carte ou avoir selon la résolution choisie, sans pouvoir dépasser le montant total du retour. La vue `customer_return_balances` expose le montant traité, le reste et l'état `PENDING`, `PARTIALLY_SETTLED` ou `SETTLED`.
 
+Le second incrément expose la gestion métier des retours :
+
+- `GET /api/manage/customer-returns` liste les retours avec pagination et filtres `status`, `saleId`, `customerId`, `from`, `to` et, pour le root seulement, `libraryId` ;
+- `POST /api/manage/customer-returns` crée un brouillon à partir des identifiants de lignes d'une vente confirmée ; les titres et prix sont toujours relus côté serveur ;
+- `GET /api/manage/customer-returns/{id}` consulte un retour dans le périmètre de la librairie connectée ;
+- `PUT /api/manage/customer-returns/{id}` remplace les lignes d'un brouillon avec contrôle optimiste par `version` ;
+- `POST /api/manage/customer-returns/{id}/complete` finalise le retour et restitue atomiquement les quantités au stock ;
+- `POST /api/manage/customer-returns/{id}/cancel` annule un brouillon sans modifier le stock.
+
+La finalisation produit un mouvement `ENTRY` par livre, des audits `UPDATE_INVENTORY` et un audit `COMPLETE_CUSTOMER_RETURN`. Les transitions répétées, versions obsolètes et dépassements des quantités vendues retournent `409 Conflict`. Les retours d'une autre librairie restent invisibles (`404 Not Found`). Le règlement financier du remboursement ou de l'avoir sera ajouté dans l'incrément suivant.
+
 SQLite contrôle que la vente et la caisse appartiennent à la même librairie, que la caisse est active, que la vente est confirmée et que le cumul des règlements ne dépasse jamais son total. La vue `sale_payment_balances` calcule le montant payé, le reste à payer et l’état financier `UNPAID`, `PARTIALLY_PAID` ou `PAID`. Un règlement annulé conservera sa ligne avec le statut `VOIDED` pour assurer la traçabilité.
 
 ## Tester FTS5 directement
