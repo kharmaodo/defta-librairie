@@ -750,6 +750,8 @@ La migration `017_create_supplier_returns.sql` pose la fondation des retours ver
 
 Le cycle prévu est `DRAFT → SHIPPED` ou `DRAFT → CANCELLED`. SQLite refuse les lignes étrangères à l'achat, les brouillons vides lors de l'expédition et le cumul de quantités supérieur à la quantité reçue. Les brouillons concurrents réservent les quantités disponibles ; leur annulation les libère. L'expédition diminuera atomiquement le stock et produira des mouvements `EXIT` ainsi que les audits associés.
 
+Le CRUD des brouillons est exposé par `GET|POST /api/manage/supplier-returns`, `GET|PUT /api/manage/supplier-returns/{id}` et `POST /api/manage/supplier-returns/{id}/cancel`. La liste accepte `status`, `purchaseId`, `supplierId`, `from`, `to`, `offset`, `limit` et, pour le root, `libraryId`. Chaque création, modification et annulation produit un audit dédié et respecte le contrôle optimiste par `version`.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :

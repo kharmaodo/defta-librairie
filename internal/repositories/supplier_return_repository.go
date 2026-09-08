@@ -103,3 +103,36 @@ func writeSupplierReturnLines(ctx context.Context, tx *sql.Tx, returnID,purchase
 }
 
 func mapSupplierReturnError(err error)error{message:=strings.ToLower(err.Error());switch{case strings.Contains(message,"quantity exceeds"):return ErrSupplierReturnQuantity;case strings.Contains(message,"purchase unavailable"):return ErrSupplierReturnPurchase;case strings.Contains(message,"line unavailable"):return ErrSupplierReturnLine;case strings.Contains(message,"unique"):return ErrSupplierReturnConflict;default:return fmt.Errorf("supplier return: %w",err)}}
+
+func (r *SupplierReturnRepository) Update(ctx context.Context, id, libraryID, supplierReference, reason string,
+	inputs []models.SupplierReturnLineInput, lineIDs []string, expectedVersion int,
+	actorID, auditID, now string) (models.SupplierReturn, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil { return models.SupplierReturn{}, err }
+	defer tx.Rollback()
+	query, args := `SELECT purchase_id,status,version FROM supplier_returns WHERE id=?`, []interface{}{id}
+	if libraryID != "" { query += ` AND library_id=?`; args = append(args, libraryID) }
+	var purchaseID string; var status models.SupplierReturnStatus; var version int
+	if err = tx.QueryRowContext(ctx, query, args...).Scan(&purchaseID,&status,&version); errors.Is(err,sql.ErrNoRows){return models.SupplierReturn{},ErrSupplierReturnNotFound}else if err!=nil{return models.SupplierReturn{},err}
+	if status != models.SupplierReturnStatusDraft { return models.SupplierReturn{}, ErrSupplierReturnState }
+	if version != expectedVersion { return models.SupplierReturn{}, ErrSupplierReturnConflict }
+	if _,err=tx.ExecContext(ctx,`DELETE FROM supplier_return_lines WHERE return_id=?`,id);err!=nil{return models.SupplierReturn{},err}
+	_,total,err:=writeSupplierReturnLines(ctx,tx,id,purchaseID,inputs,lineIDs,now);if err!=nil{return models.SupplierReturn{},err}
+	result,err:=tx.ExecContext(ctx,`UPDATE supplier_returns SET supplier_reference=?,reason=?,total_amount=?,version=version+1,updated_at=? WHERE id=? AND status='DRAFT' AND version=?`,nullable(supplierReference),reason,total,now,id,expectedVersion)
+	if err!=nil{return models.SupplierReturn{},err};if affected,_:=result.RowsAffected();affected!=1{return models.SupplierReturn{},ErrSupplierReturnConflict}
+	payload,_:=json.Marshal(map[string]interface{}{"supplierReference":supplierReference,"reason":reason,"totalAmount":total,"lines":len(inputs),"version":expectedVersion+1})
+	if _,err=tx.ExecContext(ctx,`INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at) VALUES(?,?,'UPDATE_SUPPLIER_RETURN','SUPPLIER_RETURN',?,?,1,?)`,auditID,actorID,id,string(payload),now);err!=nil{return models.SupplierReturn{},err}
+	if err=tx.Commit();err!=nil{return models.SupplierReturn{},err};return r.Find(ctx,id,libraryID)
+}
+
+func (r *SupplierReturnRepository) Cancel(ctx context.Context,id,libraryID string,expectedVersion int,actorID,auditID,now string)(models.SupplierReturn,error){
+	tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return models.SupplierReturn{},err};defer tx.Rollback()
+	query,args:=`SELECT reference,status,version FROM supplier_returns WHERE id=?`,[]interface{}{id};if libraryID!=""{query+=` AND library_id=?`;args=append(args,libraryID)}
+	var reference string;var status models.SupplierReturnStatus;var version int
+	if err=tx.QueryRowContext(ctx,query,args...).Scan(&reference,&status,&version);errors.Is(err,sql.ErrNoRows){return models.SupplierReturn{},ErrSupplierReturnNotFound}else if err!=nil{return models.SupplierReturn{},err}
+	if status!=models.SupplierReturnStatusDraft{return models.SupplierReturn{},ErrSupplierReturnState};if version!=expectedVersion{return models.SupplierReturn{},ErrSupplierReturnConflict}
+	result,err:=tx.ExecContext(ctx,`UPDATE supplier_returns SET status='CANCELLED',cancelled_by=?,cancelled_at=?,version=version+1,updated_at=? WHERE id=? AND status='DRAFT' AND version=?`,actorID,now,now,id,expectedVersion);if err!=nil{return models.SupplierReturn{},err};if affected,_:=result.RowsAffected();affected!=1{return models.SupplierReturn{},ErrSupplierReturnConflict}
+	payload,_:=json.Marshal(map[string]interface{}{"reference":reference,"from":"DRAFT","to":"CANCELLED","version":expectedVersion+1})
+	if _,err=tx.ExecContext(ctx,`INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at) VALUES(?,?,'CANCEL_SUPPLIER_RETURN','SUPPLIER_RETURN',?,?,1,?)`,auditID,actorID,id,string(payload),now);err!=nil{return models.SupplierReturn{},err}
+	if err=tx.Commit();err!=nil{return models.SupplierReturn{},err};return r.Find(ctx,id,libraryID)
+}
