@@ -135,6 +135,24 @@
     </section>
 
     <section class="panel">
+      <div class="panel-heading return-heading">
+        <div><p class="eyebrow">Service après-vente</p><h2>Retours clients</h2></div>
+        <form id="return-filters" class="filters">
+          <label>État<select name="status"><option value="">Tous</option><option value="DRAFT">Brouillon</option><option value="COMPLETED">Finalisé</option><option value="CANCELLED">Annulé</option></select></label>
+          <label class="return-root" hidden>Librairie<select name="libraryId"><option value="">Toutes</option></select></label>
+          <label>Du<input name="from" type="datetime-local"></label>
+          <label>Au<input name="to" type="datetime-local"></label>
+          <button class="button ghost" type="submit">Filtrer</button>
+        </form>
+      </div>
+      <p class="scope-note">Un retour finalisé restitue le stock ; son remboursement ou son avoir reste intégralement traçable.</p>
+      <p id="return-error" class="alert" role="alert" hidden></p>
+      <div class="table-wrap"><table><thead><tr><th>Référence</th><th>Vente</th><th>Résolution</th><th>Total</th><th>Règlement</th><th>État</th><th>Actions</th></tr></thead>
+        <tbody id="returns-body"><tr><td colspan="7" class="empty">Chargement…</td></tr></tbody></table></div>
+      <div class="pagination"><button id="returns-previous" class="button ghost" type="button">Précédent</button><span id="returns-page-label" class="hint">Page 1</span><button id="returns-next" class="button ghost" type="button">Suivant</button></div>
+    </section>
+
+    <section class="panel">
       <div class="panel-heading inventory-heading">
         <div><p class="eyebrow">Gestion opérationnelle</p><h2>Stocks</h2></div>
         <form id="inventory-filters" class="filters">
@@ -448,10 +466,37 @@
     </form>
   </dialog>
 
+  <dialog id="return-detail-dialog" class="modal return-modal">
+    <div class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Retour client</p><h2 id="return-detail-title">Détails du retour</h2></div><button class="icon-button" type="button" data-return-close="return-detail-dialog" aria-label="Fermer">×</button></div>
+      <div id="return-balance" class="payment-balance" hidden>
+        <div><span>Total</span><strong data-return-total>—</strong></div><div><span>Réglé</span><strong data-return-settled>—</strong></div><div><span>Reste</span><strong data-return-remaining>—</strong></div><div><span>État</span><strong data-return-balance-status>—</strong></div>
+        <button id="add-return-settlement-button" class="button primary" type="button">Régler</button>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Méthode</th><th>Montant</th><th>Référence</th><th>État</th><th>Actions</th></tr></thead><tbody id="return-settlements-body"></tbody></table></div>
+      <div class="modal-actions"><button class="button ghost" type="button" data-return-close="return-detail-dialog">Fermer</button></div>
+    </div>
+  </dialog>
+
+  <dialog id="return-settlement-dialog" class="modal narrow">
+    <form id="return-settlement-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Règlement du retour</p><h2>Remboursement ou avoir</h2></div><button class="icon-button" type="button" data-return-close="return-settlement-dialog" aria-label="Fermer">×</button></div>
+      <div class="form-grid">
+        <label>Méthode<select name="method" required><option value="CASH">Espèces</option><option value="MOBILE_MONEY">Mobile money</option><option value="CARD">Carte</option><option value="CREDIT_NOTE">Avoir</option></select></label>
+        <label>Montant<input name="amount" type="number" min="0.01" step="0.01" required></label>
+        <label class="full">Référence externe<input name="externalReference" maxlength="160"></label>
+        <label class="full">Notes<textarea name="notes" maxlength="1000" rows="3"></textarea></label>
+      </div>
+      <p id="return-settlement-error" class="alert" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-return-close="return-settlement-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
+
   <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
   <script src="/static/js/admin-auth.js" defer></script>
   <script src="/static/js/admin-procurement.js" defer></script>
   <script src="/static/js/admin-customers.js" defer></script>
   <script src="/static/js/admin-payments.js" defer></script>
+  <script src="/static/js/admin-returns.js" defer></script>
 </body>
 </html>

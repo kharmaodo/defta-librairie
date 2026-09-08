@@ -738,6 +738,8 @@ Les retours finalisés peuvent ensuite être réglés, en une ou plusieurs fois,
 
 La méthode doit correspondre à la résolution du retour : `CREDIT_NOTE` pour un avoir, et une méthode monétaire pour `REFUND`. Le cumul des règlements actifs ne peut jamais dépasser le total du retour. L'annulation conserve la ligne avec le statut `VOIDED`, rétablit le solde disponible et produit les audits `ISSUE_RETURN_SETTLEMENT` et `VOID_RETURN_SETTLEMENT`.
 
+Le tableau de bord `/admin` liste les retours avec leurs filtres et leur pagination. Pour chaque retour finalisé, l'action **Règlements** affiche le total traité, le reste à rembourser et l'historique conservé. Elle permet d'émettre un remboursement ou un avoir compatible avec la résolution choisie, puis d'annuler un règlement avec un motif obligatoire.
+
 SQLite contrôle que la vente et la caisse appartiennent à la même librairie, que la caisse est active, que la vente est confirmée et que le cumul des règlements ne dépasse jamais son total. La vue `sale_payment_balances` calcule le montant payé, le reste à payer et l’état financier `UNPAID`, `PARTIALLY_PAID` ou `PAID`. Un règlement annulé conservera sa ligne avec le statut `VOIDED` pour assurer la traçabilité.
 
 ## Tester FTS5 directement
