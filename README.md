@@ -718,31 +718,13 @@ La migration `016_create_customer_returns.sql` pose la fondation des retours cli
 
 SQLite interdit de retourner davantage d'exemplaires qu'il n'en a été vendu, en tenant compte des retours antérieurs déjà finalisés. Une finalisation vide est refusée. Les futurs règlements de retour acceptent espèces, mobile money, carte ou avoir selon la résolution choisie, sans pouvoir dépasser le montant total du retour. La vue `customer_return_balances` expose le montant traité, le reste et l'état `PENDING`, `PARTIALLY_SETTLED` ou `SETTLED`.
 
-Le second incrément expose la gestion métier des retours :
-
-- `GET /api/manage/customer-returns` liste les retours avec pagination et filtres `status`, `saleId`, `customerId`, `from`, `to` et, pour le root seulement, `libraryId` ;
-- `POST /api/manage/customer-returns` crée un brouillon à partir des identifiants de lignes d'une vente confirmée ; les titres et prix sont toujours relus côté serveur ;
-- `GET /api/manage/customer-returns/{id}` consulte un retour dans le périmètre de la librairie connectée ;
-- `PUT /api/manage/customer-returns/{id}` remplace les lignes d'un brouillon avec contrôle optimiste par `version` ;
-- `POST /api/manage/customer-returns/{id}/complete` finalise le retour et restitue atomiquement les quantités au stock ;
-- `POST /api/manage/customer-returns/{id}/cancel` annule un brouillon sans modifier le stock.
-
-La finalisation produit un mouvement `ENTRY` par livre, des audits `UPDATE_INVENTORY` et un audit `COMPLETE_CUSTOMER_RETURN`. Les transitions répétées, versions obsolètes et dépassements des quantités vendues retournent `409 Conflict`. Les retours d'une autre librairie restent invisibles (`404 Not Found`).
-
-Les retours finalisés peuvent ensuite être réglés, en une ou plusieurs fois, avec les routes suivantes :
-
-- `GET /api/manage/customer-returns/{id}/settlements` liste les règlements du retour avec les filtres `method` et `status` ;
-- `POST /api/manage/customer-returns/{id}/settlements` émet un remboursement `CASH`, `MOBILE_MONEY`, `CARD` ou un avoir `CREDIT_NOTE` ;
-- `GET /api/manage/customer-returns/{id}/settlement-balance` expose le total, le montant réglé, le reste et l'état financier ;
-- `POST /api/manage/return-settlements/{id}/void` annule un règlement avec son numéro de version et un motif obligatoire.
-
-La méthode doit correspondre à la résolution du retour : `CREDIT_NOTE` pour un avoir, et une méthode monétaire pour `REFUND`. Le cumul des règlements actifs ne peut jamais dépasser le total du retour. L'annulation conserve la ligne avec le statut `VOIDED`, rétablit le solde disponible et produit les audits `ISSUE_RETURN_SETTLEMENT` et `VOID_RETURN_SETTLEMENT`.
-
-Le tableau de bord `/admin` liste les retours avec leurs filtres et leur pagination. Pour chaque retour finalisé, l'action **Règlements** affiche le total traité, le reste à rembourser et l'historique conservé. Elle permet d'émettre un remboursement ou un avoir compatible avec la résolution choisie, puis d'annuler un règlement avec un motif obligatoire.
-
-L'action **Nouveau retour** sélectionne une vente confirmée et les quantités réellement reçues. Le brouillon obtenu peut être finalisé pour restituer atomiquement le stock ou annulé sans mouvement. Le root choisit d'abord la librairie, ce qui limite immédiatement les ventes proposées.
-
 SQLite contrôle que la vente et la caisse appartiennent à la même librairie, que la caisse est active, que la vente est confirmée et que le cumul des règlements ne dépasse jamais son total. La vue `sale_payment_balances` calcule le montant payé, le reste à payer et l’état financier `UNPAID`, `PARTIALLY_PAID` ou `PAID`. Un règlement annulé conservera sa ligne avec le statut `VOIDED` pour assurer la traçabilité.
+
+### Retours fournisseurs
+
+La migration `017_create_supplier_returns.sql` pose la fondation des retours vers les fournisseurs. Un retour est obligatoirement rattaché à un achat `RECEIVED`, au fournisseur et à la même librairie. Ses lignes référencent les lignes réellement réceptionnées et reprennent le livre, le titre et le coût unitaire historiques.
+
+Le cycle prévu est `DRAFT → SHIPPED` ou `DRAFT → CANCELLED`. SQLite refuse les lignes étrangères à l'achat, les brouillons vides lors de l'expédition et le cumul de quantités supérieur à la quantité reçue. Les brouillons concurrents réservent les quantités disponibles ; leur annulation les libère. L'expédition diminuera atomiquement le stock et produira des mouvements `EXIT` ainsi que les audits associés.
 
 ## Tester FTS5 directement
 
