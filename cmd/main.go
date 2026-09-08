@@ -216,6 +216,7 @@ func main() {
 	mux.Handle("GET /api/manage/supplier-returns/{id}", bookManagers(http.HandlerFunc(supplierReturnHandler.Get)))
 	mux.Handle("PUT /api/manage/supplier-returns/{id}", bookManagers(http.HandlerFunc(supplierReturnHandler.Update)))
 	mux.Handle("POST /api/manage/supplier-returns/{id}/cancel", bookManagers(http.HandlerFunc(supplierReturnHandler.Cancel)))
+	mux.Handle("POST /api/manage/supplier-returns/{id}/ship", bookManagers(http.HandlerFunc(supplierReturnHandler.Ship)))
 	mux.Handle("GET /api/manage/tags", bookManagers(http.HandlerFunc(tagHandler.List)))
 	mux.Handle("POST /api/manage/tags", bookManagers(http.HandlerFunc(tagHandler.Create)))
 	mux.Handle("PATCH /api/manage/tags/{id}", bookManagers(http.HandlerFunc(tagHandler.Update)))

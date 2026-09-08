@@ -858,3 +858,7 @@ git diff --check
 ```
 
 La branche de la présente réécriture est `feature/rewriting` et sa pull request doit cibler `develop`.
+
+### Expédition des retours fournisseurs
+
+`POST /api/manage/supplier-returns/{id}/ship` accepte `{"version":1}`. Seul un brouillon de la librairie autorisée peut être expédié. Une transaction unique enregistre l’état `SHIPPED`, diminue les stocks, crée les mouvements `EXIT` et les audits `UPDATE_INVENTORY` et `SHIP_SUPPLIER_RETURN`. Un stock insuffisant retourne `409 supplier_return_insufficient_stock` et annule toutes les écritures. Les versions obsolètes et transitions répétées sont refusées. Sauvegarder la base avant les tests locaux.

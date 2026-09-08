@@ -30,3 +30,9 @@ func(s *SupplierReturnService)Update(ctx context.Context,claims *auth.Claims,id 
 func(s *SupplierReturnService)Cancel(ctx context.Context,claims *auth.Claims,id string,version int)(models.SupplierReturn,error){if strings.TrimSpace(id)==""||version<1{return models.SupplierReturn{},ErrInvalidSupplierReturn};libraryID,err:=resolveBookScope(claims,"",false);if err!=nil{return models.SupplierReturn{},err};auditID,err:=identity.NewID();if err!=nil{return models.SupplierReturn{},err};return s.repository.Cancel(ctx,id,libraryID,version,claims.Subject,auditID,s.now().UTC().Format(time.RFC3339Nano))}
 func validateSupplierReturn(input models.SupplierReturnInput,update bool)error{reason:=strings.TrimSpace(input.Reason);reference:=strings.TrimSpace(input.SupplierReference);if (!update&&strings.TrimSpace(input.PurchaseID)=="")||len([]rune(reason))<3||len([]rune(reason))>1000||len([]rune(reference))>160||len(input.Lines)<1||len(input.Lines)>100||(update&&input.Version<1){return ErrInvalidSupplierReturn};seen:=map[string]bool{};for _,line:=range input.Lines{id:=strings.TrimSpace(line.PurchaseLineID);if id==""||line.Quantity<1||line.Quantity>100000||seen[id]{return ErrInvalidSupplierReturn};seen[id]=true};return nil}
 func supplierReturnIDs(count int)(string,[]string,string,error){id,err:=identity.NewID();if err!=nil{return "",nil,"",err};lines:=make([]string,count);for i:=range lines{if lines[i],err=identity.NewID();err!=nil{return "",nil,"",err}};audit,err:=identity.NewID();return id,lines,audit,err}
+
+func(s *SupplierReturnService)Ship(ctx context.Context,claims *auth.Claims,id string,version int)(models.SupplierReturn,error){
+ if strings.TrimSpace(id)==""||version<1{return models.SupplierReturn{},ErrInvalidSupplierReturn}
+ libraryID,err:=resolveBookScope(claims,"",false);if err!=nil{return models.SupplierReturn{},err}
+ return s.repository.Ship(ctx,strings.TrimSpace(id),libraryID,version,claims.Subject,s.now().UTC().Format(time.RFC3339Nano))
+}
