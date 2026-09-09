@@ -1,5 +1,7 @@
 # Defta Librairie
 
+Le suivi des douze priorités du projet est centralisé dans [BACKLOG.md](BACKLOG.md). Ce fichier distingue les fonctions livrées des travaux restant à finaliser.
+
 Catalogue web RTL de livres en arabe, développé en Go avec SQLite et son moteur de recherche plein texte FTS5.
 
 L’application propose une recherche classée par pertinence sur les titres, auteurs, éditeurs, mots-clés et catégories. Elle expose une interface HTML responsive ainsi qu’une API JSON paginée.
@@ -177,7 +179,7 @@ Les livres historiques sont rattachés à la librairie système :
 
 ### Politique d'autorisation
 
-Les routes de lecture du catalogue restent publiques. Les futures routes de gestion appliquent systématiquement l'authentification JWT puis les règles suivantes :
+Les routes de lecture du catalogue restent publiques. Les routes de gestion appliquent systématiquement l'authentification JWT puis les règles suivantes :
 
 | Profil | Périmètre autorisé |
 |---|---|
@@ -628,7 +630,7 @@ Toutes les données sont rattachées à une librairie. Une contrainte composite 
 
 La migration `012_normalize_supplier_names.sql` ajoute une clé de nom normalisée. Elle garantit l'unicité Unicode calculée par Go, notamment pour empêcher des doublons comme `Éditions Defta` et `éditions defta`, que la collation SQLite `NOCASE` seule ne détecte pas.
 
-Le cycle prévu est `DRAFT → RECEIVED` ou `DRAFT → CANCELLED`. La réception sera implémentée comme une transaction atomique qui augmentera les stocks, créera les mouvements `ENTRY` et inscrira les audits correspondants.
+Le cycle est `DRAFT → RECEIVED` ou `DRAFT → CANCELLED`. La réception augmente les stocks, crée les mouvements `ENTRY` et inscrit les audits correspondants dans une transaction atomique.
 
 Le CRUD fournisseur est accessible à `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. Le propriétaire ne voit que les fournisseurs de sa librairie ; le root peut utiliser `libraryId`. Chaque mutation utilise `version` et crée un audit. La suppression est logique (`DISABLED`) afin de conserver les achats historiques.
 
@@ -665,7 +667,7 @@ La liste des achats peut être filtrée par état, fournisseur et période. Le `
 
 La migration `013_create_customers.sql` crée le référentiel client propre à chaque librairie. Un client possède une référence stable et unique dans sa librairie, un nom, des coordonnées facultatives, une adresse, des notes, un statut et une version pour le contrôle des écritures concurrentes.
 
-La suppression fonctionnelle utilisera le statut `DISABLED` afin de préserver l’historique commercial. Les contraintes empêchent le rattachement d’un client à une librairie inexistante et les index préparent la recherche par nom, téléphone ou e-mail. Le rattachement facultatif aux ventes sera ajouté après validation du CRUD client.
+La suppression fonctionnelle utilise le statut `DISABLED` afin de préserver l’historique commercial. Les contraintes empêchent le rattachement d’un client à une librairie inexistante et les index préparent la recherche par nom, téléphone ou e-mail. Le rattachement facultatif aux ventes est implémenté par la migration 014. L’historique des achats consultable depuis un client reste à développer (priorité 2 du backlog).
 
 Le CRUD client est accessible aux rôles `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. Le propriétaire reste limité aux clients de sa librairie ; le root peut préciser `libraryId`. La recherche couvre la référence, le nom, le téléphone et l’e-mail. Chaque mutation contrôle la version et produit un audit de type `CUSTOMER`.
 
@@ -676,7 +678,7 @@ Le CRUD client est accessible aux rôles `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. 
 - `DELETE /api/manage/customers/{id}?version={version}` ;
 - `POST /api/manage/customers/{id}/reactivate?version={version}`.
 
-La désactivation est logique et conserve le client pour les futurs historiques de vente. Plusieurs clients peuvent porter le même nom ; chacun reçoit une référence générée au format `C-AAAAMMJJ-XXXXXXXX`.
+La désactivation est logique et conserve le client ainsi que ses rattachements aux ventes. Plusieurs clients peuvent porter le même nom ; chacun reçoit une référence générée au format `C-AAAAMMJJ-XXXXXXXX`.
 
 Le tableau de bord `/admin` expose le référentiel client avec recherche, filtre de statut et pagination. Il permet la création, la modification, la désactivation et la réactivation. Pour le root, les filtres et le formulaire de création proposent uniquement les librairies actives.
 
@@ -716,7 +718,7 @@ Le tableau de bord `/admin` contient désormais deux espaces de trésorerie. Le 
 
 La migration `016_create_customer_returns.sql` pose la fondation des retours clients. Un retour appartient à une vente confirmée et contient les lignes réellement retournées, valorisées au prix figé lors de la vente. Il suit le cycle `DRAFT`, `COMPLETED` ou `CANCELLED` et choisit dès sa création une résolution `REFUND` ou `CREDIT_NOTE`.
 
-SQLite interdit de retourner davantage d'exemplaires qu'il n'en a été vendu, en tenant compte des retours antérieurs déjà finalisés. Une finalisation vide est refusée. Les futurs règlements de retour acceptent espèces, mobile money, carte ou avoir selon la résolution choisie, sans pouvoir dépasser le montant total du retour. La vue `customer_return_balances` expose le montant traité, le reste et l'état `PENDING`, `PARTIALLY_SETTLED` ou `SETTLED`.
+SQLite interdit de retourner davantage d'exemplaires qu'il n'en a été vendu, en tenant compte des retours antérieurs déjà finalisés. Une finalisation vide est refusée. Les règlements de retour acceptent espèces, mobile money, carte ou avoir selon la résolution choisie, sans pouvoir dépasser le montant total du retour. La vue `customer_return_balances` expose le montant traité, le reste et l'état `PENDING`, `PARTIALLY_SETTLED` ou `SETTLED`.
 
 Le second incrément expose la gestion métier des retours :
 
@@ -748,7 +750,7 @@ SQLite contrôle que la vente et la caisse appartiennent à la même librairie, 
 
 La migration `017_create_supplier_returns.sql` pose la fondation des retours vers les fournisseurs. Un retour est obligatoirement rattaché à un achat `RECEIVED`, au fournisseur et à la même librairie. Ses lignes référencent les lignes réellement réceptionnées et reprennent le livre, le titre et le coût unitaire historiques.
 
-Le cycle prévu est `DRAFT → SHIPPED` ou `DRAFT → CANCELLED`. SQLite refuse les lignes étrangères à l'achat, les brouillons vides lors de l'expédition et le cumul de quantités supérieur à la quantité reçue. Les brouillons concurrents réservent les quantités disponibles ; leur annulation les libère. L'expédition diminuera atomiquement le stock et produira des mouvements `EXIT` ainsi que les audits associés.
+Le cycle est `DRAFT → SHIPPED` ou `DRAFT → CANCELLED`. SQLite refuse les lignes étrangères à l'achat, les brouillons vides lors de l'expédition et le cumul de quantités supérieur à la quantité reçue. Les brouillons concurrents réservent les quantités disponibles ; leur annulation les libère. L’expédition diminue atomiquement le stock et produit des mouvements `EXIT` ainsi que les audits associés.
 
 Le CRUD des brouillons est exposé par `GET|POST /api/manage/supplier-returns`, `GET|PUT /api/manage/supplier-returns/{id}` et `POST /api/manage/supplier-returns/{id}/cancel`. La liste accepte `status`, `purchaseId`, `supplierId`, `from`, `to`, `offset`, `limit` et, pour le root, `libraryId`. Chaque création, modification et annulation produit un audit dédié et respecte le contrôle optimiste par `version`.
 
@@ -857,7 +859,7 @@ go test -tags fts5 ./...
 git diff --check
 ```
 
-La branche de la présente réécriture est `feature/rewriting` et sa pull request doit cibler `develop`.
+Chaque incrément part de `develop` et revient dans `develop` par pull request. Les anciennes branches de réécriture sont déjà fusionnées.
 
 ### Expédition des retours fournisseurs
 
@@ -875,7 +877,7 @@ La section Retours fournisseurs de `/admin` propose liste paginée, filtre de st
 
 La migration `018_add_inventory_average_cost.sql` ajoute `book_inventory.average_unit_cost`. Le CMP est recalculé dans la transaction de réception : (stock avant × CMP avant + quantité reçue × coût unitaire) / stock après. Quand le stock avant est nul, le coût de la réception devient le CMP. Un coût gratuit connu vaut zéro ; un coût inconnu vaut NULL. Les stocks historiques positifs conservent un CMP inconnu, même après réception, plutôt que d’estimer leur valorisation.
 
-Cette première étape couvre les réceptions uniquement. La valorisation des autres entrées, les coûts figés des ventes et des retours, et les statistiques de marge restent à développer avant utilisation comptable du CMP. Les tests couvrent la moyenne pondérée, le stock vide, le coût nul connu, le coût historique inconnu et la réception transactionnelle. Aucune marge historique n’est reconstituée.
+La migration 018 couvre les réceptions. Les coûts figés des ventes et des retours, les règles de valorisation des entrées manuelles et les statistiques de marge sont également implémentés et décrits ci-dessous. Les tests couvrent la moyenne pondérée, le stock vide, le coût nul connu, le coût historique inconnu et la réception transactionnelle. Aucune marge historique n’est reconstituée.
 
 ### Coûts figés des ventes
 
@@ -883,13 +885,13 @@ La migration `019_freeze_sale_cost.sql` ajoute `sale_lines.unit_cost_snapshot`, 
 
 L'annulation restitue le stock au coût figé, en recalculant sa moyenne avec le stock présent. Un coût de sortie inconnu rend la valorisation résultante inconnue. Les coûts figés restent conservés après annulation. Un échec de confirmation annule aussi les écritures de coût. Les tests vérifient le gel du coût, sa conservation après changement du CMP, la revalorisation à l'annulation et le rollback pour stock insuffisant.
 
-Sauvegarder SQLite avant de redémarrer pour appliquer les migrations. La valorisation des ajustements manuels reste à intégrer avant d'exposer les statistiques de marge.
+Sauvegarder SQLite avant de redémarrer pour appliquer les migrations. La valorisation des ajustements manuels et les statistiques de marge sont décrites dans les sections suivantes.
 
 ### Valorisation des retours clients
 
 La finalisation d'un retour client restitue chaque livre au coût figé de sa ligne de vente (`sale_lines.unit_cost_snapshot`). Le CMP est recalculé avec le stock présent, dans la transaction qui enregistre les quantités, mouvements et audits. Le prix de vente et le montant du remboursement ne servent pas à valoriser le stock. Un coût historique inconnu rend le CMP résultant inconnu ; zéro reste un coût connu. Le coût de la vente d'origine n'est pas modifié.
 
-Aucune migration supplémentaire n'est nécessaire après 018 et 019. Les retours déjà finalisés ne sont pas recalculés rétroactivement. Les tests couvrent la moyenne pondérée, les coûts inconnus ou nuls, le refus d'une finalisation répétée et le rollback du stock, du CMP et du statut en cas d'échec d'audit. Les statistiques de marge restent à développer.
+Aucune migration supplémentaire n'est nécessaire après 018 et 019. Les retours déjà finalisés ne sont pas recalculés rétroactivement. Les tests couvrent la moyenne pondérée, les coûts inconnus ou nuls, le refus d'une finalisation répétée et le rollback du stock, du CMP et du statut en cas d'échec d'audit. Les statistiques de marge sont disponibles dans l’API et le tableau de bord.
 
 ### Ajustements manuels et CMP
 
@@ -897,17 +899,17 @@ Les entrées manuelles et corrections de quantité à la hausse ne fournissent a
 
 ### Fondation des statistiques commerciales
 
-`CommercialStatisticsRepository.Summary` calcule les ventes brutes, annulations, retours clients, ventes nettes et coûts connus pour une librairie explicite et un intervalle [from, to). La couche appelante devra contrôler les droits sur la librairie ; aucun endpoint HTTP n'est ajouté dans cet incrément.
+`CommercialStatisticsRepository.Summary` calcule les ventes brutes, annulations, retours clients, ventes nettes et coûts connus pour une librairie explicite et un intervalle [from, to). Le service contrôle les droits sur la librairie avant la requête ; l’endpoint est `GET /api/manage/statistics`.
 
-Les dates utilisées sont confirmed_at, cancelled_at et completed_at. Une annulation sur une période ultérieure ne réécrit donc pas les ventes de la période initiale. Les coûts proviennent des lignes de vente figées. Si une ligne d'événement présente un coût inconnu, netMargin reste null et unknownCostEvents indique le nombre de lignes concernées. knownCost représente uniquement la partie connue et ne doit pas être présenté comme le coût total lorsque des coûts manquent. Une période vide donne des totaux nuls. Ces indicateurs décrivent l'activité commerciale, pas les encaissements. Ils supposent que les transitions métier empêchent une double restitution par annulation et retour d'une même vente.
+Les dates utilisées sont confirmed_at, cancelled_at et completed_at. Une annulation sur une période ultérieure ne réécrit donc pas les ventes de la période initiale. Les coûts proviennent des lignes de vente figées. Si une ligne d'événement présente un coût inconnu, netMargin reste null et unknownCostEvents indique le nombre de lignes concernées. knownCost représente uniquement la partie connue et ne doit pas être présenté comme le coût total lorsque des coûts manquent. Une période vide donne des totaux nuls. Ces indicateurs décrivent l'activité commerciale, pas les encaissements. La migration 021 empêche une double restitution par annulation et retour d’une même vente.
 
-Tests : `go test -tags fts5 ./internal/repositories -run TestCommercialStatisticsEventsAndIsolation -count=1 -v`. Les achats, écarts de retours fournisseurs, endpoints autorisés et écran de statistiques restent à intégrer.
+Tests : `go test -tags fts5 ./internal/repositories -run TestCommercialStatisticsEventsAndIsolation -count=1 -v`. Les achats, écarts de retours fournisseurs, contrôles d’accès et écran de statistiques sont également implémentés.
 
 ### API des statistiques commerciales
 
 `GET /api/manage/statistics?from=2026-09-01T00:00:00Z&to=2026-10-01T00:00:00Z` retourne les indicateurs de la période [from, to). Les deux dates RFC3339 sont obligatoires. Un propriétaire utilise sa librairie JWT ; un libraryId différent est refusé (403). Le root doit préciser libraryId (400 si absent). Une période invalide ou un filtre répété retourne 400. Une authentification valide et le changement du mot de passe initial sont requis. Les réponses portent Cache-Control: no-store.
 
-La réponse contient grossSales, cancellations, customerReturns, netSales, knownCost, unknownCostEvents et netMargin. netMargin vaut null lorsque des coûts manquent. Une librairie sans événements renvoie des totaux nuls. Les achats, encaissements, écarts fournisseurs et l'écran restent hors de cet incrément.
+La réponse contient grossSales, cancellations, customerReturns, netSales, knownCost, unknownCostEvents et netMargin. netMargin vaut null lorsque des coûts manquent. Une librairie sans événements renvoie des totaux nuls. L’API expose également les achats et écarts fournisseurs décrits ci-dessous. Les encaissements restent suivis séparément dans les paiements ; ils ne sont pas assimilés aux ventes.
 
 Après sauvegarde, application du patch et tests Go, redémarrer le serveur pour charger la nouvelle route. Exécuter `go test -tags fts5 ./internal/services -run TestCommercialStatisticsAuthorizationAndDates -count=1 -v` puis les suites normales et race.
 
@@ -926,8 +928,8 @@ au montant fournisseur total_amount. Même périmètre de librairie et intervall
 [from,to) que les ventes. Brouillons et annulations sont exclus. Les achats nets
 peuvent être négatifs si la période contient des retours d’achats antérieurs.
 Ces indicateurs ne modifient pas la marge commerciale et ne mesurent pas les
-paiements. La valorisation CMP et les écarts des retours fournisseurs restent
-un incrément distinct ; aucun écart historique n’est estimé ici.
+paiements. La valorisation CMP et les écarts des retours fournisseurs sont implémentés
+et décrits ci-dessous ; aucun écart historique n’est estimé.
 
 Validation : `go test -tags fts5 ./internal/repositories -run TestCommercialStatistics -count=1 -v`,
 puis les suites Go et race. Dans /admin, comparer une réception et une expédition
@@ -948,7 +950,7 @@ un écart négatif signifie l’inverse. Il ne représente pas un remboursement 
 Un coût inconnu donne trois valeurs null ; un coût nul connu reste zéro.
 Les brouillons et retours annulés restent sans coût de sortie.
 Les montants fournisseur et la marge commerciale existante ne changent pas.
-L’affichage des écarts dans le tableau de bord sera un incrément ultérieur.
+Les écarts sont affichés dans le détail des retours expédiés et les statistiques de période.
 
 Exemple : 2 livres retournés à 1 000 F CFA chacun, CMP de 800 F CFA :
 montant fournisseur 2 000, coût du stock sorti 1 600, écart +400 F CFA.
