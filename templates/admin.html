@@ -30,6 +30,22 @@
     </section>
 
 
+    <section class="panel" id="csv-exports-panel" aria-labelledby="csv-exports-title">
+      <h2 id="csv-exports-title">Exports CSV</h2>
+      <p>UTF-8, séparateur point-virgule. Maximum 10 000 lignes : affinez les filtres au-delà.</p>
+      <form class="filters">
+        <label>Contenu<select name="kind"><option value="stocks">Stocks</option><option value="sales">Ventes</option><option value="purchases">Achats</option><option value="suppliers">Fournisseurs</option><option value="audit">Audit</option></select></label>
+        <label data-library hidden>Librairie<select name="libraryId"><option value="">Choisir une librairie</option></select></label>
+        <label>Statut<select name="status"></select></label>
+        <label>Du<input type="date" name="from"></label><label>Au, inclus<input type="date" name="to"></label>
+        <label>Recherche<input name="q" maxlength="256"></label>
+        <label data-audit hidden>Action<input name="action" maxlength="64"></label>
+        <label data-audit hidden>Type de ressource<input name="resourceType" maxlength="32"></label>
+        <button type="submit" class="button ghost">Télécharger le CSV</button>
+      </form>
+      <p data-hint></p><p data-notice role="status" aria-live="polite"></p><p data-error role="alert" hidden></p>
+    </section>
+
     <section class="panel" id="business-alerts-panel" aria-labelledby="business-alerts-title">
       <h2 id="business-alerts-title">Alertes métier</h2>
       <p>Situation actuelle. Les achats en brouillon ne sont pas des commandes envoyées. Actualisez après une opération.</p>
@@ -585,5 +601,6 @@
   <script src="/static/js/admin-supplier-returns.js" defer></script>
   <script src="/static/js/admin-statistics.js" defer></script>
   <script src="/static/js/admin-business-alerts.js" defer></script>
+  <script src="/static/js/admin-csv-exports.js" defer></script>
 </body>
 </html>
