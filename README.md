@@ -1135,3 +1135,32 @@ go test -race -tags fts5 ./internal/services -run '^TestCommercialLifecycleAccep
 
 Cet incrément ajoute uniquement un test et sa documentation : aucune migration ni
 modification du comportement de production.
+
+### Recette HTTP du cycle commercial
+
+`TestCommercialHTTPLifecycle` utilise `httptest`, les routes commerciales enregistrées
+par `registerCommercialHTTPRoutes`, les vrais handlers/services/repositories,
+les migrations SQLite et les middlewares JWT, session, mot de passe et rôles.
+La base, les utilisateurs, les sessions et le secret JWT sont créés uniquement pour
+le test. Aucun appel réseau externe ni accès à `.env` ou à la base de travail.
+
+Le scénario crée une vente de 6 000 F CFA, encaisse 1 000, retourne un livre de
+1 500, rembourse 700, encaisse les 5 000 restants et rembourse les 800 restants.
+Les réponses JSON et statuts HTTP sont contrôlés, ainsi que le plafond remboursable,
+le stock final de 7 livres, le CMP de 1 000 avec tolérance flottante, les ventes
+nettes de 4 500 et la marge de 1 500 F CFA.
+
+Les contrôles d’accès couvrent absence de jeton, signature invalide, changement de
+mot de passe requis, accès croisé entre propriétaires, sélection de librairie root
+et session révoquée. Les remboursements excessifs, répétitions et annulations
+incompatibles doivent être refusés. Les routes de login/refresh et le rendu visuel
+ne font pas partie de cette recette : les JWT sont signés localement pour le test.
+
+```bash
+go test -tags fts5 ./cmd -run '^TestCommercialHTTPLifecycle$' -count=1 -v
+go test -race -tags fts5 ./cmd -run '^TestCommercialHTTPLifecycle$' -count=1 -v
+```
+
+L’enregistrement des routes a seulement été regroupé dans `cmd/main.go` : URL,
+méthodes HTTP et protections restent identiques. Le lancement historique
+`go run -tags fts5 ./cmd/main.go` reste compatible. Aucune migration supplémentaire.
