@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	ErrSaleRecordedPayments = errors.New("sale has recorded payments")
 	ErrSaleCompletedReturns = errors.New("sale has completed customer returns")
 	ErrSaleNotFound         = errors.New("sale not found")
 	ErrSaleConflict         = errors.New("sale was modified by another request")
@@ -433,6 +434,9 @@ func (r *SaleRepository) Transition(ctx context.Context, id, libraryID, actorID 
 	if err != nil {
 		if strings.Contains(err.Error(), "sale has completed customer returns") {
 			return models.Sale{}, ErrSaleCompletedReturns
+		}
+		if strings.Contains(err.Error(), "sale has recorded payments") {
+			return models.Sale{}, ErrSaleRecordedPayments
 		}
 		return models.Sale{}, fmt.Errorf("transition sale: %w", err)
 	}

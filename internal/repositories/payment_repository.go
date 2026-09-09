@@ -10,13 +10,14 @@ import (
 )
 
 var (
-	ErrPaymentNotFound     = errors.New("payment not found")
-	ErrPaymentSaleNotFound = errors.New("payment sale not found")
-	ErrPaymentConflict     = errors.New("payment reference conflict")
-	ErrPaymentVersion      = errors.New("payment version conflict")
-	ErrPaymentState        = errors.New("payment state conflict")
-	ErrPaymentOverpaid     = errors.New("payment exceeds remaining amount")
-	ErrPaymentUnavailable  = errors.New("payment context unavailable")
+	ErrPaymentRefundConflict = errors.New("payment void would uncover issued refunds")
+	ErrPaymentNotFound       = errors.New("payment not found")
+	ErrPaymentSaleNotFound   = errors.New("payment sale not found")
+	ErrPaymentConflict       = errors.New("payment reference conflict")
+	ErrPaymentVersion        = errors.New("payment version conflict")
+	ErrPaymentState          = errors.New("payment state conflict")
+	ErrPaymentOverpaid       = errors.New("payment exceeds remaining amount")
+	ErrPaymentUnavailable    = errors.New("payment context unavailable")
 )
 
 type PaymentRepository struct{ db *sql.DB }
@@ -173,6 +174,9 @@ func (r *PaymentRepository) Void(ctx context.Context, payment models.Payment, ex
 		version=version+1,updated_at=? WHERE id=? AND library_id=? AND status='RECORDED' AND version=?`,
 		actorID, now, reason, reason, reason, now, payment.ID, payment.LibraryID, expectedVersion)
 	if err != nil {
+		if strings.Contains(err.Error(), "payment void would uncover issued refunds") {
+			return ErrPaymentRefundConflict
+		}
 		return fmt.Errorf("void payment: %w", err)
 	}
 	if rows, rowsErr := result.RowsAffected(); rowsErr != nil || rows != 1 {

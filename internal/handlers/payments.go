@@ -71,6 +71,8 @@ func (h *PaymentHandler) Void(w http.ResponseWriter, r *http.Request) {
 
 func writePaymentError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, repositories.ErrPaymentRefundConflict):
+		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "payment_has_issued_refunds", "message": "Ce paiement couvre des remboursements déjà émis et ne peut pas être annulé."})
 	case errors.Is(err, repositories.ErrPaymentNotFound), errors.Is(err, repositories.ErrPaymentSaleNotFound):
 		writeAuthJSON(w, http.StatusNotFound, map[string]string{"error": "payment_not_found", "message": "Payment or sale not found"})
 	case errors.Is(err, repositories.ErrPaymentConflict):

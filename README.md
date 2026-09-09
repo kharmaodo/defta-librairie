@@ -1034,3 +1034,51 @@ une correction métier ; ne pas recalculer automatiquement le stock historique.
 Tests de régression sur bases temporaires :
 `go test -tags fts5 ./internal/services -run 'TestCommercialCyclePreventsDoubleRestock|TestSupplierReturnShipInsufficientStockRollsBack' -count=1 -v`.
 Sauvegarder la base avant de redémarrer le serveur pour appliquer la migration 021.
+
+### Cohérence des encaissements et remboursements
+
+La migration `022_guard_payments_refunds.sql` ajoute trois contrôles transactionnels :
+
+- Une vente ayant des paiements `RECORDED` ne peut pas être annulée :
+  `409 sale_has_recorded_payments`.
+- Le cumul des remboursements monétaires `ISSUED` de tous les retours d’une vente
+  ne peut pas dépasser ses paiements `RECORDED` : `409 refund_exceeds_payments`.
+  Le plafond propre au montant de chaque retour reste également appliqué.
+- Annuler un paiement ne peut pas rendre les encaissements restants inférieurs aux
+  remboursements déjà émis : `409 payment_has_issued_refunds`.
+
+Le contrôle des remboursements concerne CASH, MOBILE_MONEY et CARD. CREDIT_NOTE
+reste un avoir distinct, soumis au plafond du retour et à sa résolution existante.
+Un enregistrement VOIDED ne participe plus aux cumuls actifs. Les montants des
+ventes restent bruts : cette étape ne redéfinit pas le reste à payer après retour.
+Les règles sont exécutées par SQLite dans les transactions des opérations et audits.
+
+**Annuler un enregistrement n’est pas rembourser de l’argent.** Ne pas annuler un
+paiement réel pour contourner le refus d’annulation d’une vente : utiliser le retour
+client et le remboursement adapté. Les annulations servent aux corrections de saisie.
+
+La migration n’altère pas l’historique. Contrôles en lecture seule :
+
+```sql
+SELECT s.id AS sale_id, s.library_id, SUM(p.amount) AS active_payments
+FROM sales s JOIN payments p ON p.sale_id=s.id AND p.status='RECORDED'
+WHERE s.status='CANCELLED' GROUP BY s.id,s.library_id;
+
+WITH refunds AS (
+  SELECT r.sale_id,SUM(rs.amount) AS refunded
+  FROM return_settlements rs JOIN customer_returns r ON r.id=rs.return_id
+  WHERE rs.status='ISSUED' AND rs.method IN ('CASH','MOBILE_MONEY','CARD')
+  GROUP BY r.sale_id
+), paid AS (
+  SELECT sale_id,SUM(amount) AS received FROM payments
+  WHERE status='RECORDED' GROUP BY sale_id
+)
+SELECT s.id AS sale_id,s.library_id,f.refunded,COALESCE(p.received,0) AS received
+FROM refunds f JOIN sales s ON s.id=f.sale_id LEFT JOIN paid p ON p.sale_id=f.sale_id
+WHERE f.refunded>COALESCE(p.received,0);
+```
+
+Examiner les pièces et audits si ces requêtes retournent des lignes. Aucune correction
+rétroactive automatique n’est effectuée.
+Sauvegarder SQLite avant le redémarrage qui applique la migration 022.
+Tests : `go test -tags fts5 ./internal/services -run 'TestPaidSaleCancellationRollback|TestRefundLimitedByRecordedPayments' -count=1 -v`.

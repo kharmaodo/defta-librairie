@@ -117,6 +117,8 @@ func (h *SaleHandler) transition(w http.ResponseWriter, r *http.Request, confirm
 
 func writeSaleError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, repositories.ErrSaleRecordedPayments):
+		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "sale_has_recorded_payments", "message": "La vente conserve des paiements actifs. Une annulation comptable de paiement ne constitue pas un remboursement."})
 	case errors.Is(err, repositories.ErrSaleCompletedReturns):
 		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "sale_has_completed_returns", "message": "Impossible d’annuler une vente ayant un retour client finalisé."})
 	case errors.Is(err, repositories.ErrSaleNotFound):
