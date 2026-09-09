@@ -72,6 +72,56 @@ func TestSupplierReturnShipInsufficientStockRollsBack(t *testing.T) {
 			if err = db.QueryRow(`SELECT COUNT(*) FROM inventory_movements`).Scan(&movements); err != nil { t.Fatal(err) }
 			if err = db.QueryRow(`SELECT COUNT(*) FROM audit_logs`).Scan(&audits); err != nil { t.Fatal(err) }
 			if movements != 0 || audits != auditsBefore { t.Fatalf("partial writes: movements=%d audits=%d expected=%d",movements,audits,auditsBefore) }
+			// Replenish only this temporary fixture, then exercise authorization and versions.
+			if _, err = db.Exec("UPDATE book_inventory SET quantity=5 WHERE book_id=2"); err != nil { t.Fatal(err) }
+			other := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "other-library"}
+			other.Subject = "ship-owner"
+			if _, err = service.Ship(ctx, other, value.ID, value.Version); !errors.Is(err, repositories.ErrSupplierReturnNotFound) {
+				t.Fatalf("cross-library shipment must be hidden: %v", err)
+			}
+			if _, err = service.Ship(ctx, owner, value.ID, value.Version+1); !errors.Is(err, repositories.ErrSupplierReturnConflict) {
+				t.Fatalf("stale version must be refused: %v", err)
+			}
+			unchanged, err := service.Find(ctx, owner, value.ID)
+			if err != nil { t.Fatal(err) }
+			if unchanged.Status != models.SupplierReturnStatusDraft || unchanged.Version != value.Version {
+				t.Fatalf("rejected shipment changed draft: %+v", unchanged)
+			}
+			for _, book := range []int{1, 2} {
+				var quantity int
+				if err = db.QueryRow("SELECT quantity FROM book_inventory WHERE book_id=?", book).Scan(&quantity); err != nil { t.Fatal(err) }
+				if quantity != 5 { t.Fatalf("rejected shipment changed book %d: %d", book, quantity) }
+			}
+			if err = db.QueryRow("SELECT COUNT(*) FROM inventory_movements").Scan(&movements); err != nil { t.Fatal(err) }
+			if err = db.QueryRow("SELECT COUNT(*) FROM audit_logs").Scan(&audits); err != nil { t.Fatal(err) }
+			if movements != 0 || audits != auditsBefore { t.Fatal("rejected shipment left side effects") }
+
+			shipped, err := service.Ship(ctx, owner, value.ID, value.Version)
+			if err != nil { t.Fatalf("valid shipment: %v", err) }
+			if shipped.Status != models.SupplierReturnStatusShipped || shipped.Version != value.Version+1 || shipped.ShippedBy != owner.Subject || shipped.ShippedAt == "" {
+				t.Fatalf("unexpected shipped return: %+v", shipped)
+			}
+			// A repeated shipment must not remove stock or append successful audits again.
+			if _, err = service.Ship(ctx, owner, value.ID, shipped.Version); !errors.Is(err, repositories.ErrSupplierReturnState) {
+				t.Fatalf("duplicate shipment: %v", err)
+			}
+			for _, l := range shipped.Lines {
+				var quantity, inventoryVersion, delta, before, after int
+				var movementType string
+				if err = db.QueryRow("SELECT quantity,version FROM book_inventory WHERE book_id=?", l.BookID).Scan(&quantity,&inventoryVersion); err != nil { t.Fatal(err) }
+				if quantity != 3 || inventoryVersion != 2 { t.Fatalf("unexpected stock for %d: %d v%d",l.BookID,quantity,inventoryVersion) }
+				if err = db.QueryRow("SELECT movement_type,quantity_delta,quantity_before,quantity_after FROM inventory_movements WHERE book_id=?", l.BookID).Scan(&movementType,&delta,&before,&after); err != nil { t.Fatal(err) }
+				if movementType != "EXIT" || delta != -2 || before != 5 || after != 3 { t.Fatal("incorrect EXIT movement") }
+			}
+			var shipAudits int
+			if err = db.QueryRow("SELECT COUNT(*) FROM inventory_movements").Scan(&movements); err != nil { t.Fatal(err) }
+			if err = db.QueryRow("SELECT COUNT(*) FROM audit_logs").Scan(&audits); err != nil { t.Fatal(err) }
+			if err = db.QueryRow("SELECT COUNT(*) FROM audit_logs WHERE action='SHIP_SUPPLIER_RETURN' AND resource_id=? AND success=1",value.ID).Scan(&shipAudits); err != nil { t.Fatal(err) }
+			if movements != len(lines) || audits != auditsBefore+len(lines)+1 || shipAudits != 1 {
+				t.Fatalf("unexpected effects: movements=%d audits=%d shipment audits=%d",movements,audits,shipAudits)
+			}
+
 		})
 	}
 }
+
