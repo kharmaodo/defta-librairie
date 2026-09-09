@@ -956,3 +956,19 @@ Un changement ultérieur du CMP ne modifie pas ces valeurs figées.
 
 Sauvegarder SQLite avant le redémarrage qui applique la migration 020.
 Test ciblé : `go test -tags fts5 ./internal/services -run TestSupplierReturnShipInsufficientStockRollsBack -count=1 -v`.
+
+### Affichage des coûts des retours fournisseurs
+
+Dans `/admin` → Retours fournisseurs → Détails d’un retour expédié, chaque ligne
+présente sa quantité, le montant fournisseur, le CMP figé, la valeur du stock sorti
+et l’écart (montant fournisseur − valeur du stock sorti), en F CFA.
+Un écart positif porte le signe +, un écart négatif conserve son signe −.
+Un coût nul connu affiche zéro ; un coût inconnu affiche « Indisponible ».
+L’écran affiche les valeurs figées renvoyées par l’API, sans utiliser le CMP actuel.
+Le tableau défile horizontalement sur petit écran. Les brouillons restent modifiables
+et les retours annulés ne présentent pas de valorisation d’expédition.
+Aucune migration supplémentaire n’est nécessaire après la migration 020.
+
+Validation : ouvrir un retour expédié connu et un historique sans coût, vérifier
+un coût nul, les signes des écarts, puis rouvrir un brouillon et un retour annulé.
+Vérifier les périmètres propriétaire et root et recharger la page pour le nouveau JS.
