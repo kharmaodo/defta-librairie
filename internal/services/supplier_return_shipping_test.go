@@ -16,12 +16,23 @@ import (
 )
 
 func TestSupplierReturnShipInsufficientStockRollsBack(t *testing.T) {
-	for _, multiLine := range []bool{false, true} {
+	for _, tc := range []struct {
+		multiLine bool
+		costSQL   string
+		cost      *float64
+	}{
+		{false, "800", floatPointerSupplierCost(800)},
+		{true, "800", floatPointerSupplierCost(800)},
+		{true, "0", floatPointerSupplierCost(0)},
+		{true, "NULL", nil},
+		{true, "1200", floatPointerSupplierCost(1200)},
+	} {
+		multiLine := tc.multiLine
 		name := "single_line"
 		if multiLine {
 			name = "rollback_after_first_stock_exit"
 		}
-		t.Run(name, func(t *testing.T) {
+		t.Run(name+"_cost_"+tc.costSQL, func(t *testing.T) {
 			ctx := context.Background()
 			db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "shipping.db")+"?_foreign_keys=on")
 			if err != nil {
@@ -52,6 +63,9 @@ func TestSupplierReturnShipInsufficientStockRollsBack(t *testing.T) {
 			if err != nil {
 				t.Fatalf("fixture: %v", err)
 			}
+			if _, err = db.Exec("UPDATE book_inventory SET average_unit_cost=" + tc.costSQL); err != nil {
+				t.Fatal(err)
+			}
 			service := NewSupplierReturnService(repositories.NewSupplierReturnRepository(db))
 			owner := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "ship-library"}
 			owner.Subject = "ship-owner"
@@ -79,6 +93,11 @@ func TestSupplierReturnShipInsufficientStockRollsBack(t *testing.T) {
 			}
 			if after.Status != models.SupplierReturnStatusDraft || after.Version != value.Version || after.UpdatedAt != value.UpdatedAt || after.ShippedAt != "" || after.ShippedBy != "" || len(after.Lines) != len(lines) {
 				t.Fatalf("draft changed after failure: %+v", after)
+			}
+			for _, line := range after.Lines {
+				if line.UnitCostSnapshot != nil || line.InventoryCost != nil || line.CostVariance != nil {
+					t.Fatal("failed shipment retained costs")
+				}
 			}
 			for book, expected := range map[int]int{1: 5, 2: 1} {
 				var quantity, version int
@@ -138,6 +157,36 @@ func TestSupplierReturnShipInsufficientStockRollsBack(t *testing.T) {
 				t.Fatal("rejected shipment left side effects")
 			}
 
+			// Failure of the final audit must roll back costs and all inventory writes.
+			if _, err = db.Exec(`CREATE TRIGGER reject_ship_audit BEFORE INSERT ON audit_logs WHEN NEW.action='SHIP_SUPPLIER_RETURN' BEGIN SELECT RAISE(ABORT,'test audit failure'); END`); err != nil {
+				t.Fatal(err)
+			}
+			if _, err = service.Ship(ctx, owner, value.ID, value.Version); err == nil {
+				t.Fatal("expected audit failure")
+			}
+			failed, err := service.Find(ctx, owner, value.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if failed.Status != models.SupplierReturnStatusDraft || failed.Version != value.Version {
+				t.Fatal("audit failure retained shipment")
+			}
+			for _, l := range failed.Lines {
+				if l.UnitCostSnapshot != nil || l.InventoryCost != nil || l.CostVariance != nil {
+					t.Fatal("audit failure retained costs")
+				}
+				var quantity int
+				if err = db.QueryRow("SELECT quantity FROM book_inventory WHERE book_id=?", l.BookID).Scan(&quantity); err != nil {
+					t.Fatal(err)
+				}
+				if quantity != 5 {
+					t.Fatal("audit failure retained stock exit")
+				}
+			}
+			if _, err = db.Exec("DROP TRIGGER reject_ship_audit"); err != nil {
+				t.Fatal(err)
+			}
+
 			shipped, err := service.Ship(ctx, owner, value.ID, value.Version)
 			if err != nil {
 				t.Fatalf("valid shipment: %v", err)
@@ -150,6 +199,20 @@ func TestSupplierReturnShipInsufficientStockRollsBack(t *testing.T) {
 				t.Fatalf("duplicate shipment: %v", err)
 			}
 			for _, l := range shipped.Lines {
+				if tc.cost == nil {
+					if l.UnitCostSnapshot != nil || l.InventoryCost != nil || l.CostVariance != nil {
+						t.Fatal("unknown cost became known")
+					}
+				} else if l.UnitCostSnapshot == nil || *l.UnitCostSnapshot != *tc.cost || l.InventoryCost == nil || *l.InventoryCost != 2**tc.cost || l.CostVariance == nil || *l.CostVariance != 2000-2**tc.cost {
+					t.Fatalf("incorrect frozen costs: %+v", l)
+				}
+				var currentCost sql.NullFloat64
+				if err = db.QueryRow("SELECT average_unit_cost FROM book_inventory WHERE book_id=?", l.BookID).Scan(&currentCost); err != nil {
+					t.Fatal(err)
+				}
+				if (tc.cost == nil && currentCost.Valid) || (tc.cost != nil && (!currentCost.Valid || currentCost.Float64 != *tc.cost)) {
+					t.Fatal("shipment changed CMP")
+				}
 				var quantity, inventoryVersion, delta, before, after int
 				var movementType string
 				if err = db.QueryRow("SELECT quantity,version FROM book_inventory WHERE book_id=?", l.BookID).Scan(&quantity, &inventoryVersion); err != nil {
@@ -179,6 +242,26 @@ func TestSupplierReturnShipInsufficientStockRollsBack(t *testing.T) {
 				t.Fatalf("unexpected effects: movements=%d audits=%d shipment audits=%d", movements, audits, shipAudits)
 			}
 
+			// A later receipt/CMP change must never revalue this shipment.
+			if _, err = db.Exec("UPDATE book_inventory SET average_unit_cost=9999"); err != nil {
+				t.Fatal(err)
+			}
+			frozen, err := service.Find(ctx, owner, value.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, l := range frozen.Lines {
+				if tc.cost == nil {
+					if l.UnitCostSnapshot != nil || l.CostVariance != nil {
+						t.Fatal("historical unknown cost changed")
+					}
+				} else if l.UnitCostSnapshot == nil || *l.UnitCostSnapshot != *tc.cost || l.CostVariance == nil || *l.CostVariance != 2000-2**tc.cost {
+					t.Fatal("snapshot changed with current CMP")
+				}
+			}
+
 		})
 	}
 }
+
+func floatPointerSupplierCost(v float64) *float64 { return &v }

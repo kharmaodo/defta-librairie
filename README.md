@@ -932,3 +932,27 @@ un incrément distinct ; aucun écart historique n’est estimé ici.
 Validation : `go test -tags fts5 ./internal/repositories -run TestCommercialStatistics -count=1 -v`,
 puis les suites Go et race. Dans /admin, comparer une réception et une expédition
 à leurs périodes, vérifier une période vide et la sélection de librairie root.
+
+### Coûts figés des retours fournisseurs
+
+La migration `020_freeze_supplier_return_cost.sql` ajoute le coût unitaire de sortie
+`unit_cost_snapshot` aux lignes de retour fournisseur. L’expédition fige le CMP
+courant dans la transaction qui sort le stock, change le statut et écrit les audits.
+Le CMP du stock restant est conservé, même si la quantité devient nulle.
+Les retours historiques gardent un coût inconnu ; aucune reconstitution n’est faite.
+
+Les lignes retournées par l’API exposent `unitCostSnapshot`, `inventoryCost`
+(quantité × coût figé) et `costVariance` (montant fournisseur − coût du stock sorti).
+Un écart positif signifie que le montant fournisseur excède la valeur du stock sorti ;
+un écart négatif signifie l’inverse. Il ne représente pas un remboursement reçu.
+Un coût inconnu donne trois valeurs null ; un coût nul connu reste zéro.
+Les brouillons et retours annulés restent sans coût de sortie.
+Les montants fournisseur et la marge commerciale existante ne changent pas.
+L’affichage des écarts dans le tableau de bord sera un incrément ultérieur.
+
+Exemple : 2 livres retournés à 1 000 F CFA chacun, CMP de 800 F CFA :
+montant fournisseur 2 000, coût du stock sorti 1 600, écart +400 F CFA.
+Un changement ultérieur du CMP ne modifie pas ces valeurs figées.
+
+Sauvegarder SQLite avant le redémarrage qui applique la migration 020.
+Test ciblé : `go test -tags fts5 ./internal/services -run TestSupplierReturnShipInsufficientStockRollsBack -count=1 -v`.
