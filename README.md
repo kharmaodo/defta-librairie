@@ -870,3 +870,9 @@ Le test d’expédition couvre aussi l’isolation entre librairies, les version
 ### Tableau de bord des retours fournisseurs
 
 La section Retours fournisseurs de `/admin` propose liste paginée, filtre de statut, création depuis un achat réceptionné, modification des quantités et du motif d’un brouillon, annulation et expédition confirmée. Les retours terminaux sont consultables en lecture seule. Le root sélectionne la librairie ; les propriétaires restent limités à leur périmètre JWT. Les contrôles de quantité et de version restent réalisés par le serveur. Après une expédition, actualiser la section Stocks pour consulter les nouvelles quantités. Sauvegarder SQLite avant les essais métier.
+
+### Coût moyen pondéré — première étape
+
+La migration `018_add_inventory_average_cost.sql` ajoute `book_inventory.average_unit_cost`. Le CMP est recalculé dans la transaction de réception : (stock avant × CMP avant + quantité reçue × coût unitaire) / stock après. Quand le stock avant est nul, le coût de la réception devient le CMP. Un coût gratuit connu vaut zéro ; un coût inconnu vaut NULL. Les stocks historiques positifs conservent un CMP inconnu, même après réception, plutôt que d’estimer leur valorisation.
+
+Cette première étape couvre les réceptions uniquement. La valorisation des autres entrées, les coûts figés des ventes et des retours, et les statistiques de marge restent à développer avant utilisation comptable du CMP. Les tests couvrent la moyenne pondérée, le stock vide, le coût nul connu, le coût historique inconnu et la réception transactionnelle. Aucune marge historique n’est reconstituée.

@@ -46,6 +46,7 @@ func TestPurchaseDraftLifecycleIsolationAndAudit(t *testing.T) {
 		t.Fatalf("create schema: %v", err)
 	}
 
+	if _, err = db.Exec("ALTER TABLE book_inventory ADD COLUMN average_unit_cost REAL; UPDATE book_inventory SET average_unit_cost=1500 WHERE book_id=1"); err != nil { t.Fatal(err) }
 	service := NewPurchaseService(repositories.NewPurchaseRepository(db))
 	ownerOne := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-1"}
 	ownerOne.Subject = "owner-1"
@@ -116,6 +117,9 @@ func TestPurchaseDraftLifecycleIsolationAndAudit(t *testing.T) {
 	if quantity != 12 || inventoryVersion != 2 || movements != 1 || inventoryAudits != 1 {
 		t.Fatalf("quantity=%d version=%d movements=%d audits=%d", quantity, inventoryVersion, movements, inventoryAudits)
 	}
+	var averageCost float64
+	if err = db.QueryRow("SELECT average_unit_cost FROM book_inventory WHERE book_id=1").Scan(&averageCost); err != nil { t.Fatal(err) }
+	if averageCost < 1291.666666 || averageCost > 1291.666667 { t.Fatalf("unexpected weighted cost: %v",averageCost) }
 	if _, err = service.Receive(context.Background(), ownerOne, receipt.ID, receipt.Version); !errors.Is(err, repositories.ErrPurchaseState) {
 		t.Fatalf("second receipt should fail: %v", err)
 	}
