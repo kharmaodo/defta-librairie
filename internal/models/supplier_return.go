@@ -9,15 +9,18 @@ const (
 )
 
 type SupplierReturnLine struct {
-	ID             string  `json:"id"`
-	ReturnID       string  `json:"returnId"`
-	PurchaseLineID string  `json:"purchaseLineId"`
-	BookID         int64   `json:"bookId"`
-	Title          string  `json:"title"`
-	Quantity       int     `json:"quantity"`
-	UnitCost       float64 `json:"unitCost"`
-	LineTotal      float64 `json:"lineTotal"`
-	CreatedAt      string  `json:"createdAt"`
+	UnitCostSnapshot *float64 `json:"unitCostSnapshot"`
+	InventoryCost    *float64 `json:"inventoryCost"`
+	CostVariance     *float64 `json:"costVariance"`
+	ID               string   `json:"id"`
+	ReturnID         string   `json:"returnId"`
+	PurchaseLineID   string   `json:"purchaseLineId"`
+	BookID           int64    `json:"bookId"`
+	Title            string   `json:"title"`
+	Quantity         int      `json:"quantity"`
+	UnitCost         float64  `json:"unitCost"`
+	LineTotal        float64  `json:"lineTotal"`
+	CreatedAt        string   `json:"createdAt"`
 }
 
 type SupplierReturn struct {
