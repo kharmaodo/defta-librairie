@@ -744,6 +744,14 @@ L'action **Nouveau retour** sélectionne une vente confirmée et les quantités 
 
 SQLite contrôle que la vente et la caisse appartiennent à la même librairie, que la caisse est active, que la vente est confirmée et que le cumul des règlements ne dépasse jamais son total. La vue `sale_payment_balances` calcule le montant payé, le reste à payer et l’état financier `UNPAID`, `PARTIALLY_PAID` ou `PAID`. Un règlement annulé conservera sa ligne avec le statut `VOIDED` pour assurer la traçabilité.
 
+### Retours fournisseurs
+
+La migration `017_create_supplier_returns.sql` pose la fondation des retours vers les fournisseurs. Un retour est obligatoirement rattaché à un achat `RECEIVED`, au fournisseur et à la même librairie. Ses lignes référencent les lignes réellement réceptionnées et reprennent le livre, le titre et le coût unitaire historiques.
+
+Le cycle prévu est `DRAFT → SHIPPED` ou `DRAFT → CANCELLED`. SQLite refuse les lignes étrangères à l'achat, les brouillons vides lors de l'expédition et le cumul de quantités supérieur à la quantité reçue. Les brouillons concurrents réservent les quantités disponibles ; leur annulation les libère. L'expédition diminuera atomiquement le stock et produira des mouvements `EXIT` ainsi que les audits associés.
+
+Le CRUD des brouillons est exposé par `GET|POST /api/manage/supplier-returns`, `GET|PUT /api/manage/supplier-returns/{id}` et `POST /api/manage/supplier-returns/{id}/cancel`. La liste accepte `status`, `purchaseId`, `supplierId`, `from`, `to`, `offset`, `limit` et, pour le root, `libraryId`. Chaque création, modification et annulation produit un audit dédié et respecte le contrôle optimiste par `version`.
+
 ## Tester FTS5 directement
 
 Vérifier que SQLite a été compilé avec FTS5 :
@@ -850,3 +858,15 @@ git diff --check
 ```
 
 La branche de la présente réécriture est `feature/rewriting` et sa pull request doit cibler `develop`.
+
+### Expédition des retours fournisseurs
+
+`POST /api/manage/supplier-returns/{id}/ship` accepte `{"version":1}`. Seul un brouillon de la librairie autorisée peut être expédié. Une transaction unique enregistre l’état `SHIPPED`, diminue les stocks, crée les mouvements `EXIT` et les audits `UPDATE_INVENTORY` et `SHIP_SUPPLIER_RETURN`. Un stock insuffisant retourne `409 supplier_return_insufficient_stock` et annule toutes les écritures. Les versions obsolètes et transitions répétées sont refusées. Sauvegarder la base avant les tests locaux.
+
+Le test `TestSupplierReturnShipInsufficientStockRollsBack` utilise une base temporaire et les migrations réelles. Il vérifie le refus pour stock insuffisant, y compris après une première ligne traitée, et exige que le brouillon, les quantités, versions, dates, mouvements et audits restent inchangés. Exécution ciblée : `go test -tags fts5 ./internal/services -run TestSupplierReturnShipInsufficientStockRollsBack -count=1 -v`.
+
+Le test d’expédition couvre aussi l’isolation entre librairies, les versions obsolètes, une expédition valide et le refus d’une répétition sans seconde sortie de stock ni audit supplémentaire. Ces contrôles utilisent exclusivement la base temporaire de test.
+
+### Tableau de bord des retours fournisseurs
+
+La section Retours fournisseurs de `/admin` propose liste paginée, filtre de statut, création depuis un achat réceptionné, modification des quantités et du motif d’un brouillon, annulation et expédition confirmée. Les retours terminaux sont consultables en lecture seule. Le root sélectionne la librairie ; les propriétaires restent limités à leur périmètre JWT. Les contrôles de quantité et de version restent réalisés par le serveur. Après une expédition, actualiser la section Stocks pour consulter les nouvelles quantités. Sauvegarder SQLite avant les essais métier.
