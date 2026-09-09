@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"defta-librairie/internal/auth"
+	"defta-librairie/internal/migrations"
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"errors"
@@ -20,37 +21,10 @@ func TestBookLifecycleAndLibraryIsolation(t *testing.T) {
 		t.Fatalf("open database: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
+	if err = migrations.Run(context.Background(), db); err != nil {
+		t.Fatalf("apply migrations: %v", err)
+	}
 	_, err = db.Exec(`
-		CREATE TABLE users (id TEXT PRIMARY KEY, username TEXT, email TEXT, password_hash TEXT,
-		role TEXT, status TEXT, failed_login_attempts INTEGER DEFAULT 0, locked_until TEXT,
-		last_login_at TEXT, password_changed_at TEXT, created_at TEXT, updated_at TEXT);
-		CREATE TABLE libraries (id TEXT PRIMARY KEY, name TEXT, description TEXT, owner_user_id TEXT,
-		status TEXT, created_at TEXT, updated_at TEXT);
-		CREATE TABLE defta (
-			id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL, auteur TEXT, editeur TEXT,
-			price REAL NOT NULL DEFAULT 0, volume INTEGER NOT NULL DEFAULT 0, status TEXT, tags TEXT,
-			categorie TEXT, coverUrl TEXT, library_id TEXT, created_at TEXT, updated_at TEXT,
-			deleted_at TEXT, version INTEGER NOT NULL DEFAULT 1
-		);
-		CREATE TABLE audit_logs (id TEXT PRIMARY KEY, actor_user_id TEXT, action TEXT,
-		resource_type TEXT, resource_id TEXT, old_values TEXT, new_values TEXT, ip_address TEXT,
-		success INTEGER, created_at TEXT);
-		CREATE TABLE book_inventory (book_id INTEGER PRIMARY KEY, library_id TEXT NOT NULL,
-		quantity INTEGER NOT NULL DEFAULT 0, low_stock_threshold INTEGER NOT NULL DEFAULT 5,
-		version INTEGER NOT NULL DEFAULT 1, updated_at TEXT NOT NULL);
-		CREATE VIRTUAL TABLE defta_fts USING fts5(
-			title, editeur, auteur, tags, categorie, content='defta', content_rowid='id'
-		);
-		CREATE TRIGGER defta_ai AFTER INSERT ON defta BEGIN
-			INSERT INTO defta_fts(rowid, title, editeur, auteur, tags, categorie)
-			VALUES(new.id, new.title, new.editeur, new.auteur, new.tags, new.categorie);
-		END;
-		CREATE TRIGGER defta_au AFTER UPDATE ON defta BEGIN
-			INSERT INTO defta_fts(defta_fts, rowid, title, editeur, auteur, tags, categorie)
-			VALUES('delete', old.id, old.title, old.editeur, old.auteur, old.tags, old.categorie);
-			INSERT INTO defta_fts(rowid, title, editeur, auteur, tags, categorie)
-			VALUES(new.id, new.title, new.editeur, new.auteur, new.tags, new.categorie);
-		END;
 		INSERT INTO users(id,username,password_hash,role,status,created_at,updated_at) VALUES
 		('root','root','hash','SUPER_ADMIN_ROOT','ACTIVE','now','now'),
 		('owner-1','owner1','hash','OWNER_LIBRARY','ACTIVE','now','now'),

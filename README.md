@@ -1290,3 +1290,57 @@ couvrent les droits, les cinq contenus, les filtres, les bornes 10 000/10 001,
 les caractères arabes et les formules. Recette navigateur : télécharger chaque
 type, vérifier un filtre et un fichier vide, comparer propriétaire et root,
 puis ouvrir un fichier arabe dans le tableur. Aucune nouvelle migration.
+
+
+### Paramétrage de la librairie
+
+La migration `023_create_library_settings.sql` initialise chaque librairie
+existante et future : XOF, seuil par défaut 5, coordonnées/logo/texte vides,
+version 1. Elle ne modifie ni les montants ni les seuils des livres existants.
+La création d’un livre prend désormais le seuil configuré dans la transaction.
+
+`GET /api/manage/library-settings` et `PUT /api/manage/library-settings`
+sont réservés aux rôles métier. Root fournit `libraryId` ; le propriétaire
+est limité à sa librairie active. Le nom affiché provient du référentiel de
+librairies existant et continue d’être modifié par son écran actuel.
+
+PUT remplace les champs éditables et exige la version lue par GET :
+
+```json
+{
+  "currency": "XOF",
+  "address": "Dakar",
+  "phone": "+221 …",
+  "email": "contact@example.com",
+  "logoData": "",
+  "defaultLowStockThreshold": 5,
+  "printFooter": "Merci de votre visite",
+  "version": 1
+}
+```
+
+Succès : 204. Version dépassée : 409 `version_conflict` ; données invalides :
+400 `invalid_settings` ; autre librairie propriétaire : 403 ; librairie absente
+ou désactivée pour le propriétaire : 404. GET utilise `Cache-Control: no-store`.
+Chaque modification écrit `UPDATE_LIBRARY_SETTINGS` dans la même transaction.
+Les octets du logo sont omis de l’audit.
+
+Adresse et texte d’impression : 500 caractères chacun ; téléphone : 40 ;
+e-mail : 254. Seuil entier entre 0 et 1 000 000. Logo encodé en URL de données
+PNG/JPEG, 128 Kio maximum et dimensions au plus 1 024 × 1 024, décodé et validé
+par le serveur. Une chaîne vide supprime le logo. La politique d’images autorise
+les données embarquées pour son affichage ; SVG et URL externes ne sont pas
+acceptés comme logo.
+
+Dans `/admin`, **Paramétrage de la librairie** permet de charger et enregistrer
+ces champs. Les reçus de vente et bons d’achat chargent les paramètres de la
+librairie du document, indépendamment de la sélection du formulaire. Les
+coordonnées sont celles de la consultation, sans instantané historique ; les
+montants et lignes de vente conservent leurs valeurs existantes. XOF reste fixe :
+aucune conversion ni changement d’étiquette des montants historiques.
+
+Validation : `go test -tags fts5 ./...`, puis vérifier en propriétaire et root
+les coordonnées, logo, conflit de version, nouveau livre (seuil configuré),
+livre existant (seuil conservé), aperçu et impression vente/achat. Le test
+`TestLibrarySettingsLifecycle` couvre défauts, isolation, validations, audit,
+concurrence et application du seuil. Le changement de devise reste au backlog.

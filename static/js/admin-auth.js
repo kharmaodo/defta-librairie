@@ -574,6 +574,7 @@
       textCell(row, formatMoney(line.lineTotal));
     });
     document.querySelector("#sale-detail-error").hidden = true;
+    await window.deftaPrintSettings("#sale-receipt", sale.libraryId);
     document.querySelector("#sale-detail-dialog").showModal();
   }
 
