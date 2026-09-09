@@ -338,22 +338,27 @@ func (r *SaleRepository) Transition(ctx context.Context, id, libraryID, actorID 
 		(target == models.SaleStatusCancelled && current != models.SaleStatusConfirmed) {
 		return models.Sale{}, ErrSaleState
 	}
-	rows, err := tx.QueryContext(ctx, `SELECT book_id,quantity FROM sale_lines WHERE sale_id=? ORDER BY id`, id)
+	rows, err := tx.QueryContext(ctx, `SELECT book_id,quantity,unit_cost_snapshot FROM sale_lines WHERE sale_id=? ORDER BY id`, id)
 	if err != nil {
 		return models.Sale{}, fmt.Errorf("read sale lines before transition: %w", err)
 	}
 	type transitionLine struct {
 		bookID   int64
 		quantity int
+		unitCost sql.NullFloat64
 	}
 	lines := make([]transitionLine, 0)
 	for rows.Next() {
 		var line transitionLine
-		if err = rows.Scan(&line.bookID, &line.quantity); err != nil {
+		if err = rows.Scan(&line.bookID, &line.quantity, &line.unitCost); err != nil {
 			rows.Close()
 			return models.Sale{}, fmt.Errorf("scan sale transition line: %w", err)
 		}
 		lines = append(lines, line)
+	}
+	if err = rows.Err(); err != nil {
+		rows.Close()
+		return models.Sale{}, fmt.Errorf("iterate sale transition lines: %w", err)
 	}
 	if err = rows.Close(); err != nil {
 		return models.Sale{}, fmt.Errorf("close sale transition lines: %w", err)
@@ -363,11 +368,23 @@ func (r *SaleRepository) Transition(ctx context.Context, id, libraryID, actorID 
 	}
 	for index, line := range lines {
 		var before, inventoryVersion int
-		if err = tx.QueryRowContext(ctx, `SELECT quantity,version FROM book_inventory
-			WHERE book_id=? AND library_id=?`, line.bookID, actualLibrary).Scan(&before, &inventoryVersion); errors.Is(err, sql.ErrNoRows) {
+		var averageCost sql.NullFloat64
+		if err = tx.QueryRowContext(ctx, `SELECT quantity,version,average_unit_cost FROM book_inventory
+			WHERE book_id=? AND library_id=?`, line.bookID, actualLibrary).Scan(&before, &inventoryVersion, &averageCost); errors.Is(err, sql.ErrNoRows) {
 			return models.Sale{}, ErrSaleBook
 		} else if err != nil {
 			return models.Sale{}, fmt.Errorf("read inventory for sale transition: %w", err)
+		}
+		nextCost := averageCost
+		if target == models.SaleStatusConfirmed {
+			if _, err = tx.ExecContext(ctx, `UPDATE sale_lines SET unit_cost_snapshot=? WHERE sale_id=? AND book_id=?`, averageCost, id, line.bookID); err != nil {
+				return models.Sale{}, fmt.Errorf("freeze sale cost: %w", err)
+			}
+		} else {
+			nextCost = sql.NullFloat64{}
+			if line.unitCost.Valid {
+				nextCost = receiptAverageCost(before, averageCost, line.quantity, line.unitCost.Float64)
+			}
 		}
 		after, delta, movementType := before-line.quantity, -line.quantity, models.InventoryMovementExit
 		if target == models.SaleStatusCancelled {
@@ -376,9 +393,9 @@ func (r *SaleRepository) Transition(ctx context.Context, id, libraryID, actorID 
 		if after < 0 {
 			return models.Sale{}, ErrInsufficientStock
 		}
-		result, updateErr := tx.ExecContext(ctx, `UPDATE book_inventory SET quantity=?,version=version+1,updated_at=?
+		result, updateErr := tx.ExecContext(ctx, `UPDATE book_inventory SET quantity=?,average_unit_cost=?,version=version+1,updated_at=?
 			WHERE book_id=? AND library_id=? AND version=? AND quantity=?`,
-			after, now, line.bookID, actualLibrary, inventoryVersion, before)
+			after, nextCost, now, line.bookID, actualLibrary, inventoryVersion, before)
 		if updateErr != nil {
 			return models.Sale{}, fmt.Errorf("update inventory for sale: %w", updateErr)
 		}

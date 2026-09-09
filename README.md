@@ -876,3 +876,11 @@ La section Retours fournisseurs de `/admin` propose liste paginée, filtre de st
 La migration `018_add_inventory_average_cost.sql` ajoute `book_inventory.average_unit_cost`. Le CMP est recalculé dans la transaction de réception : (stock avant × CMP avant + quantité reçue × coût unitaire) / stock après. Quand le stock avant est nul, le coût de la réception devient le CMP. Un coût gratuit connu vaut zéro ; un coût inconnu vaut NULL. Les stocks historiques positifs conservent un CMP inconnu, même après réception, plutôt que d’estimer leur valorisation.
 
 Cette première étape couvre les réceptions uniquement. La valorisation des autres entrées, les coûts figés des ventes et des retours, et les statistiques de marge restent à développer avant utilisation comptable du CMP. Les tests couvrent la moyenne pondérée, le stock vide, le coût nul connu, le coût historique inconnu et la réception transactionnelle. Aucune marge historique n’est reconstituée.
+
+### Coûts figés des ventes
+
+La migration `019_freeze_sale_cost.sql` ajoute `sale_lines.unit_cost_snapshot`, nullable. La confirmation copie le CMP courant dans chaque ligne dans la même transaction que la sortie de stock et les audits. Les ventes historiques restent sans coût connu ; aucune estimation rétroactive n'est appliquée. Le coût reste consultable en SQL et n'est pas encore exposé par l'API.
+
+L'annulation restitue le stock au coût figé, en recalculant sa moyenne avec le stock présent. Un coût de sortie inconnu rend la valorisation résultante inconnue. Les coûts figés restent conservés après annulation. Un échec de confirmation annule aussi les écritures de coût. Les tests vérifient le gel du coût, sa conservation après changement du CMP, la revalorisation à l'annulation et le rollback pour stock insuffisant.
+
+Sauvegarder SQLite avant de redémarrer pour appliquer les migrations. La valorisation des retours clients et des ajustements manuels reste à intégrer avant d'exposer les statistiques de marge.

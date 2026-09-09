@@ -49,6 +49,9 @@ func TestSaleDraftLifecycleAndIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err = db.Exec("ALTER TABLE book_inventory ADD COLUMN average_unit_cost REAL; ALTER TABLE sale_lines ADD COLUMN unit_cost_snapshot REAL; UPDATE book_inventory SET average_unit_cost=1500"); err != nil {
+		t.Fatal(err)
+	}
 	service := NewSaleService(repositories.NewSaleRepository(db))
 	service.now = func() time.Time { return time.Date(2026, 9, 3, 16, 0, 0, 0, time.UTC) }
 	owner := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-1"}
@@ -139,6 +142,14 @@ func TestSaleDraftLifecycleAndIsolation(t *testing.T) {
 	if err = service.Delete(context.Background(), owner, sale.ID); !errors.Is(err, repositories.ErrSaleState) {
 		t.Fatalf("delete confirmed sale=%v", err)
 	}
+	var frozenCost float64
+	if err = db.QueryRow("SELECT unit_cost_snapshot FROM sale_lines WHERE sale_id=?", sale.ID).Scan(&frozenCost); err != nil || frozenCost != 1500 {
+		t.Fatalf("frozen cost=%v err=%v", frozenCost, err)
+	}
+	// Simulate a changed valuation after confirmation: cancellation must use the frozen cost.
+	if _, err = db.Exec("UPDATE book_inventory SET average_unit_cost=2000 WHERE book_id=2"); err != nil {
+		t.Fatal(err)
+	}
 	sale, err = service.Cancel(context.Background(), owner, sale.ID, sale.Version)
 	if err != nil || sale.Status != models.SaleStatusCancelled || sale.Version != 4 {
 		t.Fatalf("cancel sale=%+v err=%v", sale, err)
@@ -147,10 +158,51 @@ func TestSaleDraftLifecycleAndIsolation(t *testing.T) {
 	if stock != 10 {
 		t.Fatalf("stock after cancellation=%d", stock)
 	}
+	var restoredCost float64
+	if err = db.QueryRow("SELECT average_unit_cost FROM book_inventory WHERE book_id=2").Scan(&restoredCost); err != nil || restoredCost != 1900 {
+		t.Fatalf("restored cost=%v err=%v", restoredCost, err)
+	}
+	if err = db.QueryRow("SELECT unit_cost_snapshot FROM sale_lines WHERE sale_id=?", sale.ID).Scan(&frozenCost); err != nil || frozenCost != 1500 {
+		t.Fatalf("snapshot changed=%v err=%v", frozenCost, err)
+	}
 	var movements int
 	_ = db.QueryRow("SELECT COUNT(*) FROM inventory_movements WHERE book_id=2").Scan(&movements)
 	if movements != 2 {
 		t.Fatalf("sale inventory movements=%d", movements)
+	}
+
+	for _, tc := range []struct {
+		name string
+		cost sql.NullFloat64
+	}{
+		{"unknown", sql.NullFloat64{}},
+		{"known zero", sql.NullFloat64{Valid: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := db.Exec("UPDATE book_inventory SET average_unit_cost=? WHERE book_id=1", tc.cost); err != nil {
+				t.Fatal(err)
+			}
+			draft, err := service.Create(context.Background(), owner, models.SaleInput{
+				Lines: []models.SaleLineInput{{BookID: 1, Quantity: 1}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			confirmed, err := service.Confirm(context.Background(), owner, draft.ID, draft.Version)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var cost sql.NullFloat64
+			if err = db.QueryRow("SELECT unit_cost_snapshot FROM sale_lines WHERE sale_id=?", draft.ID).Scan(&cost); err != nil || cost != tc.cost {
+				t.Fatalf("snapshot=%+v want=%+v err=%v", cost, tc.cost, err)
+			}
+			if _, err = service.Cancel(context.Background(), owner, confirmed.ID, confirmed.Version); err != nil {
+				t.Fatal(err)
+			}
+			if err = db.QueryRow("SELECT average_unit_cost FROM book_inventory WHERE book_id=1").Scan(&cost); err != nil || cost != tc.cost {
+				t.Fatalf("restored cost=%+v want=%+v err=%v", cost, tc.cost, err)
+			}
+		})
 	}
 }
 
@@ -180,6 +232,9 @@ func TestSaleConfirmationRollsBackOnInsufficientStock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err = db.Exec("ALTER TABLE book_inventory ADD COLUMN average_unit_cost REAL; ALTER TABLE sale_lines ADD COLUMN unit_cost_snapshot REAL; UPDATE book_inventory SET average_unit_cost=1500"); err != nil {
+		t.Fatal(err)
+	}
 	service := NewSaleService(repositories.NewSaleRepository(db))
 	owner := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-1"}
 	owner.Subject = "owner-1"
@@ -189,8 +244,16 @@ func TestSaleConfirmationRollsBackOnInsufficientStock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Make the stocked line run first, so failure on the second line proves rollback.
+	if _, err = db.Exec("UPDATE sale_lines SET id=CASE book_id WHEN 1 THEN 'line-a' ELSE 'line-b' END WHERE sale_id=?", sale.ID); err != nil {
+		t.Fatal(err)
+	}
 	if _, err = service.Confirm(context.Background(), owner, sale.ID, sale.Version); !errors.Is(err, repositories.ErrInsufficientStock) {
 		t.Fatalf("insufficient stock=%v", err)
+	}
+	var frozenLines int
+	if err = db.QueryRow("SELECT COUNT(*) FROM sale_lines WHERE sale_id=? AND unit_cost_snapshot IS NOT NULL", sale.ID).Scan(&frozenLines); err != nil || frozenLines != 0 {
+		t.Fatalf("cost snapshot survived rollback=%d err=%v", frozenLines, err)
 	}
 	var firstStock, movements int
 	_ = db.QueryRow("SELECT quantity FROM book_inventory WHERE book_id=1").Scan(&firstStock)
