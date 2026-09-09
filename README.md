@@ -972,3 +972,27 @@ Aucune migration supplémentaire n’est nécessaire après la migration 020.
 Validation : ouvrir un retour expédié connu et un historique sans coût, vérifier
 un coût nul, les signes des écarts, puis rouvrir un brouillon et un retour annulé.
 Vérifier les périmètres propriétaire et root et recharger la page pour le nouveau JS.
+
+### Écarts fournisseurs dans les statistiques de période
+
+L’API `/api/manage/statistics` et le tableau de bord incluent la valorisation des
+retours fournisseurs `SHIPPED`, à leur date `shipped_at`, dans le même périmètre
+JWT et l’intervalle `[from,to)` que les autres indicateurs.
+
+- `supplierReturnKnownCost` : somme des quantités × CMP figé pour les lignes connues.
+- `supplierReturnUnknownCostLines` : nombre de lignes expédiées sans coût figé.
+- `supplierReturnInventoryCost` : valeur totale du stock sorti, ou `null` si un coût manque.
+- `supplierReturnCostVariance` : montant fournisseur − valeur totale du stock sorti,
+  ou `null` si un coût manque. Ce montant peut être positif, nul ou négatif.
+
+Une période sans retours donne zéro, avec une valorisation complète. Les coûts
+historiques inconnus ne sont jamais remplacés par le CMP actuel. Si des coûts
+manquent, l’écran affiche « Indisponible » pour le total et l’écart, le nombre de
+lignes concernées et la partie connue explicitement présentée comme partielle.
+La marge commerciale reste indépendante : les écarts fournisseurs n’y sont pas ajoutés.
+Les achats nets et les montants fournisseur existants ne changent pas.
+
+Aucune migration après 020. Tests ciblés :
+`go test -tags fts5 ./internal/repositories -run TestCommercialStatistics -count=1 -v`.
+Redémarrer le serveur et recharger `/admin` : vérifier période vide, coûts connus,
+nuls ou mixtes, écarts positifs/négatifs, dates limites et sélection de librairie root.

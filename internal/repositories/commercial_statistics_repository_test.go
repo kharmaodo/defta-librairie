@@ -62,7 +62,8 @@ func TestCommercialStatisticsEventsAndIsolation(t *testing.T) {
 
 const statisticsFixture = `
 CREATE TABLE purchases(library_id TEXT,status TEXT,received_at TEXT,total_amount REAL);
-CREATE TABLE supplier_returns(library_id TEXT,status TEXT,shipped_at TEXT,total_amount REAL);
+CREATE TABLE supplier_returns(id INTEGER PRIMARY KEY,library_id TEXT,status TEXT,shipped_at TEXT,total_amount REAL);
+CREATE TABLE supplier_return_lines(return_id INTEGER,quantity INTEGER,unit_cost_snapshot REAL);
 CREATE TABLE sales(id TEXT,library_id TEXT,status TEXT,confirmed_at TEXT,cancelled_at TEXT);
 CREATE TABLE sale_lines(id TEXT,sale_id TEXT,book_id INTEGER,quantity INTEGER,line_total REAL,unit_cost_snapshot REAL);
 CREATE TABLE customer_returns(id TEXT,sale_id TEXT,library_id TEXT,status TEXT,completed_at TEXT);
@@ -126,11 +127,82 @@ INSERT INTO purchases VALUES
  ('a','CANCELLED','2026-09-01T00:00:00Z',999),
  ('a','RECEIVED',NULL,999),
  ('b','RECEIVED','2026-09-01T00:00:00Z',900);
-INSERT INTO supplier_returns VALUES
+INSERT INTO supplier_returns(library_id,status,shipped_at,total_amount) VALUES
  ('a','SHIPPED','2026-09-01T00:00:00Z',40),
  ('a','SHIPPED','2026-09-02T00:00:00Z',90),
  ('a','DRAFT','2026-09-01T00:00:00Z',999),
  ('a','CANCELLED','2026-09-01T00:00:00Z',999),
  ('a','SHIPPED',NULL,999),
  ('b','SHIPPED','2026-09-01T00:00:00Z',200);
+INSERT INTO supplier_return_lines SELECT id,1,NULL FROM supplier_returns;
+`
+
+func TestCommercialStatisticsSupplierReturnVariance(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+	if _, err = db.Exec(statisticsFixture + supplierVarianceFixture); err != nil {
+		t.Fatal(err)
+	}
+	repo := NewCommercialStatisticsRepository(db)
+	for _, tc := range []struct {
+		name, library string
+		day           int
+		amount, known float64
+		unknown       int
+	}{
+		{"multiple lines and timezone", "a", 1, 2500, 1800, 0},
+		{"mixed known and unknown", "a", 2, 2000, 500, 1},
+		{"known zero", "a", 3, 100, 0, 0},
+		{"negative variance", "a", 4, 100, 150, 0},
+		{"unknown sales independent", "a", 5, 0, 0, 0},
+		{"empty period", "a", 7, 0, 0, 0},
+		{"other library", "b", 1, 900, 600, 0},
+		{"missing library", "missing", 1, 0, 0, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			from := time.Date(2026, 9, tc.day, 0, 0, 0, 0, time.UTC)
+			got, err := repo.Summary(context.Background(), tc.library, from, from.AddDate(0, 0, 1))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.SupplierReturns != tc.amount || got.SupplierReturnKnownCost != tc.known || got.SupplierReturnUnknownCostLines != tc.unknown {
+				t.Fatalf("unexpected supplier totals: %+v", got)
+			}
+			if tc.unknown > 0 {
+				if got.SupplierReturnInventoryCost != nil || got.SupplierReturnCostVariance != nil {
+					t.Fatal("partial costs presented as complete")
+				}
+			} else if got.SupplierReturnInventoryCost == nil || *got.SupplierReturnInventoryCost != tc.known || got.SupplierReturnCostVariance == nil || *got.SupplierReturnCostVariance != tc.amount-tc.known {
+				t.Fatalf("incorrect supplier variance: %+v", got)
+			}
+			if got.UnknownCostEvents > 0 {
+				if got.NetMargin != nil {
+					t.Fatal("unknown sale cost must retain unknown margin")
+				}
+			} else if got.NetMargin == nil || *got.NetMargin != got.NetSales-got.KnownCost {
+				t.Fatal("supplier variance altered sales margin")
+			}
+		})
+	}
+}
+
+const supplierVarianceFixture = `
+INSERT INTO supplier_returns VALUES
+ (1,'a','SHIPPED','2026-09-02T01:00:00+02:00',2500),
+ (2,'a','SHIPPED','2026-09-02T00:00:00Z',2000),
+ (3,'a','SHIPPED','2026-09-03T00:00:00Z',100),
+ (4,'a','SHIPPED','2026-09-04T00:00:00Z',100),
+ (5,'b','SHIPPED','2026-09-01T00:00:00Z',900),
+ (6,'a','DRAFT','2026-09-01T00:00:00Z',999),
+ (7,'a','CANCELLED','2026-09-01T00:00:00Z',999),
+ (8,'a','SHIPPED',NULL,999);
+INSERT INTO supplier_return_lines VALUES
+ (1,2,800),(1,1,200),
+ (2,1,500),(2,1,NULL),
+ (3,1,0),(4,1,150),(5,2,300),
+ (6,1,NULL),(7,1,NULL),(8,1,NULL);
 `

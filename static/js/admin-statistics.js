@@ -25,6 +25,18 @@
     return response.json();
   }
 
+  function renderSupplierCosts(data) {
+    const unknown = data.supplierReturnUnknownCostLines > 0 ||
+      data.supplierReturnInventoryCost === null || data.supplierReturnCostVariance === null;
+    panel.querySelector('[data-value="supplierReturnInventoryCost"]').textContent = unknown
+      ? 'Indisponible' : number.format(data.supplierReturnInventoryCost) + ' F CFA';
+    panel.querySelector('[data-value="supplierReturnCostVariance"]').textContent = unknown
+      ? 'Indisponible' : (data.supplierReturnCostVariance > 0 ? '+' : '') + number.format(data.supplierReturnCostVariance) + ' F CFA';
+    panel.querySelector('[data-supplier-cost-notice]').textContent = unknown
+      ? `Valorisation et écart indisponibles : ${data.supplierReturnUnknownCostLines} ligne(s) sans coût figé. Partie connue du coût : ${number.format(data.supplierReturnKnownCost)} F CFA ; ce montant est partiel.`
+      : 'Valorisation complète des retours expédiés sur la période. Ces montants ne représentent pas des remboursements reçus.';
+  }
+
   async function load() {
     if (busy) return;
     busy = true;
@@ -68,6 +80,10 @@
       const fields = ['grossSales', 'cancellations', 'customerReturns', 'netSales', 'receivedPurchases', 'supplierReturns', 'netPurchases'];
       if (fields.some(key => !Number.isFinite(data[key])) ||
           !Number.isSafeInteger(data.unknownCostEvents) || data.unknownCostEvents < 0 ||
+          !Number.isSafeInteger(data.supplierReturnUnknownCostLines) || data.supplierReturnUnknownCostLines < 0 ||
+          !Number.isFinite(data.supplierReturnKnownCost) ||
+          (data.supplierReturnInventoryCost !== null && !Number.isFinite(data.supplierReturnInventoryCost)) ||
+          (data.supplierReturnCostVariance !== null && !Number.isFinite(data.supplierReturnCostVariance)) ||
           (data.netMargin !== null && !Number.isFinite(data.netMargin))) {
         throw new Error('Indicateurs incomplets dans la réponse du serveur.');
       }
@@ -77,6 +93,7 @@
       notice.textContent = unknown
         ? `Marge indisponible : coût historique manquant pour ${data.unknownCostEvents} ligne(s) d’événement. Les ventes restent consultables.`
         : 'Indicateurs actualisés. Les montants décrivent l’activité commerciale de la période.';
+      renderSupplierCosts(data);
       output.hidden = false;
     } catch (e) {
       notice.textContent = '';
