@@ -547,10 +547,26 @@
     </form>
   </dialog>
 
+  <dialog id="customer-history-dialog" class="modal sale-modal" aria-labelledby="customer-history-title">
+    <div class="modal-heading"><h2 id="customer-history-title">Historique client</h2><button type="button" class="icon-button" data-history-close aria-label="Fermer l’historique">×</button></div>
+    <form data-history-filters class="filters entity-form">
+      <label>État<select name="status"><option value="">Confirmées et annulées</option><option value="CONFIRMED">Confirmées</option><option value="CANCELLED">Annulées</option><option value="DRAFT">Brouillons (non finalisés)</option></select></label>
+      <label>Du<input type="date" name="from"></label><label>Au, inclus<input type="date" name="to"></label>
+      <button class="button primary" type="submit">Actualiser</button>
+    </form>
+    <p class="hint">Dates de confirmation en UTC ; dates de création pour les brouillons. Les montants affichés sont ceux des ventes, avant retours et remboursements.</p>
+    <p data-history-error class="alert" role="alert" hidden></p><p data-history-notice role="status" aria-live="polite"></p>
+    <div data-history-results hidden>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Historique des achats"><table><thead><tr><th scope="col">Référence</th><th scope="col">Date</th><th scope="col">État</th><th scope="col">Montant</th></tr></thead><tbody data-history-rows></tbody></table></div>
+      <div class="pagination"><button class="button ghost" type="button" data-history-prev>Précédent</button><span data-history-page></span><button class="button ghost" type="button" data-history-next>Suivant</button></div>
+    </div>
+  </dialog>
+
   <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
   <script src="/static/js/admin-auth.js" defer></script>
   <script src="/static/js/admin-procurement.js" defer></script>
   <script src="/static/js/admin-customers.js" defer></script>
+  <script src="/static/js/admin-customer-history.js" defer></script>
   <script src="/static/js/admin-payments.js" defer></script>
   <script src="/static/js/admin-returns.js" defer></script>
   <script src="/static/js/admin-supplier-returns.js" defer></script>

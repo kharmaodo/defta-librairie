@@ -98,6 +98,8 @@ func (h *CustomerHandler) changeStatus(w http.ResponseWriter, r *http.Request, r
 
 func writeCustomerError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, services.ErrInvalidCustomerHistory):
+		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_customer_history", "message": "Filtres de l’historique invalides."})
 	case errors.Is(err, repositories.ErrCustomerNotFound):
 		writeAuthJSON(w, http.StatusNotFound, map[string]string{"error": "customer_not_found", "message": "Customer not found"})
 	case errors.Is(err, repositories.ErrCustomerConflict):

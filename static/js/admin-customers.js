@@ -62,7 +62,7 @@
       addCell(row, customer.status === "ACTIVE" ? "Actif" : "Désactivé", "pill");
       const actions = addCell(row, "");
       actions.className = "row-actions";
-      const buttons = [actionButton("Modifier", "edit", customer.id)];
+      const buttons = [actionButton("Modifier", "edit", customer.id), actionButton("Historique", "history", customer.id)];
       if (customer.status === "ACTIVE") buttons.push(actionButton("Désactiver", "disable", customer.id, true));
       else buttons.push(actionButton("Réactiver", "reactivate", customer.id));
       actions.replaceChildren(...buttons);
@@ -149,6 +149,7 @@
       const button = event.target.closest("button");
       if (!button) return;
       const customer = state.customers.find((item) => item.id === button.dataset.id);
+      if (button.dataset.action === "history") { window.dispatchEvent(new CustomEvent("customer-history-open", {detail: {id: customer.id, name: customer.name}})); return; }
       if (button.dataset.action === "edit") return openCustomer(customer);
       if (!confirm(`${button.textContent} ${customer.name} ?`)) return;
       const reactivate = button.dataset.action === "reactivate";
