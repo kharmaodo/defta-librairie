@@ -90,6 +90,7 @@ func main() {
 	inventoryHandler := handlers.NewInventoryHandler(inventoryService)
 	statisticsService := services.NewCommercialStatisticsService(repositories.NewCommercialStatisticsRepository(database.DB))
 	statisticsHandler := handlers.NewCommercialStatisticsHandler(statisticsService)
+	alertHandler := handlers.NewBusinessAlertHandler(services.NewBusinessAlertService(repositories.NewBusinessAlertRepository(database.DB)))
 	saleService := services.NewSaleService(repositories.NewSaleRepository(database.DB))
 	saleHandler := handlers.NewSaleHandler(saleService)
 	supplierService := services.NewSupplierService(repositories.NewSupplierRepository(database.DB))
@@ -155,6 +156,7 @@ func main() {
 			models.RoleSuperAdminRoot, models.RoleOwnerLibrary))
 	}
 	registerCommercialHTTPRoutes(mux, bookManagers, statisticsHandler, saleHandler, paymentHandler, customerReturnHandler, returnSettlementHandler)
+	mux.Handle("GET /api/manage/alerts", bookManagers(http.HandlerFunc(alertHandler.List)))
 	mux.Handle("GET /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.List)))
 	mux.Handle("POST /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.Create)))
 	mux.Handle("GET /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Get)))

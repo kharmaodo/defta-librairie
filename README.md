@@ -1201,3 +1201,42 @@ Aucune migration supplémentaire n’est nécessaire.
 Validation de cet incrément : `go test -tags fts5 ./...`, puis vérifier dans
 Clients → Historique les clients actifs/désactivés, les filtres, la pagination
 et un historique vide. Les tests dédiés portent le préfixe `TestCustomerHistory`.
+
+
+### Alertes métier
+
+`GET /api/manage/alerts` fournit une situation actuelle, sans période :
+`results` (kind, resourceId, label, detail), `total`, `offset` (défaut 0),
+`limit` (défaut 30, entre 1 et 100). Le filtre `kind` accepte :
+
+- `OUT_OF_STOCK` : quantité nulle ;
+- `LOW_STOCK` : quantité positive inférieure ou égale au seuil ;
+- `DRAFT_PURCHASE` : achat en brouillon, pas une commande envoyée ;
+- `DISABLED_SUPPLIER` : fournisseur désactivé, même sans achat en cours.
+
+Sans `kind`, les quatre catégories sont incluses. Les livres supprimés sont
+exclus ; les achats réceptionnés et annulés ne sont pas en attente. Un brouillon
+auprès d’un fournisseur désactivé et le fournisseur lui-même forment deux
+alertes distinctes. Le tri suit l’ordre des catégories ci-dessus, puis le
+libellé et l’identifiant. Total et page proviennent du même instantané SQLite.
+
+Le propriétaire est limité à sa librairie. Root doit fournir `libraryId` ;
+une librairie sans résultat donne une liste vide. Les filtres inconnus,
+répétés ou invalides donnent 400 ; un autre périmètre propriétaire donne 403.
+Les réponses portent `Cache-Control: no-store`.
+
+```bash
+curl --get http://localhost:8080/api/manage/alerts \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  --data-urlencode 'kind=DRAFT_PURCHASE' \
+  --data-urlencode 'offset=0' --data-urlencode 'limit=10'
+```
+
+Dans `/admin`, le tableau **Alertes métier** offre sélection de librairie
+pour root, filtre de catégorie et pagination. Cliquer sur **Actualiser** après
+une mutation ; l’heure de consultation est affichée. Il ne s’agit pas d’un
+système de notifications automatiques. Aucune nouvelle migration.
+
+Validation : `go test -tags fts5 ./...`, puis recette navigateur propriétaire
+et root, bibliothèque vide, filtres, pagination et actualisation après une
+réception ou une modification de stock. Tests dédiés : `TestBusinessAlerts`.

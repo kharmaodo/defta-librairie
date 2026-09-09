@@ -30,6 +30,19 @@
     </section>
 
 
+    <section class="panel" id="business-alerts-panel" aria-labelledby="business-alerts-title">
+      <h2 id="business-alerts-title">Alertes métier</h2>
+      <p>Situation actuelle. Les achats en brouillon ne sont pas des commandes envoyées. Actualisez après une opération.</p>
+      <form class="filters">
+        <label data-library hidden>Librairie<select name="libraryId"><option value="">Choisir une librairie</option></select></label>
+        <label>Catégorie<select name="kind"><option value="">Toutes</option><option value="OUT_OF_STOCK">Ruptures</option><option value="LOW_STOCK">Stock faible</option><option value="DRAFT_PURCHASE">Achats en brouillon</option><option value="DISABLED_SUPPLIER">Fournisseurs désactivés</option></select></label>
+        <button type="submit" class="button ghost">Actualiser</button>
+      </form>
+      <p data-notice role="status" aria-live="polite"></p><p data-error role="alert" hidden></p>
+      <div data-results hidden><div style="overflow-x:auto"><table><thead><tr><th scope="col">Catégorie</th><th scope="col">Ressource</th><th scope="col">Détail</th></tr></thead><tbody></tbody></table></div>
+      <div class="pagination"><button type="button" data-prev>Précédent</button><span data-page></span><button type="button" data-next>Suivant</button></div></div>
+    </section>
+
     <section class="panel" id="commercial-statistics-panel" aria-labelledby="commercial-statistics-title">
       <div class="panel-heading"><h2 id="commercial-statistics-title">Statistiques commerciales</h2></div>
       <form class="filters entity-form">
@@ -571,5 +584,6 @@
   <script src="/static/js/admin-returns.js" defer></script>
   <script src="/static/js/admin-supplier-returns.js" defer></script>
   <script src="/static/js/admin-statistics.js" defer></script>
+  <script src="/static/js/admin-business-alerts.js" defer></script>
 </body>
 </html>
