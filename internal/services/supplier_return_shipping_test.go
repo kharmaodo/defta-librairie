@@ -6,6 +6,7 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"defta-librairie/internal/auth"
 	"defta-librairie/internal/migrations"
@@ -193,6 +194,12 @@ func TestSupplierReturnShipInsufficientStockRollsBack(t *testing.T) {
 			}
 			if shipped.Status != models.SupplierReturnStatusShipped || shipped.Version != value.Version+1 || shipped.ShippedBy != owner.Subject || shipped.ShippedAt == "" {
 				t.Fatalf("unexpected shipped return: %+v", shipped)
+			}
+			listCtx, cancelList := context.WithTimeout(ctx, 2*time.Second)
+			listed, total, listErr := repositories.NewSupplierReturnRepository(db).List(listCtx, "ship-library", models.SupplierReturnFilter{}, 0, 10)
+			cancelList()
+			if listErr != nil || total != 1 || len(listed) != 1 || len(listed[0].Lines) != len(lines) {
+				t.Fatalf("single-connection list: total=%d err=%v", total, listErr)
 			}
 			// A repeated shipment must not remove stock or append successful audits again.
 			if _, err = service.Ship(ctx, owner, value.ID, shipped.Version); !errors.Is(err, repositories.ErrSupplierReturnState) {

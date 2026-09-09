@@ -7,14 +7,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var (
-	ErrSaleNotFound = errors.New("sale not found")
-	ErrSaleConflict = errors.New("sale was modified by another request")
-	ErrSaleState    = errors.New("sale is not editable")
-	ErrSaleBook     = errors.New("sale contains an unavailable book")
-	ErrSaleCustomer = errors.New("sale customer is unavailable")
+	ErrSaleCompletedReturns = errors.New("sale has completed customer returns")
+	ErrSaleNotFound         = errors.New("sale not found")
+	ErrSaleConflict         = errors.New("sale was modified by another request")
+	ErrSaleState            = errors.New("sale is not editable")
+	ErrSaleBook             = errors.New("sale contains an unavailable book")
+	ErrSaleCustomer         = errors.New("sale customer is unavailable")
 )
 
 type SaleRepository struct{ db *sql.DB }
@@ -429,6 +431,9 @@ func (r *SaleRepository) Transition(ctx context.Context, id, libraryID, actorID 
 	result, err := tx.ExecContext(ctx, "UPDATE sales SET "+setClause+",version=version+1,updated_at=? WHERE id=? AND version=?",
 		actorID, now, now, id, expectedVersion)
 	if err != nil {
+		if strings.Contains(err.Error(), "sale has completed customer returns") {
+			return models.Sale{}, ErrSaleCompletedReturns
+		}
 		return models.Sale{}, fmt.Errorf("transition sale: %w", err)
 	}
 	if affected, rowsErr := result.RowsAffected(); rowsErr != nil || affected != 1 {
