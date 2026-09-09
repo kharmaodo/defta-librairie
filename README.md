@@ -996,3 +996,41 @@ Aucune migration après 020. Tests ciblés :
 `go test -tags fts5 ./internal/repositories -run TestCommercialStatistics -count=1 -v`.
 Redémarrer le serveur et recharger `/admin` : vérifier période vide, coûts connus,
 nuls ou mixtes, écarts positifs/négatifs, dates limites et sélection de librairie root.
+
+### Revue de cohérence du cycle commercial — septembre 2026
+
+La revue ciblée porte sur les réceptions, les sorties de vente, les annulations,
+les retours clients/fournisseurs, la propagation des coûts inconnus et les statistiques
+par date d’événement. Les calculs existants utilisent le CMP à la réception, le coût
+figé à la sortie et à la restitution, et conservent les écarts fournisseurs séparés
+de la marge commerciale. Cette revue ne constitue pas une validation comptable des
+encaissements et remboursements.
+
+Deux défauts identifiés sont corrigés :
+
+- La migration `021_guard_sale_return_cycle.sql` interdit d’annuler une vente ayant
+  un retour client finalisé (`409 sale_has_completed_returns`). Elle interdit aussi
+  de finaliser un retour dont la vente n’est plus confirmée (`422 sale_unavailable`).
+  Ces contrôles SQLite participent aux transactions existantes : en cas de refus,
+  le stock, le CMP, les versions, les dates, les mouvements et les audits sont annulés.
+  Un brouillon de retour lié à une vente annulée peut encore être annulé lui-même.
+- La liste des retours fournisseurs ferme le curseur des retours avant de charger
+  leurs lignes, ce qui évite l’attente d’une seconde connexion lorsque le pool est
+  limité à une connexion. Le test utilise un délai maximal de deux secondes.
+
+La migration n’altère pas les données historiques. Contrôle en lecture seule pour
+repérer une vente annulée ayant déjà un retour finalisé :
+
+```sql
+SELECT s.id AS sale_id, s.library_id, r.id AS return_id,
+       s.cancelled_at, r.completed_at
+FROM sales s JOIN customer_returns r ON r.sale_id=s.id
+WHERE s.status='CANCELLED' AND r.status='COMPLETED';
+```
+
+Si cette requête renvoie des lignes, examiner les mouvements et les audits avant
+une correction métier ; ne pas recalculer automatiquement le stock historique.
+
+Tests de régression sur bases temporaires :
+`go test -tags fts5 ./internal/services -run 'TestCommercialCyclePreventsDoubleRestock|TestSupplierReturnShipInsufficientStockRollsBack' -count=1 -v`.
+Sauvegarder la base avant de redémarrer le serveur pour appliquer la migration 021.

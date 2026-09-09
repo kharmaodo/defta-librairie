@@ -85,13 +85,22 @@ func (r *SupplierReturnRepository) List(ctx context.Context, libraryID string,
 		if scanErr != nil {
 			return nil, 0, scanErr
 		}
-		value.Lines, scanErr = r.listLines(ctx, value.ID)
-		if scanErr != nil {
-			return nil, 0, scanErr
-		}
 		values = append(values, value)
 	}
-	return values, total, rows.Err()
+	if err = rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	// Release the connection before querying child rows, including with a one-connection pool.
+	if err = rows.Close(); err != nil {
+		return nil, 0, err
+	}
+	for i := range values {
+		values[i].Lines, err = r.listLines(ctx, values[i].ID)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+	return values, total, nil
 }
 
 func (r *SupplierReturnRepository) Find(ctx context.Context, id, libraryID string) (models.SupplierReturn, error) {
