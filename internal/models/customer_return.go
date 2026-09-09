@@ -54,11 +54,11 @@ type CustomerReturnLineInput struct {
 }
 
 type CustomerReturnInput struct {
-	LibraryID  string                   `json:"libraryId,omitempty"`
-	SaleID     string                   `json:"saleId"`
-	Reason     string                   `json:"reason"`
-	Resolution CustomerReturnResolution `json:"resolution"`
-	Version    int                      `json:"version,omitempty"`
+	LibraryID  string                    `json:"libraryId,omitempty"`
+	SaleID     string                    `json:"saleId"`
+	Reason     string                    `json:"reason"`
+	Resolution CustomerReturnResolution  `json:"resolution"`
+	Version    int                       `json:"version,omitempty"`
 	Lines      []CustomerReturnLineInput `json:"lines"`
 }
 
@@ -121,10 +121,11 @@ type ReturnSettlementFilter struct {
 }
 
 type CustomerReturnBalance struct {
-	ReturnID        string  `json:"returnId"`
-	LibraryID       string  `json:"libraryId"`
-	TotalAmount     float64 `json:"totalAmount"`
-	SettledAmount   float64 `json:"settledAmount"`
-	RemainingAmount float64 `json:"remainingAmount"`
-	SettlementStatus string `json:"settlementStatus"`
+	RefundableAmount *float64 `json:"refundableAmount"`
+	ReturnID         string   `json:"returnId"`
+	LibraryID        string   `json:"libraryId"`
+	TotalAmount      float64  `json:"totalAmount"`
+	SettledAmount    float64  `json:"settledAmount"`
+	RemainingAmount  float64  `json:"remainingAmount"`
+	SettlementStatus string   `json:"settlementStatus"`
 }

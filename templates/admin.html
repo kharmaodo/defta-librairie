@@ -509,6 +509,8 @@
       <div class="modal-heading"><div><p class="eyebrow">Retour client</p><h2 id="return-detail-title">Détails du retour</h2></div><button class="icon-button" type="button" data-return-close="return-detail-dialog" aria-label="Fermer">×</button></div>
       <div id="return-balance" class="payment-balance" hidden>
         <div><span>Total</span><strong data-return-total>—</strong></div><div><span>Réglé</span><strong data-return-settled>—</strong></div><div><span>Reste</span><strong data-return-remaining>—</strong></div><div><span>État</span><strong data-return-balance-status>—</strong></div>
+        <div data-refund-capacity><span>Remboursable maintenant</span><strong data-return-refundable>—</strong></div>
+        <p data-refund-capacity-note class="hint"></p>
         <button id="add-return-settlement-button" class="button primary" type="button">Régler</button>
       </div>
       <div class="table-wrap"><table><thead><tr><th>Date</th><th>Méthode</th><th>Montant</th><th>Référence</th><th>État</th><th>Actions</th></tr></thead><tbody id="return-settlements-body"></tbody></table></div>
