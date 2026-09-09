@@ -1103,3 +1103,35 @@ Aucune migration supplémentaire. Redémarrer puis recharger `/admin`.
 Test : `go test -tags fts5 ./internal/services -run 'TestRefundableBalanceAcrossReturns|TestReturnSettlementLifecycleBalanceIsolationAndAudit' -count=1 -v`.
 Vérifier un retour sans encaissement, un paiement partiel, plusieurs retours de la
 même vente, un retour soldé et un avoir ; contrôler propriétaire et root.
+
+### Recette intégrée vente → paiement → retour → remboursement
+
+Le test `TestCommercialLifecycleAcceptance` utilise une base temporaire, les migrations
+réelles et les services métier. Il ne lit pas `.env` et n’utilise pas la base de travail.
+Il couvre le parcours suivant avec des dates fixes :
+
+| Étape | Stock | Encaissé brut | Remboursé | Remboursable sur le retour |
+|---|---:|---:|---:|---:|
+| Stock initial : 10 livres, CMP 1 000, prix 1 500 F CFA | 10 | 0 | 0 | — |
+| Vente confirmée de 4 livres | 6 | 0 | 0 | — |
+| Premier paiement de 1 000 | 6 | 1 000 | 0 | — |
+| Retour d’un livre finalisé le lendemain | 7 | 1 000 | 0 | 1 000 |
+| Premier remboursement de 700 | 7 | 1 000 | 700 | 300 |
+| Complément de paiement de 5 000 | 7 | 6 000 | 700 | 800 |
+| Solde du remboursement de 800 | 7 | 6 000 | 1 500 | 0 |
+
+Sur les deux jours : ventes nettes 4 500, coût net 3 000, marge commerciale 1 500,
+encaissements moins remboursements 4 500 F CFA. Le CMP reste 1 000.
+Le test contrôle aussi les périodes séparées (le retour ne réécrit pas la veille),
+les droits propriétaire/root, les coûts figés, les soldes, les mouvements et
+l’absence d’audits supplémentaires après refus d’opérations répétées ou invalides.
+Cette recette vérifie les services et la base ; elle ne remplace pas la recette HTTP
+et visuelle du tableau de bord.
+
+```bash
+go test -tags fts5 ./internal/services -run '^TestCommercialLifecycleAcceptance$' -count=1 -v
+go test -race -tags fts5 ./internal/services -run '^TestCommercialLifecycleAcceptance$' -count=1 -v
+```
+
+Cet incrément ajoute uniquement un test et sa documentation : aucune migration ni
+modification du comportement de production.
