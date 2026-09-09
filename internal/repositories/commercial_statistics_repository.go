@@ -10,16 +10,20 @@ import (
 // CommercialStatistics describes activity in a half-open interval [from, to).
 // NetMargin is nil when any event has an unknown historical cost.
 type CommercialStatistics struct {
-	ReceivedPurchases float64  `json:"receivedPurchases"`
-	SupplierReturns   float64  `json:"supplierReturns"`
-	NetPurchases      float64  `json:"netPurchases"`
-	GrossSales        float64  `json:"grossSales"`
-	Cancellations     float64  `json:"cancellations"`
-	CustomerReturns   float64  `json:"customerReturns"`
-	NetSales          float64  `json:"netSales"`
-	KnownCost         float64  `json:"knownCost"`
-	UnknownCostEvents int      `json:"unknownCostEvents"`
-	NetMargin         *float64 `json:"netMargin"`
+	SupplierReturnKnownCost        float64  `json:"supplierReturnKnownCost"`
+	SupplierReturnUnknownCostLines int      `json:"supplierReturnUnknownCostLines"`
+	SupplierReturnInventoryCost    *float64 `json:"supplierReturnInventoryCost"`
+	SupplierReturnCostVariance     *float64 `json:"supplierReturnCostVariance"`
+	ReceivedPurchases              float64  `json:"receivedPurchases"`
+	SupplierReturns                float64  `json:"supplierReturns"`
+	NetPurchases                   float64  `json:"netPurchases"`
+	GrossSales                     float64  `json:"grossSales"`
+	Cancellations                  float64  `json:"cancellations"`
+	CustomerReturns                float64  `json:"customerReturns"`
+	NetSales                       float64  `json:"netSales"`
+	KnownCost                      float64  `json:"knownCost"`
+	UnknownCostEvents              int      `json:"unknownCostEvents"`
+	NetMargin                      *float64 `json:"netMargin"`
 }
 
 type CommercialStatisticsRepository struct{ db *sql.DB }
@@ -37,9 +41,16 @@ func (r *CommercialStatisticsRepository) Summary(ctx context.Context, libraryID 
 	err := r.db.QueryRowContext(ctx, commercialStatisticsSQL, libraryID,
 		from.UTC().Format(time.RFC3339Nano), to.UTC().Format(time.RFC3339Nano)).Scan(
 		&result.GrossSales, &result.Cancellations, &result.CustomerReturns,
-		&result.KnownCost, &result.UnknownCostEvents, &result.ReceivedPurchases, &result.SupplierReturns)
+		&result.KnownCost, &result.UnknownCostEvents, &result.ReceivedPurchases, &result.SupplierReturns,
+		&result.SupplierReturnKnownCost, &result.SupplierReturnUnknownCostLines)
 	if err != nil {
 		return result, err
+	}
+	if result.SupplierReturnUnknownCostLines == 0 {
+		cost := result.SupplierReturnKnownCost
+		variance := result.SupplierReturns - cost
+		result.SupplierReturnInventoryCost = &cost
+		result.SupplierReturnCostVariance = &variance
 	}
 	result.NetPurchases = result.ReceivedPurchases - result.SupplierReturns
 	result.NetSales = result.GrossSales - result.Cancellations - result.CustomerReturns
@@ -79,6 +90,15 @@ procurement AS (
  FROM supplier_returns r JOIN scope s ON s.library_id=r.library_id
  WHERE r.status='SHIPPED'
 ),
+supplier_return_costs AS (
+ SELECT COALESCE(SUM(l.quantity*l.unit_cost_snapshot),0) AS known_cost,
+        COALESCE(SUM(l.unit_cost_snapshot IS NULL),0) AS unknown_lines
+ FROM supplier_returns r
+ JOIN supplier_return_lines l ON l.return_id=r.id
+ JOIN scope s ON s.library_id=r.library_id
+ WHERE r.status='SHIPPED'
+   AND julianday(r.shipped_at)>=s.start_at AND julianday(r.shipped_at)<s.end_at
+),
 procurement_totals AS (
  SELECT COALESCE(SUM(CASE WHEN kind='PURCHASE' THEN amount ELSE 0 END),0) AS received,
         COALESCE(SUM(CASE WHEN kind='SUPPLIER_RETURN' THEN amount ELSE 0 END),0) AS returned
@@ -89,7 +109,8 @@ SELECT COALESCE(SUM(CASE WHEN kind='SALE' THEN amount ELSE 0 END),0),
        COALESCE(SUM(CASE WHEN kind='CANCEL' THEN -amount ELSE 0 END),0),
        COALESCE(SUM(CASE WHEN kind='RETURN' THEN -amount ELSE 0 END),0),
        COALESCE(SUM(cost),0), COALESCE(SUM(cost IS NULL),0),
-       (SELECT received FROM procurement_totals), (SELECT returned FROM procurement_totals)
+       (SELECT received FROM procurement_totals), (SELECT returned FROM procurement_totals),
+       (SELECT known_cost FROM supplier_return_costs), (SELECT unknown_lines FROM supplier_return_costs)
 FROM events CROSS JOIN scope
 WHERE julianday(event_at)>=start_at AND julianday(event_at)<end_at
 `
