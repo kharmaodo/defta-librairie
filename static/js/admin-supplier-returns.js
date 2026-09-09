@@ -22,8 +22,16 @@
         <label class="full">Motif<textarea name="reason" minlength="3" maxlength="1000" required></textarea></label>
         <label class="full">Référence fournisseur<input name="supplierReference" maxlength="160"></label>
       </div>
-      <p class="hint">Quantité zéro : article exclu du retour. Le serveur contrôle les quantités déjà réservées.</p>
+      <p class="hint" data-quantity-hint>Quantité zéro : article exclu du retour. Le serveur contrôle les quantités déjà réservées.</p>
       <div data-lines class="form-grid"></div>
+      <section data-costs hidden aria-label="Valorisation du retour expédié">
+        <h3>Valorisation à l’expédition</h3>
+        <p class="hint">Montants en F CFA. Écart = montant fournisseur − valeur du stock sorti. Un écart positif signifie que le montant fournisseur est supérieur à la valeur du stock sorti.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Coûts par livre, défilement horizontal">
+          <table><thead><tr><th scope="col">Livre</th><th scope="col">Quantité</th><th scope="col">Montant fournisseur</th><th scope="col">CMP figé</th><th scope="col">Valeur du stock sorti</th><th scope="col">Écart</th></tr></thead><tbody data-cost-rows></tbody></table>
+        </div>
+        <p class="hint">« Indisponible » indique un coût inconnu. Ces montants historiques ne représentent pas un remboursement reçu.</p>
+      </section>
       <p class="alert" role="alert" data-form-error hidden></p>
       <div class="modal-actions"><button type="button" class="button ghost" data-close>Fermer</button><button class="button primary" data-save>Enregistrer</button></div>
     </form></dialog>`;
@@ -73,6 +81,20 @@
       input.disabled=readonly; label.append(input); $('[data-lines]').append(label);
     }
   }
+  function renderCosts(value) {
+    const rows = $('[data-cost-rows]');
+    rows.replaceChildren();
+    const amount = n => Number.isFinite(n) ? `${money(n)} F CFA` : 'Indisponible';
+    for (const line of value.lines) {
+      const row = rows.insertRow();
+      const variance = Number.isFinite(line.costVariance)
+        ? `${line.costVariance > 0 ? '+' : ''}${amount(line.costVariance)}` : 'Indisponible';
+      for (const text of [line.title, line.quantity, amount(line.lineTotal), amount(line.unitCostSnapshot), amount(line.inventoryCost), variance]) {
+        row.insertCell().textContent = text;
+      }
+    }
+    $('[data-costs]').hidden = false;
+  }
   async function loadPurchases() {
     const generation = ++purchaseGeneration;
     form.elements.purchaseId.replaceChildren(option('', 'Choisir un achat'));
@@ -115,6 +137,8 @@
     $('[data-error]').hidden=true;
   }
   async function open(id = '') {
+    $('[data-costs]').hidden=true; $('[data-cost-rows]').replaceChildren();
+    $('[data-quantity-hint]').hidden=false;
     editing=null; form.reset(); $('[data-lines]').replaceChildren(); $('[data-form-error]').hidden=true;
     form.elements.purchaseId.disabled=false; form.elements.libraryId.disabled=false;
     form.elements.reason.disabled=false; form.elements.supplierReference.disabled=false; $('[data-save]').hidden=false;
@@ -127,7 +151,9 @@
       form.elements.purchaseId.replaceChildren(option(editing.purchaseId,editing.purchaseId));form.elements.purchaseId.disabled=true;
       form.elements.reason.value=editing.reason;form.elements.supplierReference.value=editing.supplierReference || '';
       form.elements.reason.disabled=readonly;form.elements.supplierReference.disabled=readonly; $('[data-save]').hidden=readonly;
-      if (readonly) renderLines(editing, editing.lines, true);
+      $('[data-quantity-hint]').hidden=readonly;
+      if (editing.status === 'SHIPPED') renderCosts(editing);
+      else if (readonly) renderLines(editing, editing.lines, true);
       else renderLines(await api(`/api/manage/purchases/${encodeURIComponent(editing.purchaseId)}`),editing.lines);
     } else {
       form.elements.libraryId.value=filters.elements.libraryId.value || form.elements.libraryId.options[0]?.value || '';
