@@ -10,6 +10,9 @@ import (
 // CommercialStatistics describes activity in a half-open interval [from, to).
 // NetMargin is nil when any event has an unknown historical cost.
 type CommercialStatistics struct {
+	ReceivedPurchases float64  `json:"receivedPurchases"`
+	SupplierReturns   float64  `json:"supplierReturns"`
+	NetPurchases      float64  `json:"netPurchases"`
 	GrossSales        float64  `json:"grossSales"`
 	Cancellations     float64  `json:"cancellations"`
 	CustomerReturns   float64  `json:"customerReturns"`
@@ -34,10 +37,11 @@ func (r *CommercialStatisticsRepository) Summary(ctx context.Context, libraryID 
 	err := r.db.QueryRowContext(ctx, commercialStatisticsSQL, libraryID,
 		from.UTC().Format(time.RFC3339Nano), to.UTC().Format(time.RFC3339Nano)).Scan(
 		&result.GrossSales, &result.Cancellations, &result.CustomerReturns,
-		&result.KnownCost, &result.UnknownCostEvents)
+		&result.KnownCost, &result.UnknownCostEvents, &result.ReceivedPurchases, &result.SupplierReturns)
 	if err != nil {
 		return result, err
 	}
+	result.NetPurchases = result.ReceivedPurchases - result.SupplierReturns
 	result.NetSales = result.GrossSales - result.Cancellations - result.CustomerReturns
 	if result.UnknownCostEvents == 0 {
 		margin := result.NetSales - result.KnownCost
@@ -65,11 +69,27 @@ events AS (
  JOIN sales s ON s.id=r.sale_id AND s.library_id=r.library_id
  JOIN scope p ON p.library_id=r.library_id
  WHERE r.status='COMPLETED'
+),
+procurement AS (
+ SELECT 'PURCHASE' AS kind, p.received_at AS event_at, p.total_amount AS amount
+ FROM purchases p JOIN scope s ON s.library_id=p.library_id
+ WHERE p.status='RECEIVED'
+ UNION ALL
+ SELECT 'SUPPLIER_RETURN', r.shipped_at, r.total_amount
+ FROM supplier_returns r JOIN scope s ON s.library_id=r.library_id
+ WHERE r.status='SHIPPED'
+),
+procurement_totals AS (
+ SELECT COALESCE(SUM(CASE WHEN kind='PURCHASE' THEN amount ELSE 0 END),0) AS received,
+        COALESCE(SUM(CASE WHEN kind='SUPPLIER_RETURN' THEN amount ELSE 0 END),0) AS returned
+ FROM procurement CROSS JOIN scope
+ WHERE julianday(event_at)>=start_at AND julianday(event_at)<end_at
 )
 SELECT COALESCE(SUM(CASE WHEN kind='SALE' THEN amount ELSE 0 END),0),
        COALESCE(SUM(CASE WHEN kind='CANCEL' THEN -amount ELSE 0 END),0),
        COALESCE(SUM(CASE WHEN kind='RETURN' THEN -amount ELSE 0 END),0),
-       COALESCE(SUM(cost),0), COALESCE(SUM(cost IS NULL),0)
+       COALESCE(SUM(cost),0), COALESCE(SUM(cost IS NULL),0),
+       (SELECT received FROM procurement_totals), (SELECT returned FROM procurement_totals)
 FROM events CROSS JOIN scope
 WHERE julianday(event_at)>=start_at AND julianday(event_at)<end_at
 `

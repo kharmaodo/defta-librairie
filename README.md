@@ -916,3 +916,19 @@ Après sauvegarde, application du patch et tests Go, redémarrer le serveur pour
 La section Statistiques commerciales de `/admin` affiche les ventes brutes, annulations, retours clients, ventes nettes et marge commerciale. La période initiale va du premier jour du mois à aujourd'hui en UTC ; la date de fin choisie est incluse. Le propriétaire consulte sa librairie et le root doit en sélectionner une. Les résultats sont masqués dès qu'un filtre change, pendant le chargement et en cas d'erreur. Une marge inconnue affiche Indisponible avec le nombre de lignes sans coût. Les sessions expirées affichent une invitation à se reconnecter.
 
 Vérification locale : recharger `/admin` après redémarrage du serveur ; contrôler propriétaire et root, période inversée, journée unique, période vide, coûts manquants et session expirée. Les montants utilisent F CFA comme le reste de l'interface actuelle. Le paramétrage de devise reste à développer.
+
+
+### Statistiques des achats et retours fournisseurs
+
+L’API et l’écran ajoutent `receivedPurchases`, `supplierReturns` et `netPurchases`.
+Les achats RECEIVED sont comptés à received_at ; les retours SHIPPED à shipped_at,
+au montant fournisseur total_amount. Même périmètre de librairie et intervalle
+[from,to) que les ventes. Brouillons et annulations sont exclus. Les achats nets
+peuvent être négatifs si la période contient des retours d’achats antérieurs.
+Ces indicateurs ne modifient pas la marge commerciale et ne mesurent pas les
+paiements. La valorisation CMP et les écarts des retours fournisseurs restent
+un incrément distinct ; aucun écart historique n’est estimé ici.
+
+Validation : `go test -tags fts5 ./internal/repositories -run TestCommercialStatistics -count=1 -v`,
+puis les suites Go et race. Dans /admin, comparer une réception et une expédition
+à leurs périodes, vérifier une période vide et la sélection de librairie root.
