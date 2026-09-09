@@ -61,6 +61,8 @@ func TestCommercialStatisticsEventsAndIsolation(t *testing.T) {
 }
 
 const statisticsFixture = `
+CREATE TABLE purchases(library_id TEXT,status TEXT,received_at TEXT,total_amount REAL);
+CREATE TABLE supplier_returns(library_id TEXT,status TEXT,shipped_at TEXT,total_amount REAL);
 CREATE TABLE sales(id TEXT,library_id TEXT,status TEXT,confirmed_at TEXT,cancelled_at TEXT);
 CREATE TABLE sale_lines(id TEXT,sale_id TEXT,book_id INTEGER,quantity INTEGER,line_total REAL,unit_cost_snapshot REAL);
 CREATE TABLE customer_returns(id TEXT,sale_id TEXT,library_id TEXT,status TEXT,completed_at TEXT);
@@ -77,4 +79,58 @@ INSERT INTO sale_lines VALUES
  ('l4','s4',4,1,10,0),('l5','s5',5,1,900,500),('ld','draft',6,1,1000,NULL);
 INSERT INTO customer_returns VALUES ('r','s1','a','COMPLETED','2026-09-02T00:00:00Z');
 INSERT INTO customer_return_lines VALUES ('r','l1',1,1,100);
+`
+
+func TestCommercialStatisticsProcurement(t *testing.T) {
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+	if _, err = db.Exec(statisticsFixture + procurementFixture); err != nil {
+		t.Fatal(err)
+	}
+	repo := NewCommercialStatisticsRepository(db)
+	for _, tc := range []struct {
+		name, library      string
+		day                int
+		received, returned float64
+	}{
+		{"receipt and shipping", "a", 1, 300, 40},
+		{"exclusive end and negative net", "a", 2, 0, 90},
+		{"other library", "b", 1, 900, 200},
+		{"empty", "missing", 1, 0, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			from := time.Date(2026, 9, tc.day, 0, 0, 0, 0, time.UTC)
+			v, err := repo.Summary(context.Background(), tc.library, from, from.AddDate(0, 0, 1))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if v.ReceivedPurchases != tc.received || v.SupplierReturns != tc.returned || v.NetPurchases != tc.received-tc.returned {
+				t.Fatalf("unexpected procurement: %+v", v)
+			}
+			if v.NetMargin == nil || *v.NetMargin != v.NetSales-v.KnownCost {
+				t.Fatalf("procurement changed margin: %+v", v)
+			}
+		})
+	}
+}
+
+const procurementFixture = `
+INSERT INTO purchases VALUES
+ ('a','RECEIVED','2026-09-01T00:00:00Z',100),
+ ('a','RECEIVED','2026-09-02T01:00:00+02:00',200),
+ ('a','DRAFT','2026-09-01T00:00:00Z',999),
+ ('a','CANCELLED','2026-09-01T00:00:00Z',999),
+ ('a','RECEIVED',NULL,999),
+ ('b','RECEIVED','2026-09-01T00:00:00Z',900);
+INSERT INTO supplier_returns VALUES
+ ('a','SHIPPED','2026-09-01T00:00:00Z',40),
+ ('a','SHIPPED','2026-09-02T00:00:00Z',90),
+ ('a','DRAFT','2026-09-01T00:00:00Z',999),
+ ('a','CANCELLED','2026-09-01T00:00:00Z',999),
+ ('a','SHIPPED',NULL,999),
+ ('b','SHIPPED','2026-09-01T00:00:00Z',200);
 `

@@ -65,7 +65,7 @@
       const query = new URLSearchParams({from: start.toISOString(), to: end.toISOString()});
       if (isRoot) query.set('libraryId', form.elements.libraryId.value);
       const data = await api(`/api/manage/statistics?${query}`);
-      const fields = ['grossSales', 'cancellations', 'customerReturns', 'netSales'];
+      const fields = ['grossSales', 'cancellations', 'customerReturns', 'netSales', 'receivedPurchases', 'supplierReturns', 'netPurchases'];
       if (fields.some(key => !Number.isFinite(data[key])) ||
           !Number.isSafeInteger(data.unknownCostEvents) || data.unknownCostEvents < 0 ||
           (data.netMargin !== null && !Number.isFinite(data.netMargin))) {
