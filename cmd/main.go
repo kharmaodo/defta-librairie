@@ -176,6 +176,7 @@ func main() {
 	mux.Handle("POST /api/manage/suppliers/{id}/reactivate", bookManagers(http.HandlerFunc(supplierHandler.Reactivate)))
 	mux.Handle("GET /api/manage/customers", bookManagers(http.HandlerFunc(customerHandler.List)))
 	mux.Handle("POST /api/manage/customers", bookManagers(http.HandlerFunc(customerHandler.Create)))
+	mux.Handle("GET /api/manage/customers/{id}/sales", bookManagers(http.HandlerFunc(customerHandler.SaleHistory)))
 	mux.Handle("GET /api/manage/customers/{id}", bookManagers(http.HandlerFunc(customerHandler.Get)))
 	mux.Handle("PUT /api/manage/customers/{id}", bookManagers(http.HandlerFunc(customerHandler.Update)))
 	mux.Handle("DELETE /api/manage/customers/{id}", bookManagers(http.HandlerFunc(customerHandler.Disable)))

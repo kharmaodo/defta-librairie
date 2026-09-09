@@ -15,7 +15,7 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | Priorité | Fonctionnalité | Éléments principaux du périmètre | État | Reste à finaliser |
 |---|---|---|---|---|
 | 1 | Finalisation de l’approvisionnement | Tests finaux, contrôle des filtres, merge dans `develop` | Réalisé | Aucun incrément d’approvisionnement restant identifié dans ce périmètre ; maintenir la non-régression. |
-| 2 | Gestion des clients | CRUD, recherche, historique des achats, rattachement aux ventes | Partiel | Historique paginé des achats depuis une fiche client. CRUD, recherche, désactivation/réactivation et rattachement aux ventes existent. |
+| 2 | Gestion des clients | CRUD, recherche, historique des achats, rattachement aux ventes | Partiel | Historique paginé et filtré implémenté dans cet incrément ; tests Go, recette navigateur et fusion à valider. CRUD, recherche, désactivation/réactivation et rattachement aux ventes existent. |
 | 3 | Paiements et caisse | Espèces, mobile money, carte, paiements partiels, reste à payer | Réalisé | Les modes de paiement sont enregistrés dans l’application ; aucune intégration à un prestataire de paiement n’est présumée. Le solde existant porte sur la vente brute. |
 | 4 | Retours et remboursements | Retour client, restauration du stock, avoir, remboursement et audit | Réalisé | Le périmètre comprend l’émission d’avoirs, les remboursements partiels, leur audit et le plafond remboursable. La consommation d’un avoir sur une nouvelle vente n’est pas incluse implicitement. |
 | 5 | Retours fournisseurs | Sortie de stock liée à un achat réceptionné et justification | Réalisé | Brouillons, expédition atomique, annulation, motif, coûts figés, écarts et affichage sont livrés. |
@@ -27,7 +27,7 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Partiel | Sauvegardes SQLite contrôlées et arrêt gracieux existants. Ajouter les contrôles de santé, métriques, logs structurés et procédure de restauration testée. |
 | 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Modules JavaScript métier déjà séparés. Harmoniser les erreurs, revoir l’accessibilité et intégrer les tests navigateur. Les recettes Go/HTTP ne couvrent pas le rendu visuel. |
 
-## Prochain incrément : finir l’historique client (priorité 2)
+## Incrément en validation : historique client (priorité 2)
 
 Objectif : depuis la fiche d’un client, consulter ses ventes sans rechercher
 manuellement chaque référence. « Achats du client » désigne ici les ventes de la
@@ -45,7 +45,7 @@ Critères de finalisation proposés pour cet incrément :
    demandé ; tests d’isolation, pagination et historique vide.
 5. Action depuis l’écran Clients, documentation et tests de non-régression.
 
-Cette section fixe l’objectif de travail ; elle ne déclare pas ces ajouts réalisés.
+L’API, la fenêtre Historique et les tests dédiés sont ajoutés. La priorité 2 reste partielle jusqu’à validation des tests Go, de la recette navigateur et de la fusion. La prochaine fonctionnalité sera la priorité 7, alertes métier.
 
 ## Ordre de poursuite
 
@@ -71,7 +71,7 @@ CANCELLED ; il ne faut pas inventer un état SENT ou ORDERED inexistant.
 | Domaine | Principaux fichiers de référence |
 |---|---|
 | Approvisionnement | `internal/repositories/purchase_repository.go`, `internal/services/purchase_service_test.go` |
-| Clients | `internal/handlers/customers.go`, `internal/repositories/customer_repository.go`, `static/js/admin-customers.js`, `internal/models/sale.go` |
+| Clients | `internal/handlers/customers.go`, `internal/repositories/customer_repository.go`, `static/js/admin-customers.js`, `static/js/admin-customer-history.js`, `internal/services/customer_history_test.go`, `internal/handlers/customer_history_test.go` |
 | Paiements et retours | `internal/repositories/payment_repository.go`, `internal/repositories/return_settlement_repository.go`, migrations 015, 016, 021 et 022 |
 | Retours fournisseurs | `internal/repositories/supplier_return_shipping.go`, migration 020, `static/js/admin-supplier-returns.js` |
 | Statistiques | `internal/repositories/commercial_statistics_repository.go`, `static/js/admin-statistics.js` |

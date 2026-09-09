@@ -667,7 +667,7 @@ La liste des achats peut être filtrée par état, fournisseur et période. Le `
 
 La migration `013_create_customers.sql` crée le référentiel client propre à chaque librairie. Un client possède une référence stable et unique dans sa librairie, un nom, des coordonnées facultatives, une adresse, des notes, un statut et une version pour le contrôle des écritures concurrentes.
 
-La suppression fonctionnelle utilise le statut `DISABLED` afin de préserver l’historique commercial. Les contraintes empêchent le rattachement d’un client à une librairie inexistante et les index préparent la recherche par nom, téléphone ou e-mail. Le rattachement facultatif aux ventes est implémenté par la migration 014. L’historique des achats consultable depuis un client reste à développer (priorité 2 du backlog).
+La suppression fonctionnelle utilise le statut `DISABLED` afin de préserver l’historique commercial. Les contraintes empêchent le rattachement d’un client à une librairie inexistante et les index préparent la recherche par nom, téléphone ou e-mail. Le rattachement facultatif aux ventes est implémenté par la migration 014. L’action **Historique** de l’écran Clients ouvre les ventes rattachées au client, même désactivé, avec pagination et filtres de période et de statut.
 
 Le CRUD client est accessible aux rôles `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. Le propriétaire reste limité aux clients de sa librairie ; le root peut préciser `libraryId`. La recherche couvre la référence, le nom, le téléphone et l’e-mail. Chaque mutation contrôle la version et produit un audit de type `CUSTOMER`.
 
@@ -1166,3 +1166,38 @@ go test -race -tags fts5 ./cmd -run '^TestCommercialHTTPLifecycle$' -count=1 -v
 L’enregistrement des routes a seulement été regroupé dans `cmd/main.go` : URL,
 méthodes HTTP et protections restent identiques. Le lancement historique
 `go run -tags fts5 ./cmd/main.go` reste compatible. Aucune migration supplémentaire.
+
+
+### Historique des achats d’un client
+
+`GET /api/manage/customers/{id}/sales` renvoie `results`, `total`, `offset`
+(défaut 0) et `limit` (défaut 30, maximum 100). Chaque résultat contient
+`id`, `reference`, `status`, `totalAmount`, `createdAt` et les dates de
+confirmation/annulation lorsqu’elles existent.
+
+```bash
+curl --get "http://localhost:8080/api/manage/customers/$CUSTOMER_ID/sales" \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  --data-urlencode 'from=2026-09-01T00:00:00Z' \
+  --data-urlencode 'to=2026-10-01T00:00:00Z' \
+  --data-urlencode 'offset=0' --data-urlencode 'limit=10'
+```
+
+Sans `status`, seules les ventes `CONFIRMED` et `CANCELLED` sont incluses.
+Les filtres explicites acceptent aussi `DRAFT`, présenté comme non finalisé.
+La période RFC3339 utilise une borne `from` incluse et une borne `to` exclue,
+sur la confirmation (création pour un brouillon). Le tri est décroissant par
+cette date puis par identifiant. Dans l’écran, les jours sont interprétés en UTC
+et le jour de fin est inclus. Les montants sont les montants bruts d’origine,
+avant retours et remboursements ; ils ne représentent pas le reste à payer.
+
+Seul le rattachement `customer_id` est utilisé : un nom identique ne suffit pas.
+Le propriétaire accède uniquement aux clients de sa librairie ; le root accède
+au client désigné, sans paramètre `libraryId`. Un client absent ou inaccessible
+renvoie 404. Les filtres invalides, inconnus ou répétés renvoient 400
+`invalid_customer_history`. Les réponses portent `Cache-Control: no-store`.
+Aucune migration supplémentaire n’est nécessaire.
+
+Validation de cet incrément : `go test -tags fts5 ./...`, puis vérifier dans
+Clients → Historique les clients actifs/désactivés, les filtres, la pagination
+et un historique vide. Les tests dédiés portent le préfixe `TestCustomerHistory`.
