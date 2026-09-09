@@ -866,3 +866,7 @@ La branche de la présente réécriture est `feature/rewriting` et sa pull reque
 Le test `TestSupplierReturnShipInsufficientStockRollsBack` utilise une base temporaire et les migrations réelles. Il vérifie le refus pour stock insuffisant, y compris après une première ligne traitée, et exige que le brouillon, les quantités, versions, dates, mouvements et audits restent inchangés. Exécution ciblée : `go test -tags fts5 ./internal/services -run TestSupplierReturnShipInsufficientStockRollsBack -count=1 -v`.
 
 Le test d’expédition couvre aussi l’isolation entre librairies, les versions obsolètes, une expédition valide et le refus d’une répétition sans seconde sortie de stock ni audit supplémentaire. Ces contrôles utilisent exclusivement la base temporaire de test.
+
+### Tableau de bord des retours fournisseurs
+
+La section Retours fournisseurs de `/admin` propose liste paginée, filtre de statut, création depuis un achat réceptionné, modification des quantités et du motif d’un brouillon, annulation et expédition confirmée. Les retours terminaux sont consultables en lecture seule. Le root sélectionne la librairie ; les propriétaires restent limités à leur périmètre JWT. Les contrôles de quantité et de version restent réalisés par le serveur. Après une expédition, actualiser la section Stocks pour consulter les nouvelles quantités. Sauvegarder SQLite avant les essais métier.
