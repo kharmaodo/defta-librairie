@@ -79,12 +79,22 @@
     await loadReturns();
   }
 
+  let settlementGeneration = 0;
+  function settlementLimit(item, balance) {
+    const amount = item.resolution === "CREDIT_NOTE" ? balance?.remainingAmount : balance?.refundableAmount;
+    return Number.isFinite(amount) && amount >= 0 ? amount : null;
+  }
   async function loadSettlementDetails(returnItem) {
+    const generation = ++settlementGeneration;
+    state.balance = null;
+    document.querySelector("#return-balance").hidden = true;
+    document.querySelector("#add-return-settlement-button").disabled = true;
     state.current = returnItem;
     const [balance, settlements] = await Promise.all([
       api(`/api/manage/customer-returns/${returnItem.id}/settlement-balance`),
       api(`/api/manage/customer-returns/${returnItem.id}/settlements?offset=0&limit=100`)
     ]);
+    if (generation !== settlementGeneration) return;
     state.balance = balance; state.settlements = settlements.results;
     document.querySelector("#return-detail-title").textContent = `${returnItem.reference} · ${returnItem.resolution === "CREDIT_NOTE" ? "Avoir" : "Remboursement"}`;
     const summary = document.querySelector("#return-balance");
@@ -92,7 +102,15 @@
     summary.querySelector("[data-return-settled]").textContent = money(balance.settledAmount);
     summary.querySelector("[data-return-remaining]").textContent = money(balance.remainingAmount);
     summary.querySelector("[data-return-balance-status]").textContent = {PENDING: "En attente", PARTIALLY_SETTLED: "Partiel", SETTLED: "Soldé"}[balance.settlementStatus] || balance.settlementStatus;
-    document.querySelector("#add-return-settlement-button").disabled = balance.remainingAmount <= 0; summary.hidden = false;
+    const limit = settlementLimit(returnItem, balance);
+    const credit = returnItem.resolution === "CREDIT_NOTE";
+    summary.querySelector("[data-refund-capacity]").hidden = credit;
+    summary.querySelector("[data-return-refundable]").textContent = limit === null ? "Indisponible" : money(limit);
+    summary.querySelector("[data-refund-capacity-note]").textContent = credit
+      ? "Avoir : le montant disponible correspond au reste à régler de ce retour."
+      : limit === null ? "Montant remboursable indisponible. Actualisez la page et vérifiez le serveur."
+      : "Limité au reste de ce retour et aux encaissements de la vente, déduction faite de tous ses remboursements actifs. Le serveur vérifie le montant à l’enregistrement.";
+    document.querySelector("#add-return-settlement-button").disabled = limit === null || limit <= 0; summary.hidden = false;
     const body = document.querySelector("#return-settlements-body"); body.replaceChildren();
     settlements.results.forEach((item) => {
       const row = body.insertRow(); cell(row, new Date(item.createdAt).toLocaleString("fr-FR"));
@@ -105,11 +123,18 @@
     if (!dialog.open) dialog.showModal();
   }
 
-  function openSettlement() {
+  async function openSettlement() {
+    const current = state.current;
+    if (!current) return;
+    await loadSettlementDetails(current);
+    if (state.current?.id !== current.id || !state.balance) return;
+    const limit = settlementLimit(current, state.balance);
+    if (limit === null || limit <= 0) return;
     const form = document.querySelector("#return-settlement-form"); form.reset();
     form.elements.method.value = state.current.resolution === "CREDIT_NOTE" ? "CREDIT_NOTE" : "CASH";
     [...form.elements.method.options].forEach((option) => { option.disabled = state.current.resolution === "CREDIT_NOTE" ? option.value !== "CREDIT_NOTE" : option.value === "CREDIT_NOTE"; });
-    form.elements.amount.value = state.balance.remainingAmount;
+    form.elements.amount.value = limit;
+    form.elements.amount.max = String(limit);
     document.querySelector("#return-settlement-error").hidden = true;
     document.querySelector("#return-settlement-dialog").showModal();
   }
@@ -127,7 +152,7 @@
     document.querySelector("#returns-next").onclick = async () => { state.offset += state.limit; await loadReturns(); };
     document.querySelector("#returns-body").onclick = async (event) => { const button = event.target.closest("button[data-action]"); if (!button) return; const item = state.returns.find((value) => value.id === button.dataset.id); try { if (button.dataset.action === "settlements") await loadSettlementDetails(item); else await transitionReturn(item, button.dataset.action); } catch (error) { showError("#return-error", error); } };
     document.querySelectorAll("[data-return-close]").forEach((button) => { button.onclick = () => document.querySelector(`#${button.dataset.returnClose}`).close(); });
-    document.querySelector("#add-return-settlement-button").onclick = openSettlement;
+    document.querySelector("#add-return-settlement-button").onclick = () => openSettlement().catch(error => showError("#return-error", error));
     if (state.isRoot) document.querySelector("#return-form [name=libraryId]").onchange = (event) => loadReturnSales(event.target.value);
     document.querySelector("#return-form [name=saleId]").onchange = (event) => renderReturnLines(event.target.value).catch((error) => showError("#return-form-error", error));
     document.querySelector("#return-form").onsubmit = async (event) => { event.preventDefault(); const form = event.currentTarget; const lines = [...document.querySelectorAll("#return-lines .return-line")].map((row) => ({saleLineId: row.dataset.saleLineId, quantity: Number(row.querySelector('[name="quantity"]').value)})).filter((line) => line.quantity > 0); const payload = {saleId: form.elements.saleId.value, reason: form.elements.reason.value.trim(), resolution: form.elements.resolution.value, lines}; if (state.isRoot) payload.libraryId = form.elements.libraryId.value; try { await api("/api/manage/customer-returns", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)}); document.querySelector("#return-dialog").close(); state.offset = 0; await loadReturns(); } catch (error) { showError("#return-form-error", error); } };

@@ -1082,3 +1082,24 @@ Examiner les pièces et audits si ces requêtes retournent des lignes. Aucune co
 rétroactive automatique n’est effectuée.
 Sauvegarder SQLite avant le redémarrage qui applique la migration 022.
 Tests : `go test -tags fts5 ./internal/services -run 'TestPaidSaleCancellationRollback|TestRefundLimitedByRecordedPayments' -count=1 -v`.
+
+### Montant remboursable avant saisie
+
+`GET /api/manage/customer-returns/{id}/settlement-balance` ajoute `refundableAmount` :
+le minimum entre le reste à régler de ce retour et les paiements RECORDED de sa vente
+moins tous les remboursements monétaires ISSUED des retours de cette vente, borné à zéro.
+Le calcul est lu dans une seule requête SQLite. Un brouillon, un retour annulé ou une
+vente non confirmée donne zéro. Pour CREDIT_NOTE, le champ est null : le plafond de
+l’avoir reste `remainingAmount`. Les champs existants gardent leur signification.
+
+Dans Règlements, « Remboursable maintenant » affiche ce plafond pour REFUND. Le bouton
+est désactivé si le plafond est nul ou indisponible. Le solde est relu à l’ouverture
+du formulaire, dont le montant proposé et le maximum utilisent ce plafond.
+Après émission ou annulation, les montants sont actualisés. Les réponses tardives
+à une ancienne sélection sont ignorées et un chargement échoué masque le solde.
+La migration 022 conserve le contrôle transactionnel final en cas de concurrence.
+
+Aucune migration supplémentaire. Redémarrer puis recharger `/admin`.
+Test : `go test -tags fts5 ./internal/services -run 'TestRefundableBalanceAcrossReturns|TestReturnSettlementLifecycleBalanceIsolationAndAudit' -count=1 -v`.
+Vérifier un retour sans encaissement, un paiement partiel, plusieurs retours de la
+même vente, un retour soldé et un avoir ; contrôler propriétaire et root.

@@ -103,20 +103,38 @@ func (r *ReturnSettlementRepository) Find(ctx context.Context, id, libraryID str
 	}
 	return v, nil
 }
+
+// Balance reads the return balance and sale-wide refund capacity in one SQLite snapshot.
 func (r *ReturnSettlementRepository) Balance(ctx context.Context, returnID, libraryID string) (models.CustomerReturnBalance, error) {
-	q := `SELECT return_id,library_id,total_amount,settled_amount,remaining_amount,settlement_status FROM customer_return_balances WHERE return_id=?`
+	q := refundableBalanceSQL
 	args := []interface{}{returnID}
 	if libraryID != "" {
-		q += " AND library_id=?"
+		q += " AND b.library_id=?"
 		args = append(args, libraryID)
 	}
 	var v models.CustomerReturnBalance
-	err := r.db.QueryRowContext(ctx, q, args...).Scan(&v.ReturnID, &v.LibraryID, &v.TotalAmount, &v.SettledAmount, &v.RemainingAmount, &v.SettlementStatus)
+	err := r.db.QueryRowContext(ctx, q, args...).Scan(&v.ReturnID, &v.LibraryID, &v.TotalAmount, &v.SettledAmount, &v.RemainingAmount, &v.SettlementStatus, &v.RefundableAmount)
 	if errors.Is(err, sql.ErrNoRows) {
 		return v, ErrReturnSettlementReturnNotFound
 	}
 	return v, err
 }
+
+const refundableBalanceSQL = `
+SELECT b.return_id,b.library_id,b.total_amount,b.settled_amount,b.remaining_amount,b.settlement_status,
+ CASE WHEN r.resolution='CREDIT_NOTE' THEN NULL
+      WHEN r.status<>'COMPLETED' OR s.status<>'CONFIRMED' THEN 0
+      ELSE MAX(0, MIN(b.remaining_amount,
+        COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.sale_id=r.sale_id AND p.status='RECORDED'),0)
+        - COALESCE((SELECT SUM(rs.amount) FROM return_settlements rs
+                    JOIN customer_returns other ON other.id=rs.return_id
+                    WHERE other.sale_id=r.sale_id AND rs.status='ISSUED'
+                    AND rs.method IN ('CASH','MOBILE_MONEY','CARD')),0))) END
+FROM customer_return_balances b
+JOIN customer_returns r ON r.id=b.return_id AND r.library_id=b.library_id
+JOIN sales s ON s.id=r.sale_id AND s.library_id=r.library_id
+WHERE b.return_id=?`
+
 func (r *ReturnSettlementRepository) Create(ctx context.Context, v models.ReturnSettlement, auditID, snapshot string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
