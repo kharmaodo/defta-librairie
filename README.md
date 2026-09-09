@@ -1240,3 +1240,53 @@ système de notifications automatiques. Aucune nouvelle migration.
 Validation : `go test -tags fts5 ./...`, puis recette navigateur propriétaire
 et root, bibliothèque vide, filtres, pagination et actualisation après une
 réception ou une modification de stock. Tests dédiés : `TestBusinessAlerts`.
+
+
+### Exports CSV
+
+`GET /api/manage/exports/{kind}` accepte `stocks`, `sales`, `purchases`,
+`suppliers` ou `audit`. Depuis `/admin`, utiliser **Exports CSV** : ses filtres
+sont indépendants des autres tableaux. Le fichier comprend toutes les lignes
+filtrées, jusqu’à 10 000 ; au-delà, 422 `export_too_large` demande de restreindre
+les filtres. Un résultat vide produit les en-têtes seuls, sans erreur.
+
+| Filtre | Signification |
+|---|---|
+| `libraryId` | Obligatoire pour root sur les quatre exports métier ; propriétaire limité à sa librairie. Interdit pour audit. |
+| `status` | Stocks : OUT_OF_STOCK, LOW_STOCK, IN_STOCK ; ventes : DRAFT, CONFIRMED, CANCELLED ; achats : DRAFT, RECEIVED, CANCELLED ; fournisseurs : ACTIVE, DISABLED. Interdit pour audit. |
+| `from`, `to` | RFC3339, début inclus et fin exclue. Date de modification pour stocks, de création pour ventes/achats/fournisseurs, d’événement pour audit. |
+| `q` | Sous-chaîne littérale du titre de livre, de la référence vente/achat, du nom fournisseur ou de l’identifiant de ressource audit. Insensibilité à la casse ASCII selon SQLite. |
+| `action`, `resourceType` | Égalité exacte, uniquement sur audit. |
+
+Les jours choisis dans l’écran sont UTC, avec jour de fin inclus. Les filtres
+inconnus, répétés ou invalides sont rejetés avec 400 `invalid_export_filter`.
+Les requêtes n’acceptent pas de pagination : aucun résultat n’est silencieusement
+tronqué. Une seule requête SELECT lit chaque export.
+
+L’audit respecte les droits de consultation existants : seuls ses propres
+événements pour un propriétaire, journal global pour root. Il exporte identité
+de l’acteur, action, ressource, résultat et date ; les instantanés JSON et les
+adresses IP sont omis. Ce n’est pas un audit filtré par librairie.
+
+Le format utilise UTF-8 avec BOM, séparateur `;`, fins de ligne CRLF et
+échappement CSV des guillemets, séparateurs et sauts de ligne. Les cellules
+susceptibles de devenir des formules reçoivent une apostrophe protectrice ;
+elles peuvent donc différer du texte stocké. Les montants sont bruts, avant
+retours/remboursements, avec point décimal. Un CMP inconnu est une cellule vide.
+Les livres supprimés sont exclus du stock ; les fournisseurs désactivés restent
+exportables. Les réponses utilisent `Cache-Control: no-store` et un nom fixe.
+
+```bash
+curl --fail-with-body --get http://localhost:8080/api/manage/exports/sales \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  --data-urlencode 'status=CONFIRMED' \
+  --data-urlencode 'from=2026-09-01T00:00:00Z' \
+  --data-urlencode 'to=2026-10-01T00:00:00Z' \
+  --output sales.csv
+```
+
+Validation : `go test -tags fts5 ./...`. Les tests `TestCSV` et `TestSafeCSVCell`
+couvrent les droits, les cinq contenus, les filtres, les bornes 10 000/10 001,
+les caractères arabes et les formules. Recette navigateur : télécharger chaque
+type, vérifier un filtre et un fichier vide, comparer propriétaire et root,
+puis ouvrir un fichier arabe dans le tableur. Aucune nouvelle migration.
