@@ -353,16 +353,17 @@ func (r *PurchaseRepository) Transition(ctx context.Context, id, libraryID, acto
 	type receiptLine struct {
 		bookID   int64
 		quantity int
+		unitCost float64
 	}
 	lines := make([]receiptLine, 0)
 	if target == models.PurchaseStatusReceived {
-		rows, rowsErr := tx.QueryContext(ctx, `SELECT book_id,quantity FROM purchase_lines WHERE purchase_id=? ORDER BY id`, id)
+		rows, rowsErr := tx.QueryContext(ctx, `SELECT book_id,quantity,unit_cost FROM purchase_lines WHERE purchase_id=? ORDER BY id`, id)
 		if rowsErr != nil {
 			return models.Purchase{}, fmt.Errorf("read purchase receipt lines: %w", rowsErr)
 		}
 		for rows.Next() {
 			var line receiptLine
-			if err = rows.Scan(&line.bookID, &line.quantity); err != nil {
+			if err = rows.Scan(&line.bookID, &line.quantity, &line.unitCost); err != nil {
 				rows.Close()
 				return models.Purchase{}, fmt.Errorf("scan purchase receipt line: %w", err)
 			}
@@ -376,8 +377,9 @@ func (r *PurchaseRepository) Transition(ctx context.Context, id, libraryID, acto
 		}
 		for index, line := range lines {
 			var before, inventoryVersion int
-			err = tx.QueryRowContext(ctx, `SELECT quantity,version FROM book_inventory WHERE book_id=? AND library_id=?`,
-				line.bookID, actualLibrary).Scan(&before, &inventoryVersion)
+			var averageCost sql.NullFloat64
+			err = tx.QueryRowContext(ctx, `SELECT quantity,version,average_unit_cost FROM book_inventory WHERE book_id=? AND library_id=?`,
+				line.bookID, actualLibrary).Scan(&before, &inventoryVersion, &averageCost)
 			if errors.Is(err, sql.ErrNoRows) {
 				return models.Purchase{}, ErrPurchaseBook
 			}
@@ -385,8 +387,9 @@ func (r *PurchaseRepository) Transition(ctx context.Context, id, libraryID, acto
 				return models.Purchase{}, fmt.Errorf("read inventory for purchase: %w", err)
 			}
 			after := before + line.quantity
-			result, updateErr := tx.ExecContext(ctx, `UPDATE book_inventory SET quantity=?,version=version+1,updated_at=?
-				WHERE book_id=? AND library_id=? AND version=?`, after, now, line.bookID, actualLibrary, inventoryVersion)
+			nextCost := receiptAverageCost(before, averageCost, line.quantity, line.unitCost)
+			result, updateErr := tx.ExecContext(ctx, `UPDATE book_inventory SET quantity=?,average_unit_cost=?,version=version+1,updated_at=?
+				WHERE book_id=? AND library_id=? AND version=?`, after, nextCost, now, line.bookID, actualLibrary, inventoryVersion)
 			if updateErr != nil {
 				return models.Purchase{}, fmt.Errorf("update inventory for purchase: %w", updateErr)
 			}

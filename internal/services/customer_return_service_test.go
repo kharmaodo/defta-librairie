@@ -7,6 +7,7 @@ import (
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"errors"
+	"math"
 	"path/filepath"
 	"testing"
 
@@ -14,8 +15,26 @@ import (
 )
 
 func TestCustomerReturnLifecycleIsolationStockAndAudit(t *testing.T) {
+	for _, tc := range []struct {
+		name                              string
+		stockCost, saleCost, expectedCost sql.NullFloat64
+	}{
+		{"weighted", sql.NullFloat64{Float64: 2000, Valid: true}, sql.NullFloat64{Float64: 1100, Valid: true}, sql.NullFloat64{Float64: 1800, Valid: true}},
+		{"unknown sale", sql.NullFloat64{Float64: 2000, Valid: true}, sql.NullFloat64{}, sql.NullFloat64{}},
+		{"unknown stock", sql.NullFloat64{}, sql.NullFloat64{Float64: 1100, Valid: true}, sql.NullFloat64{}},
+		{"known zero", sql.NullFloat64{Valid: true}, sql.NullFloat64{Valid: true}, sql.NullFloat64{Valid: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			testCustomerReturnValuation(t, tc.stockCost, tc.saleCost, tc.expectedCost)
+		})
+	}
+}
+
+func testCustomerReturnValuation(t *testing.T, stockCost, saleCost, expectedCost sql.NullFloat64) {
 	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "returns.db")+"?_foreign_keys=on")
-	if err != nil { t.Fatalf("open database: %v", err) }
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
 	t.Cleanup(func() { _ = db.Close() })
 	_, err = db.Exec(`
 		CREATE TABLE users(id TEXT PRIMARY KEY);
@@ -55,13 +74,26 @@ func TestCustomerReturnLifecycleIsolationStockAndAudit(t *testing.T) {
 		INSERT INTO sale_lines VALUES('line-1','sale-1',1,5,1000);
 		INSERT INTO book_inventory VALUES(1,'library-1',7,1,'now');
 	`)
-	if err != nil { t.Fatalf("create schema: %v", err) }
+	if err != nil {
+		t.Fatalf("create schema: %v", err)
+	}
 
+	if _, err = db.Exec("ALTER TABLE book_inventory ADD COLUMN average_unit_cost REAL; ALTER TABLE sale_lines ADD COLUMN unit_cost_snapshot REAL"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec("UPDATE book_inventory SET average_unit_cost=?", stockCost); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec("UPDATE sale_lines SET unit_cost_snapshot=?", saleCost); err != nil {
+		t.Fatal(err)
+	}
 	service := NewCustomerReturnService(repositories.NewCustomerReturnRepository(db))
-	ownerOne := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-1"}; ownerOne.Subject = "owner-1"
-	ownerTwo := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-2"}; ownerTwo.Subject = "owner-2"
-	input := models.CustomerReturnInput{SaleID:"sale-1",Reason:"Livre endommagé",Resolution:models.CustomerReturnResolutionRefund,
-		Lines:[]models.CustomerReturnLineInput{{SaleLineID:"line-1",Quantity:2}}}
+	ownerOne := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-1"}
+	ownerOne.Subject = "owner-1"
+	ownerTwo := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-2"}
+	ownerTwo.Subject = "owner-2"
+	input := models.CustomerReturnInput{SaleID: "sale-1", Reason: "Livre endommagé", Resolution: models.CustomerReturnResolutionRefund,
+		Lines: []models.CustomerReturnLineInput{{SaleLineID: "line-1", Quantity: 2}}}
 	value, err := service.Create(context.Background(), ownerOne, input)
 	if err != nil || value.TotalAmount != 2000 || value.Status != models.CustomerReturnStatusDraft || value.Version != 1 {
 		t.Fatalf("create return=%+v err=%v", value, err)
@@ -69,23 +101,74 @@ func TestCustomerReturnLifecycleIsolationStockAndAudit(t *testing.T) {
 	if _, err = service.Find(context.Background(), ownerTwo, value.ID); !errors.Is(err, repositories.ErrCustomerReturnNotFound) {
 		t.Fatalf("cross-library return must be hidden: %v", err)
 	}
+	// Fail after the inventory update: quantity, valuation and status must all roll back.
+	if _, err = db.Exec("CREATE TRIGGER fail_return_audit BEFORE INSERT ON audit_logs WHEN NEW.action='UPDATE_INVENTORY' BEGIN SELECT RAISE(ABORT,'test audit failure'); END"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.Complete(context.Background(), ownerOne, value.ID, value.Version); err == nil {
+		t.Fatal("expected audit failure")
+	}
+	var rolledCost sql.NullFloat64
+	var rolledQuantity, rolledVersion int
+	if err = db.QueryRow("SELECT quantity,version,average_unit_cost FROM book_inventory WHERE book_id=1").Scan(&rolledQuantity, &rolledVersion, &rolledCost); err != nil {
+		t.Fatal(err)
+	}
+	if rolledQuantity != 7 || rolledVersion != 1 || rolledCost != stockCost {
+		t.Fatalf("rollback quantity=%d version=%d cost=%+v", rolledQuantity, rolledVersion, rolledCost)
+	}
+	stored, err := service.Find(context.Background(), ownerOne, value.ID)
+	if err != nil || stored.Status != models.CustomerReturnStatusDraft || stored.Version != 1 {
+		t.Fatalf("rollback return=%+v err=%v", stored, err)
+	}
+	if _, err = db.Exec("DROP TRIGGER fail_return_audit"); err != nil {
+		t.Fatal(err)
+	}
 	value, err = service.Complete(context.Background(), ownerOne, value.ID, value.Version)
-	if err != nil || value.Status != models.CustomerReturnStatusCompleted || value.Version != 2 { t.Fatalf("complete=%+v err=%v",value,err) }
+	if err != nil || value.Status != models.CustomerReturnStatusCompleted || value.Version != 2 {
+		t.Fatalf("complete=%+v err=%v", value, err)
+	}
 	var quantity, movements, audits int
 	_ = db.QueryRow(`SELECT quantity FROM book_inventory WHERE book_id=1 AND library_id='library-1'`).Scan(&quantity)
 	_ = db.QueryRow(`SELECT COUNT(*) FROM inventory_movements WHERE reason LIKE 'Retour client %'`).Scan(&movements)
 	_ = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE action IN ('CREATE_CUSTOMER_RETURN','COMPLETE_CUSTOMER_RETURN','UPDATE_INVENTORY')`).Scan(&audits)
-	if quantity != 9 || movements != 1 || audits != 3 { t.Fatalf("quantity=%d movements=%d audits=%d",quantity,movements,audits) }
+	if quantity != 9 || movements != 1 || audits != 3 {
+		t.Fatalf("quantity=%d movements=%d audits=%d", quantity, movements, audits)
+	}
 
-	excess := input; excess.Lines=[]models.CustomerReturnLineInput{{SaleLineID:"line-1",Quantity:4}}
-	second, err := service.Create(context.Background(), ownerOne, excess); if err != nil { t.Fatalf("create excess draft: %v",err) }
-	if _, err = service.Complete(context.Background(), ownerOne, second.ID, second.Version); !errors.Is(err,repositories.ErrCustomerReturnQuantity) { t.Fatalf("excess return: %v",err) }
+	var actualCost sql.NullFloat64
+	if err = db.QueryRow("SELECT average_unit_cost FROM book_inventory WHERE book_id=1").Scan(&actualCost); err != nil || actualCost.Valid != expectedCost.Valid || (actualCost.Valid && math.Abs(actualCost.Float64-expectedCost.Float64) > 1e-8) {
+		t.Fatalf("cost=%+v expected=%+v err=%v", actualCost, expectedCost, err)
+	}
+	if _, err = service.Complete(context.Background(), ownerOne, value.ID, value.Version); !errors.Is(err, repositories.ErrCustomerReturnState) {
+		t.Fatalf("repeated completion: %v", err)
+	}
+	var frozen sql.NullFloat64
+	if err = db.QueryRow("SELECT unit_cost_snapshot FROM sale_lines WHERE id='line-1'").Scan(&frozen); err != nil || frozen != saleCost {
+		t.Fatalf("sale cost changed=%+v err=%v", frozen, err)
+	}
+	excess := input
+	excess.Lines = []models.CustomerReturnLineInput{{SaleLineID: "line-1", Quantity: 4}}
+	second, err := service.Create(context.Background(), ownerOne, excess)
+	if err != nil {
+		t.Fatalf("create excess draft: %v", err)
+	}
+	if _, err = service.Complete(context.Background(), ownerOne, second.ID, second.Version); !errors.Is(err, repositories.ErrCustomerReturnQuantity) {
+		t.Fatalf("excess return: %v", err)
+	}
 	second, err = service.Cancel(context.Background(), ownerOne, second.ID, second.Version)
-	if err != nil || second.Status != models.CustomerReturnStatusCancelled { t.Fatalf("cancel=%+v err=%v",second,err) }
+	if err != nil || second.Status != models.CustomerReturnStatusCancelled {
+		t.Fatalf("cancel=%+v err=%v", second, err)
+	}
 }
 
 func TestCustomerReturnValidation(t *testing.T) {
-	valid:=models.CustomerReturnInput{SaleID:"sale",Reason:"Motif valide",Resolution:models.CustomerReturnResolutionRefund,Lines:[]models.CustomerReturnLineInput{{SaleLineID:"line",Quantity:1}}}
-	if err:=validateCustomerReturn(valid,false);err!=nil{t.Fatalf("valid return: %v",err)}
-	invalid:=valid;invalid.Lines=append(invalid.Lines,invalid.Lines[0]);if !errors.Is(validateCustomerReturn(invalid,false),ErrInvalidCustomerReturn){t.Fatal("duplicate sale line should fail")}
+	valid := models.CustomerReturnInput{SaleID: "sale", Reason: "Motif valide", Resolution: models.CustomerReturnResolutionRefund, Lines: []models.CustomerReturnLineInput{{SaleLineID: "line", Quantity: 1}}}
+	if err := validateCustomerReturn(valid, false); err != nil {
+		t.Fatalf("valid return: %v", err)
+	}
+	invalid := valid
+	invalid.Lines = append(invalid.Lines, invalid.Lines[0])
+	if !errors.Is(validateCustomerReturn(invalid, false), ErrInvalidCustomerReturn) {
+		t.Fatal("duplicate sale line should fail")
+	}
 }
