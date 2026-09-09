@@ -36,6 +36,9 @@ func TestInventoryMovementsAndIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err = db.Exec("ALTER TABLE book_inventory ADD COLUMN average_unit_cost REAL"); err != nil {
+		t.Fatal(err)
+	}
 	service := NewInventoryService(repositories.NewInventoryRepository(db))
 	owner := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-1"}
 	owner.Subject = "owner-1"
@@ -97,4 +100,38 @@ func TestInventoryMovementsAndIsolation(t *testing.T) {
 	if thresholdAudits != 1 {
 		t.Fatalf("threshold audits=%d", thresholdAudits)
 	}
+	for _, tc := range []struct {
+		name     string
+		quantity int
+		entry    bool
+		known    bool
+	}{
+		{"manual entry", 2, true, false},
+		{"upward adjustment", 12, false, false},
+		{"downward adjustment", 5, false, true},
+		{"empty stock", 0, false, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := db.Exec("UPDATE book_inventory SET quantity=8,average_unit_cost=1500,version=1 WHERE book_id=2"); err != nil {
+				t.Fatal(err)
+			}
+			var err error
+			if tc.entry {
+				_, err = service.Move(context.Background(), owner, 2, models.InventoryMovementEntry, tc.quantity, 1, "test valorisation")
+			} else {
+				_, err = service.Adjust(context.Background(), owner, 2, tc.quantity, 1, "test valorisation")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			var cost sql.NullFloat64
+			if err = db.QueryRow("SELECT average_unit_cost FROM book_inventory WHERE book_id=2").Scan(&cost); err != nil {
+				t.Fatal(err)
+			}
+			if cost.Valid != tc.known || (cost.Valid && cost.Float64 != 1500) {
+				t.Fatalf("cost=%+v known=%v", cost, tc.known)
+			}
+		})
+	}
+
 }

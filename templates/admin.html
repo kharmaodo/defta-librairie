@@ -29,6 +29,29 @@
       <p id="scope-text" class="muted">Vérification de vos droits…</p>
     </section>
 
+
+    <section class="panel" id="commercial-statistics-panel" aria-labelledby="commercial-statistics-title">
+      <div class="panel-heading"><h2 id="commercial-statistics-title">Statistiques commerciales</h2></div>
+      <form class="filters entity-form">
+        <label>Du<input name="from" type="date" required></label>
+        <label>Au, inclus<input name="to" type="date" required></label>
+        <label data-library hidden>Librairie<select name="libraryId"><option value="">Choisir une librairie</option></select></label>
+        <button class="button primary" type="submit">Actualiser</button>
+      </form>
+      <p class="scope-note">Journées en UTC. Les annulations et retours sont déduits à leur date de traitement. Les encaissements sont suivis dans la section caisse.</p>
+      <p data-error class="alert" role="alert" hidden></p>
+      <p data-notice role="status" aria-live="polite"></p>
+      <div data-results hidden>
+        <div class="metrics">
+          <article class="metric"><span>Ventes brutes</span><strong data-value="grossSales">—</strong></article>
+          <article class="metric"><span>Annulations</span><strong data-value="cancellations">—</strong></article>
+          <article class="metric"><span>Retours clients</span><strong data-value="customerReturns">—</strong></article>
+          <article class="metric"><span>Ventes nettes</span><strong data-value="netSales">—</strong></article>
+          <article class="metric"><span>Marge commerciale</span><strong data-value="netMargin">—</strong></article>
+        </div>
+      </div>
+    </section>
+
     <p id="dashboard-error" class="alert" role="alert" hidden></p>
 
     <section class="panel">
@@ -515,5 +538,6 @@
   <script src="/static/js/admin-payments.js" defer></script>
   <script src="/static/js/admin-returns.js" defer></script>
   <script src="/static/js/admin-supplier-returns.js" defer></script>
+  <script src="/static/js/admin-statistics.js" defer></script>
 </body>
 </html>

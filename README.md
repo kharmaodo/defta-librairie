@@ -883,4 +883,36 @@ La migration `019_freeze_sale_cost.sql` ajoute `sale_lines.unit_cost_snapshot`, 
 
 L'annulation restitue le stock au coût figé, en recalculant sa moyenne avec le stock présent. Un coût de sortie inconnu rend la valorisation résultante inconnue. Les coûts figés restent conservés après annulation. Un échec de confirmation annule aussi les écritures de coût. Les tests vérifient le gel du coût, sa conservation après changement du CMP, la revalorisation à l'annulation et le rollback pour stock insuffisant.
 
-Sauvegarder SQLite avant de redémarrer pour appliquer les migrations. La valorisation des retours clients et des ajustements manuels reste à intégrer avant d'exposer les statistiques de marge.
+Sauvegarder SQLite avant de redémarrer pour appliquer les migrations. La valorisation des ajustements manuels reste à intégrer avant d'exposer les statistiques de marge.
+
+### Valorisation des retours clients
+
+La finalisation d'un retour client restitue chaque livre au coût figé de sa ligne de vente (`sale_lines.unit_cost_snapshot`). Le CMP est recalculé avec le stock présent, dans la transaction qui enregistre les quantités, mouvements et audits. Le prix de vente et le montant du remboursement ne servent pas à valoriser le stock. Un coût historique inconnu rend le CMP résultant inconnu ; zéro reste un coût connu. Le coût de la vente d'origine n'est pas modifié.
+
+Aucune migration supplémentaire n'est nécessaire après 018 et 019. Les retours déjà finalisés ne sont pas recalculés rétroactivement. Les tests couvrent la moyenne pondérée, les coûts inconnus ou nuls, le refus d'une finalisation répétée et le rollback du stock, du CMP et du statut en cas d'échec d'audit. Les statistiques de marge restent à développer.
+
+### Ajustements manuels et CMP
+
+Les entrées manuelles et corrections de quantité à la hausse ne fournissent aucun coût d'achat dans l'API actuelle : elles rendent le CMP inconnu (NULL). Les sorties et corrections à la baisse conservent le CMP. Un stock vidé conserve son ancien CMP à titre historique ; une prochaine réception sur stock nul initialise le CMP au coût reçu. Aucun coût ni marge historique n'est estimé. Les tests ajoutés couvrent ces quatre cas.
+
+### Fondation des statistiques commerciales
+
+`CommercialStatisticsRepository.Summary` calcule les ventes brutes, annulations, retours clients, ventes nettes et coûts connus pour une librairie explicite et un intervalle [from, to). La couche appelante devra contrôler les droits sur la librairie ; aucun endpoint HTTP n'est ajouté dans cet incrément.
+
+Les dates utilisées sont confirmed_at, cancelled_at et completed_at. Une annulation sur une période ultérieure ne réécrit donc pas les ventes de la période initiale. Les coûts proviennent des lignes de vente figées. Si une ligne d'événement présente un coût inconnu, netMargin reste null et unknownCostEvents indique le nombre de lignes concernées. knownCost représente uniquement la partie connue et ne doit pas être présenté comme le coût total lorsque des coûts manquent. Une période vide donne des totaux nuls. Ces indicateurs décrivent l'activité commerciale, pas les encaissements. Ils supposent que les transitions métier empêchent une double restitution par annulation et retour d'une même vente.
+
+Tests : `go test -tags fts5 ./internal/repositories -run TestCommercialStatisticsEventsAndIsolation -count=1 -v`. Les achats, écarts de retours fournisseurs, endpoints autorisés et écran de statistiques restent à intégrer.
+
+### API des statistiques commerciales
+
+`GET /api/manage/statistics?from=2026-09-01T00:00:00Z&to=2026-10-01T00:00:00Z` retourne les indicateurs de la période [from, to). Les deux dates RFC3339 sont obligatoires. Un propriétaire utilise sa librairie JWT ; un libraryId différent est refusé (403). Le root doit préciser libraryId (400 si absent). Une période invalide ou un filtre répété retourne 400. Une authentification valide et le changement du mot de passe initial sont requis. Les réponses portent Cache-Control: no-store.
+
+La réponse contient grossSales, cancellations, customerReturns, netSales, knownCost, unknownCostEvents et netMargin. netMargin vaut null lorsque des coûts manquent. Une librairie sans événements renvoie des totaux nuls. Les achats, encaissements, écarts fournisseurs et l'écran restent hors de cet incrément.
+
+Après sauvegarde, application du patch et tests Go, redémarrer le serveur pour charger la nouvelle route. Exécuter `go test -tags fts5 ./internal/services -run TestCommercialStatisticsAuthorizationAndDates -count=1 -v` puis les suites normales et race.
+
+### Écran des statistiques commerciales
+
+La section Statistiques commerciales de `/admin` affiche les ventes brutes, annulations, retours clients, ventes nettes et marge commerciale. La période initiale va du premier jour du mois à aujourd'hui en UTC ; la date de fin choisie est incluse. Le propriétaire consulte sa librairie et le root doit en sélectionner une. Les résultats sont masqués dès qu'un filtre change, pendant le chargement et en cas d'erreur. Une marge inconnue affiche Indisponible avec le nombre de lignes sans coût. Les sessions expirées affichent une invitation à se reconnecter.
+
+Vérification locale : recharger `/admin` après redémarrage du serveur ; contrôler propriétaire et root, période inversée, journée unique, période vide, coûts manquants et session expirée. Les montants utilisent F CFA comme le reste de l'interface actuelle. Le paramétrage de devise reste à développer.

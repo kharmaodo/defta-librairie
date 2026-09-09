@@ -13,42 +13,371 @@ import (
 var (
 	ErrCustomerReturnNotFound = errors.New("customer return not found")
 	ErrCustomerReturnConflict = errors.New("customer return was modified by another request")
-	ErrCustomerReturnState = errors.New("customer return is not editable")
-	ErrCustomerReturnSale = errors.New("customer return sale is unavailable")
-	ErrCustomerReturnLine = errors.New("customer return line is invalid")
+	ErrCustomerReturnState    = errors.New("customer return is not editable")
+	ErrCustomerReturnSale     = errors.New("customer return sale is unavailable")
+	ErrCustomerReturnLine     = errors.New("customer return line is invalid")
 	ErrCustomerReturnQuantity = errors.New("customer return quantity exceeds sold quantity")
 )
 
 type CustomerReturnRepository struct{ db *sql.DB }
-func NewCustomerReturnRepository(db *sql.DB)*CustomerReturnRepository{return &CustomerReturnRepository{db:db}}
 
-func (r *CustomerReturnRepository) List(ctx context.Context, libraryID string, filter models.CustomerReturnFilter, offset,limit int)([]models.CustomerReturn,int,error){
-	where:=" WHERE 1=1"; args:=[]interface{}{}
-	if libraryID!=""{where+=" AND library_id=?";args=append(args,libraryID)}; if filter.Status!=""{where+=" AND status=?";args=append(args,filter.Status)}
-	if filter.SaleID!=""{where+=" AND sale_id=?";args=append(args,filter.SaleID)}; if filter.CustomerID!=""{where+=" AND customer_id=?";args=append(args,filter.CustomerID)}
-	if filter.From!=""{where+=" AND created_at>=?";args=append(args,filter.From)};if filter.To!=""{where+=" AND created_at<=?";args=append(args,filter.To)}
-	var total int;if err:=r.db.QueryRowContext(ctx,"SELECT COUNT(*) FROM customer_returns"+where,args...).Scan(&total);err!=nil{return nil,0,fmt.Errorf("count customer returns: %w",err)}
-	queryArgs:=append(append([]interface{}{},args...),limit,offset); rows,err:=r.db.QueryContext(ctx,returnSelect+where+" ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?",queryArgs...);if err!=nil{return nil,0,fmt.Errorf("list customer returns: %w",err)}
-	defer rows.Close(); values:=[]models.CustomerReturn{};for rows.Next(){v,e:=scanCustomerReturn(rows);if e!=nil{return nil,0,e};values=append(values,v)};if err=rows.Err();err!=nil{return nil,0,err}
-	for i:=range values{values[i].Lines,err=r.listLines(ctx,values[i].ID);if err!=nil{return nil,0,err}};return values,total,nil
+func NewCustomerReturnRepository(db *sql.DB) *CustomerReturnRepository {
+	return &CustomerReturnRepository{db: db}
 }
 
-const returnSelect=`SELECT id,library_id,sale_id,COALESCE(customer_id,''),reference,reason,status,resolution,total_amount,version,
+func (r *CustomerReturnRepository) List(ctx context.Context, libraryID string, filter models.CustomerReturnFilter, offset, limit int) ([]models.CustomerReturn, int, error) {
+	where := " WHERE 1=1"
+	args := []interface{}{}
+	if libraryID != "" {
+		where += " AND library_id=?"
+		args = append(args, libraryID)
+	}
+	if filter.Status != "" {
+		where += " AND status=?"
+		args = append(args, filter.Status)
+	}
+	if filter.SaleID != "" {
+		where += " AND sale_id=?"
+		args = append(args, filter.SaleID)
+	}
+	if filter.CustomerID != "" {
+		where += " AND customer_id=?"
+		args = append(args, filter.CustomerID)
+	}
+	if filter.From != "" {
+		where += " AND created_at>=?"
+		args = append(args, filter.From)
+	}
+	if filter.To != "" {
+		where += " AND created_at<=?"
+		args = append(args, filter.To)
+	}
+	var total int
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM customer_returns"+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count customer returns: %w", err)
+	}
+	queryArgs := append(append([]interface{}{}, args...), limit, offset)
+	rows, err := r.db.QueryContext(ctx, returnSelect+where+" ORDER BY created_at DESC,id DESC LIMIT ? OFFSET ?", queryArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list customer returns: %w", err)
+	}
+	defer rows.Close()
+	values := []models.CustomerReturn{}
+	for rows.Next() {
+		v, e := scanCustomerReturn(rows)
+		if e != nil {
+			return nil, 0, e
+		}
+		values = append(values, v)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	for i := range values {
+		values[i].Lines, err = r.listLines(ctx, values[i].ID)
+		if err != nil {
+			return nil, 0, err
+		}
+	}
+	return values, total, nil
+}
+
+const returnSelect = `SELECT id,library_id,sale_id,COALESCE(customer_id,''),reference,reason,status,resolution,total_amount,version,
 	created_by,COALESCE(completed_by,''),COALESCE(cancelled_by,''),created_at,updated_at,COALESCE(completed_at,''),COALESCE(cancelled_at,'') FROM customer_returns`
-type customerReturnScanner interface{Scan(...interface{})error}
-func scanCustomerReturn(row customerReturnScanner)(models.CustomerReturn,error){var v models.CustomerReturn;err:=row.Scan(&v.ID,&v.LibraryID,&v.SaleID,&v.CustomerID,&v.Reference,&v.Reason,&v.Status,&v.Resolution,&v.TotalAmount,&v.Version,&v.CreatedBy,&v.CompletedBy,&v.CancelledBy,&v.CreatedAt,&v.UpdatedAt,&v.CompletedAt,&v.CancelledAt);if err!=nil{return v,fmt.Errorf("scan customer return: %w",err)};return v,nil}
-func (r *CustomerReturnRepository) Find(ctx context.Context,id,libraryID string)(models.CustomerReturn,error){q:=returnSelect+" WHERE id=?";args:=[]interface{}{id};if libraryID!=""{q+=" AND library_id=?";args=append(args,libraryID)};v,err:=scanCustomerReturn(r.db.QueryRowContext(ctx,q,args...));if errors.Is(errors.Unwrap(err),sql.ErrNoRows){return v,ErrCustomerReturnNotFound};if err!=nil{return v,err};v.Lines,err=r.listLines(ctx,id);return v,err}
-func(r *CustomerReturnRepository)listLines(ctx context.Context,id string)([]models.CustomerReturnLine,error){rows,err:=r.db.QueryContext(ctx,`SELECT rl.id,rl.return_id,rl.sale_line_id,rl.book_id,COALESCE(d.title,''),rl.quantity,rl.unit_price,rl.line_total,rl.created_at FROM customer_return_lines rl LEFT JOIN defta d ON d.id=rl.book_id WHERE rl.return_id=? ORDER BY rl.id`,id);if err!=nil{return nil,fmt.Errorf("list customer return lines: %w",err)};defer rows.Close();lines:=[]models.CustomerReturnLine{};for rows.Next(){var v models.CustomerReturnLine;if err=rows.Scan(&v.ID,&v.ReturnID,&v.SaleLineID,&v.BookID,&v.Title,&v.Quantity,&v.UnitPrice,&v.LineTotal,&v.CreatedAt);err!=nil{return nil,err};lines=append(lines,v)};return lines,rows.Err()}
 
-func(r *CustomerReturnRepository)Create(ctx context.Context,v models.CustomerReturn,inputs []models.CustomerReturnLineInput,lineIDs []string,auditID,now string)(models.CustomerReturn,error){tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return v,err};defer tx.Rollback();var customer sql.NullString;err=tx.QueryRowContext(ctx,`SELECT customer_id FROM sales WHERE id=? AND library_id=? AND status='CONFIRMED'`,v.SaleID,v.LibraryID).Scan(&customer);if errors.Is(err,sql.ErrNoRows){return v,ErrCustomerReturnSale};if err!=nil{return v,err};if customer.Valid{v.CustomerID=customer.String};_,err=tx.ExecContext(ctx,`INSERT INTO customer_returns(id,library_id,sale_id,customer_id,reference,reason,status,resolution,total_amount,version,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,'DRAFT',?,0,1,?,?,?)`,v.ID,v.LibraryID,v.SaleID,nullable(v.CustomerID),v.Reference,v.Reason,v.Resolution,v.CreatedBy,now,now);if err!=nil{return v,mapReturnError(err)};lines,err:=writeReturnLines(ctx,tx,v.ID,v.SaleID,inputs,lineIDs,now);if err!=nil{return v,err};payload,_:=json.Marshal(map[string]interface{}{"saleId":v.SaleID,"reference":v.Reference,"lines":len(lines),"resolution":v.Resolution});_,err=tx.ExecContext(ctx,`INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at) VALUES(?,?,'CREATE_CUSTOMER_RETURN','CUSTOMER_RETURN',?,?,1,?)`,auditID,v.CreatedBy,v.ID,string(payload),now);if err!=nil{return v,err};if err=tx.Commit();err!=nil{return v,err};v.Status=models.CustomerReturnStatusDraft;v.Version=1;v.CreatedAt=now;v.UpdatedAt=now;v.Lines=lines;for _,line:=range lines{v.TotalAmount+=line.LineTotal};return v,nil}
-func nullable(v string)interface{}{if v==""{return nil};return v}
-func writeReturnLines(ctx context.Context,tx *sql.Tx,returnID,saleID string,inputs []models.CustomerReturnLineInput,ids []string,now string)([]models.CustomerReturnLine,error){lines:=[]models.CustomerReturnLine{};for i,input:=range inputs{var line models.CustomerReturnLine;line.ID=ids[i];line.ReturnID=returnID;line.SaleLineID=strings.TrimSpace(input.SaleLineID);line.Quantity=input.Quantity;err:=tx.QueryRowContext(ctx,`SELECT book_id,unit_price FROM sale_lines WHERE id=? AND sale_id=? AND quantity>=?`,line.SaleLineID,saleID,line.Quantity).Scan(&line.BookID,&line.UnitPrice);if errors.Is(err,sql.ErrNoRows){return nil,ErrCustomerReturnLine};if err!=nil{return nil,err};line.LineTotal=float64(line.Quantity)*line.UnitPrice;line.CreatedAt=now;_,err=tx.ExecContext(ctx,`INSERT INTO customer_return_lines(id,return_id,sale_line_id,book_id,quantity,unit_price,line_total,created_at) VALUES(?,?,?,?,?,?,?,?)`,line.ID,line.ReturnID,line.SaleLineID,line.BookID,line.Quantity,line.UnitPrice,line.LineTotal,now);if err!=nil{return nil,mapReturnError(err)};lines=append(lines,line)};return lines,nil}
+type customerReturnScanner interface{ Scan(...interface{}) error }
 
-func(r *CustomerReturnRepository)Update(ctx context.Context,id,libraryID,reason string,resolution models.CustomerReturnResolution,inputs []models.CustomerReturnLineInput,lineIDs []string,expected int,actor,auditID,now string)(models.CustomerReturn,error){tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return models.CustomerReturn{},err};defer tx.Rollback();var saleID string;var status models.CustomerReturnStatus;var version int;err=tx.QueryRowContext(ctx,`SELECT sale_id,status,version FROM customer_returns WHERE id=? AND library_id=?`,id,libraryID).Scan(&saleID,&status,&version);if errors.Is(err,sql.ErrNoRows){return models.CustomerReturn{},ErrCustomerReturnNotFound};if err!=nil{return models.CustomerReturn{},err};if status!=models.CustomerReturnStatusDraft{return models.CustomerReturn{},ErrCustomerReturnState};if version!=expected{return models.CustomerReturn{},ErrCustomerReturnConflict};if _,err=tx.ExecContext(ctx,"DELETE FROM customer_return_lines WHERE return_id=?",id);err!=nil{return models.CustomerReturn{},mapReturnError(err)};lines,err:=writeReturnLines(ctx,tx,id,saleID,inputs,lineIDs,now);if err!=nil{return models.CustomerReturn{},err};result,err:=tx.ExecContext(ctx,`UPDATE customer_returns SET reason=?,resolution=?,version=version+1,updated_at=? WHERE id=? AND version=?`,reason,resolution,now,id,expected);if err!=nil{return models.CustomerReturn{},err};if n,_:=result.RowsAffected();n!=1{return models.CustomerReturn{},ErrCustomerReturnConflict};payload,_:=json.Marshal(map[string]interface{}{"lines":len(lines),"resolution":resolution,"version":expected+1});_,err=tx.ExecContext(ctx,`INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)VALUES(?,?,'UPDATE_CUSTOMER_RETURN','CUSTOMER_RETURN',?,?,1,?)`,auditID,actor,id,string(payload),now);if err!=nil{return models.CustomerReturn{},err};if err=tx.Commit();err!=nil{return models.CustomerReturn{},err};return r.Find(ctx,id,libraryID)}
+func scanCustomerReturn(row customerReturnScanner) (models.CustomerReturn, error) {
+	var v models.CustomerReturn
+	err := row.Scan(&v.ID, &v.LibraryID, &v.SaleID, &v.CustomerID, &v.Reference, &v.Reason, &v.Status, &v.Resolution, &v.TotalAmount, &v.Version, &v.CreatedBy, &v.CompletedBy, &v.CancelledBy, &v.CreatedAt, &v.UpdatedAt, &v.CompletedAt, &v.CancelledAt)
+	if err != nil {
+		return v, fmt.Errorf("scan customer return: %w", err)
+	}
+	return v, nil
+}
+func (r *CustomerReturnRepository) Find(ctx context.Context, id, libraryID string) (models.CustomerReturn, error) {
+	q := returnSelect + " WHERE id=?"
+	args := []interface{}{id}
+	if libraryID != "" {
+		q += " AND library_id=?"
+		args = append(args, libraryID)
+	}
+	v, err := scanCustomerReturn(r.db.QueryRowContext(ctx, q, args...))
+	if errors.Is(errors.Unwrap(err), sql.ErrNoRows) {
+		return v, ErrCustomerReturnNotFound
+	}
+	if err != nil {
+		return v, err
+	}
+	v.Lines, err = r.listLines(ctx, id)
+	return v, err
+}
+func (r *CustomerReturnRepository) listLines(ctx context.Context, id string) ([]models.CustomerReturnLine, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT rl.id,rl.return_id,rl.sale_line_id,rl.book_id,COALESCE(d.title,''),rl.quantity,rl.unit_price,rl.line_total,rl.created_at FROM customer_return_lines rl LEFT JOIN defta d ON d.id=rl.book_id WHERE rl.return_id=? ORDER BY rl.id`, id)
+	if err != nil {
+		return nil, fmt.Errorf("list customer return lines: %w", err)
+	}
+	defer rows.Close()
+	lines := []models.CustomerReturnLine{}
+	for rows.Next() {
+		var v models.CustomerReturnLine
+		if err = rows.Scan(&v.ID, &v.ReturnID, &v.SaleLineID, &v.BookID, &v.Title, &v.Quantity, &v.UnitPrice, &v.LineTotal, &v.CreatedAt); err != nil {
+			return nil, err
+		}
+		lines = append(lines, v)
+	}
+	return lines, rows.Err()
+}
 
-func(r *CustomerReturnRepository)Transition(ctx context.Context,id,libraryID,actor string,expected int,target models.CustomerReturnStatus,movementIDs,inventoryAuditIDs []string,auditID,now string)(models.CustomerReturn,error){tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return models.CustomerReturn{},err};defer tx.Rollback();var reference string;var status models.CustomerReturnStatus;var version int;err=tx.QueryRowContext(ctx,`SELECT reference,status,version FROM customer_returns WHERE id=? AND library_id=?`,id,libraryID).Scan(&reference,&status,&version);if errors.Is(err,sql.ErrNoRows){return models.CustomerReturn{},ErrCustomerReturnNotFound};if err!=nil{return models.CustomerReturn{},err};if status!=models.CustomerReturnStatusDraft{return models.CustomerReturn{},ErrCustomerReturnState};if version!=expected{return models.CustomerReturn{},ErrCustomerReturnConflict}
-	action:="CANCEL_CUSTOMER_RETURN"; update:=`UPDATE customer_returns SET status='CANCELLED',cancelled_by=?,cancelled_at=?,version=version+1,updated_at=? WHERE id=? AND status='DRAFT' AND version=?`;stockEntries:=0
-	if target==models.CustomerReturnStatusCompleted{action="COMPLETE_CUSTOMER_RETURN";update=`UPDATE customer_returns SET status='COMPLETED',completed_by=?,completed_at=?,version=version+1,updated_at=? WHERE id=? AND status='DRAFT' AND version=?`;rows,e:=tx.QueryContext(ctx,`SELECT book_id,quantity FROM customer_return_lines WHERE return_id=? ORDER BY id`,id);if e!=nil{return models.CustomerReturn{},e};type item struct{bookID,quantity int};items:=[]item{};for rows.Next(){var x item;if e=rows.Scan(&x.bookID,&x.quantity);e!=nil{rows.Close();return models.CustomerReturn{},e};items=append(items,x)};rows.Close();if len(items)==0||len(items)!=len(movementIDs){return models.CustomerReturn{},ErrCustomerReturnConflict};result,e:=tx.ExecContext(ctx,update,actor,now,now,id,expected);if e!=nil{return models.CustomerReturn{},mapReturnError(e)};if n,_:=result.RowsAffected();n!=1{return models.CustomerReturn{},ErrCustomerReturnConflict};update="";for i,x:=range items{var before,invVersion int;e=tx.QueryRowContext(ctx,`SELECT quantity,version FROM book_inventory WHERE book_id=? AND library_id=?`,x.bookID,libraryID).Scan(&before,&invVersion);if e!=nil{return models.CustomerReturn{},ErrCustomerReturnLine};after:=before+x.quantity;result,e=tx.ExecContext(ctx,`UPDATE book_inventory SET quantity=?,version=version+1,updated_at=? WHERE book_id=? AND library_id=? AND version=?`,after,now,x.bookID,libraryID,invVersion);if e!=nil{return models.CustomerReturn{},e};if n,_:=result.RowsAffected();n!=1{return models.CustomerReturn{},ErrInventoryConflict};reason:="Retour client "+reference;_,e=tx.ExecContext(ctx,`INSERT INTO inventory_movements(id,book_id,library_id,actor_user_id,movement_type,quantity_delta,quantity_before,quantity_after,reason,created_at)VALUES(?,?,?,?,'ENTRY',?,?,?,?,?)`,movementIDs[i],x.bookID,libraryID,actor,x.quantity,before,after,reason,now);if e!=nil{return models.CustomerReturn{},e};payload,_:=json.Marshal(map[string]interface{}{"returnId":id,"movementType":"ENTRY","quantityBefore":before,"quantityAfter":after,"quantityDelta":x.quantity,"version":invVersion+1});_,e=tx.ExecContext(ctx,`INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)VALUES(?,?,'UPDATE_INVENTORY','BOOK',?,?,1,?)`,inventoryAuditIDs[i],actor,x.bookID,string(payload),now);if e!=nil{return models.CustomerReturn{},e};stockEntries++}}
-	if update!=""{result,e:=tx.ExecContext(ctx,update,actor,now,now,id,expected);if e!=nil{return models.CustomerReturn{},mapReturnError(e)};if n,_:=result.RowsAffected();n!=1{return models.CustomerReturn{},ErrCustomerReturnConflict}}
-	payload,_:=json.Marshal(map[string]interface{}{"from":status,"to":target,"version":expected+1,"stockEntries":stockEntries});_,err=tx.ExecContext(ctx,`INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)VALUES(?,?,?,'CUSTOMER_RETURN',?,?,1,?)`,auditID,actor,action,id,string(payload),now);if err!=nil{return models.CustomerReturn{},err};if err=tx.Commit();err!=nil{return models.CustomerReturn{},err};return r.Find(ctx,id,libraryID)}
-func mapReturnError(err error)error{if err==nil{return nil};message:=err.Error();switch{case strings.Contains(message,"quantity exceeds sold"):return ErrCustomerReturnQuantity;case strings.Contains(message,"sale is unavailable"):return ErrCustomerReturnSale;case strings.Contains(message,"return line is invalid"):return ErrCustomerReturnLine;default:return err}}
+func (r *CustomerReturnRepository) Create(ctx context.Context, v models.CustomerReturn, inputs []models.CustomerReturnLineInput, lineIDs []string, auditID, now string) (models.CustomerReturn, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return v, err
+	}
+	defer tx.Rollback()
+	var customer sql.NullString
+	err = tx.QueryRowContext(ctx, `SELECT customer_id FROM sales WHERE id=? AND library_id=? AND status='CONFIRMED'`, v.SaleID, v.LibraryID).Scan(&customer)
+	if errors.Is(err, sql.ErrNoRows) {
+		return v, ErrCustomerReturnSale
+	}
+	if err != nil {
+		return v, err
+	}
+	if customer.Valid {
+		v.CustomerID = customer.String
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO customer_returns(id,library_id,sale_id,customer_id,reference,reason,status,resolution,total_amount,version,created_by,created_at,updated_at) VALUES(?,?,?,?,?,?,'DRAFT',?,0,1,?,?,?)`, v.ID, v.LibraryID, v.SaleID, nullable(v.CustomerID), v.Reference, v.Reason, v.Resolution, v.CreatedBy, now, now)
+	if err != nil {
+		return v, mapReturnError(err)
+	}
+	lines, err := writeReturnLines(ctx, tx, v.ID, v.SaleID, inputs, lineIDs, now)
+	if err != nil {
+		return v, err
+	}
+	payload, _ := json.Marshal(map[string]interface{}{"saleId": v.SaleID, "reference": v.Reference, "lines": len(lines), "resolution": v.Resolution})
+	_, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at) VALUES(?,?,'CREATE_CUSTOMER_RETURN','CUSTOMER_RETURN',?,?,1,?)`, auditID, v.CreatedBy, v.ID, string(payload), now)
+	if err != nil {
+		return v, err
+	}
+	if err = tx.Commit(); err != nil {
+		return v, err
+	}
+	v.Status = models.CustomerReturnStatusDraft
+	v.Version = 1
+	v.CreatedAt = now
+	v.UpdatedAt = now
+	v.Lines = lines
+	for _, line := range lines {
+		v.TotalAmount += line.LineTotal
+	}
+	return v, nil
+}
+func nullable(v string) interface{} {
+	if v == "" {
+		return nil
+	}
+	return v
+}
+func writeReturnLines(ctx context.Context, tx *sql.Tx, returnID, saleID string, inputs []models.CustomerReturnLineInput, ids []string, now string) ([]models.CustomerReturnLine, error) {
+	lines := []models.CustomerReturnLine{}
+	for i, input := range inputs {
+		var line models.CustomerReturnLine
+		line.ID = ids[i]
+		line.ReturnID = returnID
+		line.SaleLineID = strings.TrimSpace(input.SaleLineID)
+		line.Quantity = input.Quantity
+		err := tx.QueryRowContext(ctx, `SELECT book_id,unit_price FROM sale_lines WHERE id=? AND sale_id=? AND quantity>=?`, line.SaleLineID, saleID, line.Quantity).Scan(&line.BookID, &line.UnitPrice)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrCustomerReturnLine
+		}
+		if err != nil {
+			return nil, err
+		}
+		line.LineTotal = float64(line.Quantity) * line.UnitPrice
+		line.CreatedAt = now
+		_, err = tx.ExecContext(ctx, `INSERT INTO customer_return_lines(id,return_id,sale_line_id,book_id,quantity,unit_price,line_total,created_at) VALUES(?,?,?,?,?,?,?,?)`, line.ID, line.ReturnID, line.SaleLineID, line.BookID, line.Quantity, line.UnitPrice, line.LineTotal, now)
+		if err != nil {
+			return nil, mapReturnError(err)
+		}
+		lines = append(lines, line)
+	}
+	return lines, nil
+}
+
+func (r *CustomerReturnRepository) Update(ctx context.Context, id, libraryID, reason string, resolution models.CustomerReturnResolution, inputs []models.CustomerReturnLineInput, lineIDs []string, expected int, actor, auditID, now string) (models.CustomerReturn, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return models.CustomerReturn{}, err
+	}
+	defer tx.Rollback()
+	var saleID string
+	var status models.CustomerReturnStatus
+	var version int
+	err = tx.QueryRowContext(ctx, `SELECT sale_id,status,version FROM customer_returns WHERE id=? AND library_id=?`, id, libraryID).Scan(&saleID, &status, &version)
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.CustomerReturn{}, ErrCustomerReturnNotFound
+	}
+	if err != nil {
+		return models.CustomerReturn{}, err
+	}
+	if status != models.CustomerReturnStatusDraft {
+		return models.CustomerReturn{}, ErrCustomerReturnState
+	}
+	if version != expected {
+		return models.CustomerReturn{}, ErrCustomerReturnConflict
+	}
+	if _, err = tx.ExecContext(ctx, "DELETE FROM customer_return_lines WHERE return_id=?", id); err != nil {
+		return models.CustomerReturn{}, mapReturnError(err)
+	}
+	lines, err := writeReturnLines(ctx, tx, id, saleID, inputs, lineIDs, now)
+	if err != nil {
+		return models.CustomerReturn{}, err
+	}
+	result, err := tx.ExecContext(ctx, `UPDATE customer_returns SET reason=?,resolution=?,version=version+1,updated_at=? WHERE id=? AND version=?`, reason, resolution, now, id, expected)
+	if err != nil {
+		return models.CustomerReturn{}, err
+	}
+	if n, _ := result.RowsAffected(); n != 1 {
+		return models.CustomerReturn{}, ErrCustomerReturnConflict
+	}
+	payload, _ := json.Marshal(map[string]interface{}{"lines": len(lines), "resolution": resolution, "version": expected + 1})
+	_, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)VALUES(?,?,'UPDATE_CUSTOMER_RETURN','CUSTOMER_RETURN',?,?,1,?)`, auditID, actor, id, string(payload), now)
+	if err != nil {
+		return models.CustomerReturn{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return models.CustomerReturn{}, err
+	}
+	return r.Find(ctx, id, libraryID)
+}
+
+func (r *CustomerReturnRepository) Transition(ctx context.Context, id, libraryID, actor string, expected int, target models.CustomerReturnStatus, movementIDs, inventoryAuditIDs []string, auditID, now string) (models.CustomerReturn, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return models.CustomerReturn{}, err
+	}
+	defer tx.Rollback()
+	var reference string
+	var status models.CustomerReturnStatus
+	var version int
+	err = tx.QueryRowContext(ctx, `SELECT reference,status,version FROM customer_returns WHERE id=? AND library_id=?`, id, libraryID).Scan(&reference, &status, &version)
+	if errors.Is(err, sql.ErrNoRows) {
+		return models.CustomerReturn{}, ErrCustomerReturnNotFound
+	}
+	if err != nil {
+		return models.CustomerReturn{}, err
+	}
+	if status != models.CustomerReturnStatusDraft {
+		return models.CustomerReturn{}, ErrCustomerReturnState
+	}
+	if version != expected {
+		return models.CustomerReturn{}, ErrCustomerReturnConflict
+	}
+	action := "CANCEL_CUSTOMER_RETURN"
+	update := `UPDATE customer_returns SET status='CANCELLED',cancelled_by=?,cancelled_at=?,version=version+1,updated_at=? WHERE id=? AND status='DRAFT' AND version=?`
+	stockEntries := 0
+	if target == models.CustomerReturnStatusCompleted {
+		action = "COMPLETE_CUSTOMER_RETURN"
+		update = `UPDATE customer_returns SET status='COMPLETED',completed_by=?,completed_at=?,version=version+1,updated_at=? WHERE id=? AND status='DRAFT' AND version=?`
+		rows, e := tx.QueryContext(ctx, `SELECT rl.book_id,rl.quantity,sl.unit_cost_snapshot FROM customer_return_lines rl JOIN sale_lines sl ON sl.id=rl.sale_line_id AND sl.book_id=rl.book_id JOIN customer_returns cr ON cr.id=rl.return_id AND cr.sale_id=sl.sale_id WHERE rl.return_id=? ORDER BY rl.id`, id)
+		if e != nil {
+			return models.CustomerReturn{}, e
+		}
+		type item struct {
+			bookID, quantity int
+			unitCost         sql.NullFloat64
+		}
+		items := []item{}
+		for rows.Next() {
+			var x item
+			if e = rows.Scan(&x.bookID, &x.quantity, &x.unitCost); e != nil {
+				rows.Close()
+				return models.CustomerReturn{}, e
+			}
+			items = append(items, x)
+		}
+		if e = rows.Err(); e != nil {
+			rows.Close()
+			return models.CustomerReturn{}, e
+		}
+		if e = rows.Close(); e != nil {
+			return models.CustomerReturn{}, e
+		}
+		if len(items) == 0 || len(items) != len(movementIDs) || len(items) != len(inventoryAuditIDs) {
+			return models.CustomerReturn{}, ErrCustomerReturnConflict
+		}
+		result, e := tx.ExecContext(ctx, update, actor, now, now, id, expected)
+		if e != nil {
+			return models.CustomerReturn{}, mapReturnError(e)
+		}
+		if n, _ := result.RowsAffected(); n != 1 {
+			return models.CustomerReturn{}, ErrCustomerReturnConflict
+		}
+		update = ""
+		for i, x := range items {
+			var before, invVersion int
+			var previousCost sql.NullFloat64
+			e = tx.QueryRowContext(ctx, `SELECT quantity,version,average_unit_cost FROM book_inventory WHERE book_id=? AND library_id=?`, x.bookID, libraryID).Scan(&before, &invVersion, &previousCost)
+			if e != nil {
+				return models.CustomerReturn{}, ErrCustomerReturnLine
+			}
+			after := before + x.quantity
+			nextCost := sql.NullFloat64{}
+			if x.unitCost.Valid {
+				nextCost = receiptAverageCost(before, previousCost, x.quantity, x.unitCost.Float64)
+			}
+			result, e = tx.ExecContext(ctx, `UPDATE book_inventory SET quantity=?,average_unit_cost=?,version=version+1,updated_at=? WHERE book_id=? AND library_id=? AND version=?`, after, nextCost, now, x.bookID, libraryID, invVersion)
+			if e != nil {
+				return models.CustomerReturn{}, e
+			}
+			if n, _ := result.RowsAffected(); n != 1 {
+				return models.CustomerReturn{}, ErrInventoryConflict
+			}
+			reason := "Retour client " + reference
+			_, e = tx.ExecContext(ctx, `INSERT INTO inventory_movements(id,book_id,library_id,actor_user_id,movement_type,quantity_delta,quantity_before,quantity_after,reason,created_at)VALUES(?,?,?,?,'ENTRY',?,?,?,?,?)`, movementIDs[i], x.bookID, libraryID, actor, x.quantity, before, after, reason, now)
+			if e != nil {
+				return models.CustomerReturn{}, e
+			}
+			payload, _ := json.Marshal(map[string]interface{}{"returnId": id, "movementType": "ENTRY", "quantityBefore": before, "quantityAfter": after, "quantityDelta": x.quantity, "version": invVersion + 1})
+			_, e = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)VALUES(?,?,'UPDATE_INVENTORY','BOOK',?,?,1,?)`, inventoryAuditIDs[i], actor, x.bookID, string(payload), now)
+			if e != nil {
+				return models.CustomerReturn{}, e
+			}
+			stockEntries++
+		}
+	}
+	if update != "" {
+		result, e := tx.ExecContext(ctx, update, actor, now, now, id, expected)
+		if e != nil {
+			return models.CustomerReturn{}, mapReturnError(e)
+		}
+		if n, _ := result.RowsAffected(); n != 1 {
+			return models.CustomerReturn{}, ErrCustomerReturnConflict
+		}
+	}
+	payload, _ := json.Marshal(map[string]interface{}{"from": status, "to": target, "version": expected + 1, "stockEntries": stockEntries})
+	_, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at)VALUES(?,?,?,'CUSTOMER_RETURN',?,?,1,?)`, auditID, actor, action, id, string(payload), now)
+	if err != nil {
+		return models.CustomerReturn{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return models.CustomerReturn{}, err
+	}
+	return r.Find(ctx, id, libraryID)
+}
+func mapReturnError(err error) error {
+	if err == nil {
+		return nil
+	}
+	message := err.Error()
+	switch {
+	case strings.Contains(message, "quantity exceeds sold"):
+		return ErrCustomerReturnQuantity
+	case strings.Contains(message, "sale is unavailable"):
+		return ErrCustomerReturnSale
+	case strings.Contains(message, "return line is invalid"):
+		return ErrCustomerReturnLine
+	default:
+		return err
+	}
+}

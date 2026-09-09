@@ -128,9 +128,10 @@ func (r *InventoryRepository) ApplyMovement(ctx context.Context, bookID int, lib
 		return models.BookInventory{}, ErrInventoryUnchanged
 	}
 	result, err := tx.ExecContext(ctx, `
-		UPDATE book_inventory SET quantity=?, version=version+1, updated_at=?
+		UPDATE book_inventory SET average_unit_cost=CASE WHEN ? > quantity THEN NULL ELSE average_unit_cost END,
+		quantity=?, version=version+1, updated_at=?
 		WHERE book_id=? AND version=?
-	`, after, now, bookID, expectedVersion)
+	`, after, after, now, bookID, expectedVersion)
 	if err != nil {
 		return models.BookInventory{}, fmt.Errorf("update inventory: %w", err)
 	}
