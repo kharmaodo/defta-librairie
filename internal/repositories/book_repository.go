@@ -165,8 +165,8 @@ func (r *BookRepository) Create(ctx context.Context, book models.BookInput, acto
 	}
 	if _, err = tx.ExecContext(ctx, `
 		INSERT INTO book_inventory(book_id, library_id, quantity, low_stock_threshold, version, updated_at)
-		VALUES (?, ?, 0, 5, 1, ?)
-	`, id, book.LibraryID, now); err != nil {
+		VALUES (?, ?, 0, COALESCE((SELECT default_low_stock_threshold FROM library_settings WHERE library_id=?),5), 1, ?)
+	`, id, book.LibraryID, book.LibraryID, now); err != nil {
 		return models.Book{}, fmt.Errorf("initialize book inventory: %w", err)
 	}
 	if _, err = tx.ExecContext(ctx, `

@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 9 septembre 2026 sur `develop`, commit `08cf01f`
-(fusion des alertes métier). Les douze priorités et leurs éléments
+État consolidé le 9 septembre 2026 sur `develop`, commit `b25dd61`
+(fusion des exports CSV). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -21,28 +21,28 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 5 | Retours fournisseurs | Sortie de stock liée à un achat réceptionné et justification | Réalisé | Brouillons, expédition atomique, annulation, motif, coûts figés, écarts et affichage sont livrés. |
 | 6 | Statistiques commerciales | Chiffre d’affaires, marge, ventes et achats par période | Réalisé | Ventes brutes/nettes, annulations, retours, achats nets, marge nullable et écarts fournisseurs disponibles. Les coûts inconnus sont signalés. |
 | 7 | Alertes métier | Stock faible, rupture, commandes en attente, fournisseurs désactivés | Réalisé | Tableau commun validé et fusionné. Les achats DRAFT sont explicitement désignés comme achats en brouillon. |
-| 8 | Exports | CSV des stocks, ventes, achats, fournisseurs et audit | Partiel | Cinq exports et formulaire implémentés ; tests Go, recette navigateur et fusion à valider. Audit : événements propres au propriétaire, journal global pour root, selon les droits existants. |
-| 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Partiel | Nom et description existent dans l’administration ; créer le paramétrage complet et son utilisation dans les écrans/impressions. Le seuil actuel est par livre. |
+| 8 | Exports | CSV des stocks, ventes, achats, fournisseurs et audit | Réalisé | Cinq exports validés et fusionnés. Audit limité aux événements propres du propriétaire, global pour root. |
+| 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Partiel | Coordonnées, logo, seuil des nouveaux livres et impressions implémentés ; tests Go, recette et fusion à valider. Devise XOF fixe ; choix/changement de devise reste à cadrer. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Partiel | Exemples et routes présents dans le README ; fournir un contrat OpenAPI complet, sa consultation et les exemples manquants. |
 | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Partiel | Sauvegardes SQLite contrôlées et arrêt gracieux existants. Ajouter les contrôles de santé, métriques, logs structurés et procédure de restauration testée. |
 | 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Modules JavaScript métier déjà séparés. Harmoniser les erreurs, revoir l’accessibilité et intégrer les tests navigateur. Les recettes Go/HTTP ne couvrent pas le rendu visuel. |
 
-## Incrément en validation : exports CSV (priorité 8)
+## Incrément en validation : paramétrage de librairie (priorité 9)
 
-Les alertes métier sont validées et fusionnées. Le nouvel incrément fournit
-les cinq exports, des filtres propres au formulaire, UTF-8 avec BOM, séparateur
-point-virgule et neutralisation des formules. Limite de 10 000 lignes, avec
-refus explicite au-delà plutôt que troncature. Tests Go et recette navigateur
-restent à valider avant fusion.
+Les exports CSV sont validés et fusionnés. Le nouvel incrément ajoute les
+coordonnées, un logo PNG/JPEG, le seuil par défaut des nouveaux livres et le
+texte d’impression. Les reçus et bons d’achat utilisent les coordonnées
+actuelles de leur propre librairie. Version concurrente et audit protègent
+les modifications. Tests Go et recette restent à valider.
 
-Les exports métier sont limités à la librairie autorisée. L’audit conserve
-sa règle existante : événements du propriétaire connecté ; accès global root.
-Il ne prétend pas reconstituer un audit par librairie à partir des ressources.
+XOF est conservé et affiché comme devise fixe. Le choix d’une autre devise et
+le traitement des montants historiques restent explicitement ouverts ; la
+fusion de cet incrément ne suffira donc pas à déclarer toute la priorité 9 réalisée.
 
 ## Ordre de poursuite
 
-Après validation de la priorité 8, poursuivre les lignes ouvertes 9, 10,
-11 et 12 dans l’ordre du tableau. Les tests et la
+Après validation de cet incrément, cadrer le choix de devise restant de la
+priorité 9, puis poursuivre les priorités 10, 11 et 12. Les tests et la
 qualité des nouveaux écrans s’appliquent à chaque incrément, sans attendre la ligne 12.
 
 Pour les alertes de « commandes en attente », préciser la règle opérationnelle
@@ -77,3 +77,8 @@ Actualiser la ligne concernée après validation et fusion, citer les nouveaux
 éléments de preuve et garder les travaux non terminés explicites. Les paragraphes
 historiques du README décrivent les mécanismes ; ce backlog fait référence pour
 l’état d’avancement et l’ordre des priorités.
+
+
+À chaque fusion vérifiée dans `origin/develop`, mettre à jour le commit de
+référence, la ligne concernée et le prochain incrément dans le patch suivant.
+Une fusion partielle conserve le statut Partiel et détaille les éléments restants.

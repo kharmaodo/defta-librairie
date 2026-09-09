@@ -30,6 +30,24 @@
     </section>
 
 
+    <section class="panel" id="library-settings-panel" aria-labelledby="library-settings-title">
+      <h2 id="library-settings-title">Paramétrage de la librairie</h2>
+      <form data-select class="filters"><label data-library hidden>Librairie<select name="libraryId"><option value="">Choisir une librairie</option></select></label><button type="submit">Charger les paramètres</button></form>
+      <p data-notice role="status" aria-live="polite"></p><p data-error role="alert" hidden></p>
+      <form data-settings class="entity-form" hidden>
+        <p data-name></p><p>Devise : XOF (franc CFA). Les montants existants restent en XOF.</p>
+        <label>Adresse<textarea name="address" maxlength="500"></textarea></label>
+        <label>Téléphone<input name="phone" maxlength="40"></label><label>E-mail<input name="email" type="email" maxlength="254"></label>
+        <label>Seuil par défaut des nouveaux livres<input name="defaultLowStockThreshold" type="number" min="0" max="1000000" required></label>
+        <label>Texte en bas des impressions<textarea name="printFooter" maxlength="500"></textarea></label>
+        <label>Logo PNG ou JPEG (128 Kio, 1 024 × 1 024 maximum)<input name="logo" type="file" accept="image/png,image/jpeg"></label>
+        <img data-logo alt="Logo de la librairie" style="max-width:120px;max-height:100px" hidden>
+        <label><input type="checkbox" name="removeLogo">Supprimer le logo</label>
+        <p>Les impressions utilisent les coordonnées actuelles. Les seuils des livres existants sont conservés.</p>
+        <button type="submit" class="button primary">Enregistrer</button>
+      </form>
+    </section>
+
     <section class="panel" id="csv-exports-panel" aria-labelledby="csv-exports-title">
       <h2 id="csv-exports-title">Exports CSV</h2>
       <p>UTF-8, séparateur point-virgule. Maximum 10 000 lignes : affinez les filtres au-delà.</p>
@@ -602,5 +620,6 @@
   <script src="/static/js/admin-statistics.js" defer></script>
   <script src="/static/js/admin-business-alerts.js" defer></script>
   <script src="/static/js/admin-csv-exports.js" defer></script>
+  <script src="/static/js/admin-library-settings.js" defer></script>
 </body>
 </html>

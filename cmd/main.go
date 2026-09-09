@@ -157,6 +157,9 @@ func main() {
 	}
 	registerCommercialHTTPRoutes(mux, bookManagers, statisticsHandler, saleHandler, paymentHandler, customerReturnHandler, returnSettlementHandler)
 	mux.Handle("GET /api/manage/alerts", bookManagers(http.HandlerFunc(alertHandler.List)))
+	settingsHandler := handlers.NewLibrarySettingsHandler(services.NewLibrarySettingsService(repositories.NewLibrarySettingsRepository(database.DB)))
+	mux.Handle("GET /api/manage/library-settings", bookManagers(http.HandlerFunc(settingsHandler.Settings)))
+	mux.Handle("PUT /api/manage/library-settings", bookManagers(http.HandlerFunc(settingsHandler.Settings)))
 	exportHandler := handlers.NewCSVExportHandler(services.NewCSVExportService(repositories.NewCSVExportRepository(database.DB)))
 	mux.Handle("GET /api/manage/exports/{kind}", bookManagers(http.HandlerFunc(exportHandler.Download)))
 	mux.Handle("GET /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.List)))
