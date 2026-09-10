@@ -1,11 +1,6 @@
 (() => {
   'use strict';
-  async function api(url,options={}){
-    const token=sessionStorage.getItem('defta.accessToken');if(!token)throw new Error('Connectez-vous pour accéder aux paramètres.');
-    const response=await fetch(url,{...options,cache:'no-store',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}});
-    if(!response.ok)throw new Error(response.status===409?'Les paramètres ont changé : rechargez-les avant de réessayer.':response.status===400?'Paramètres invalides : vérifiez les champs et le logo.':`Paramètres indisponibles (HTTP ${response.status}).`);
-    return response.status===204?null:response.json();
-  }
+  const api = (url, options) => window.DeftaHTTP.json(url, options);
   // Resolve the document's library, never the current settings form selection.
   window.deftaPrintSettings=async(selector,libraryID)=>{
     const receipt=document.querySelector(selector);receipt.querySelectorAll('[data-print-settings]').forEach(e=>e.remove());

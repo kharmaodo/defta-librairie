@@ -7,13 +7,7 @@
   const prev=panel.querySelector('[data-prev]'), next=panel.querySelector('[data-next]');
   const labels={OUT_OF_STOCK:'Rupture',LOW_STOCK:'Stock faible',DRAFT_PURCHASE:'Achat en brouillon',DISABLED_SUPPLIER:'Fournisseur désactivé'};
   let offset=0,total=0,busy=false;
-  async function api(url) {
-    const token=sessionStorage.getItem('defta.accessToken');
-    if (!token) throw new Error('Connectez-vous pour consulter les alertes.');
-    const response=await fetch(url,{cache:'no-store',headers:{Authorization:`Bearer ${token}`}});
-    if (!response.ok) throw new Error(response.status===401 ? 'Session expirée : reconnectez-vous.' : `Alertes indisponibles (HTTP ${response.status}).`);
-    return response.json();
-  }
+  const api = (url, options) => window.DeftaHTTP.json(url, options);
   async function load() {
     if (busy) return;
     busy=true;output.hidden=true;error.hidden=true;notice.textContent='Chargement…';panel.setAttribute('aria-busy','true');

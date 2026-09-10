@@ -25,11 +25,7 @@
       if (from && to && from > to) throw new Error('La date de début doit précéder ou égaler la date de fin.');
       if (from) query.set('from',new Date(from+'T00:00:00Z').toISOString());
       if (to) { const end = new Date(to+'T00:00:00Z'); end.setUTCDate(end.getUTCDate()+1); query.set('to',end.toISOString()); }
-      const token = sessionStorage.getItem('defta.accessToken');
-      if (!token) throw new Error('Connectez-vous pour consulter cet historique.');
-      const response = await fetch(`/api/manage/customers/${encodeURIComponent(customerID)}/sales?${query}`, {headers:{Authorization:`Bearer ${token}`},cache:'no-store',signal:controller.signal});
-      if (!response.ok) throw new Error(response.status===401 ? 'Session expirée : reconnectez-vous.' : response.status===404 ? 'Client introuvable ou inaccessible.' : `Historique indisponible (HTTP ${response.status}).`);
-      const data = await response.json();
+      const data = await window.DeftaHTTP.json(`/api/manage/customers/${encodeURIComponent(customerID)}/sales?${query}`, {signal:controller.signal});
       if (current !== generation || !dialog.open) return;
       if (!Array.isArray(data.results) || !Number.isSafeInteger(data.total) || data.total<0) throw new Error('Réponse inattendue du serveur.');
       total=data.total;

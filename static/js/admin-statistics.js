@@ -12,18 +12,7 @@
   form.elements.from.value = today.slice(0, 8) + '01';
   form.elements.to.value = today;
 
-  async function api(url) {
-    const token = sessionStorage.getItem('defta.accessToken');
-    if (!token) throw new Error('Connectez-vous pour consulter les statistiques.');
-    const response = await fetch(url, {cache: 'no-store', headers: {Authorization: `Bearer ${token}`}});
-    if (response.status === 401) throw new Error('Session expirée : reconnectez-vous puis actualisez cette page.');
-    if (response.status === 403) throw new Error('Accès refusé. Vérifiez votre librairie et le changement de mot de passe obligatoire.');
-    if (!response.ok) throw new Error(`Statistiques indisponibles (HTTP ${response.status}).`);
-    if (!(response.headers.get('content-type') || '').includes('application/json')) {
-      throw new Error('Réponse inattendue. Vérifiez que le serveur charge la nouvelle API.');
-    }
-    return response.json();
-  }
+  const api = (url, options) => window.DeftaHTTP.json(url, options);
 
   function renderSupplierCosts(data) {
     const unknown = data.supplierReturnUnknownCostLines > 0 ||

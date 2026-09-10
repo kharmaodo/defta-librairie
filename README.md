@@ -1502,3 +1502,7 @@ retour de focus, erreurs et impressions. Le contrôle Python est structurel ;
 il ne remplace pas les tests navigateur/lecteur d’écran. Les erreurs globales
 et les tests navigateur automatisés restent à finaliser dans la priorité 12.
 Aucune migration ni modification de l’API.
+
+Les statistiques, alertes, historiques clients, exports et paramètres utilisent
+le client HTTP commun décrit dans [FRONTEND_HTTP.md](docs/FRONTEND_HTTP.md).
+Ses tests sans dépendance s’exécutent avec `node --test scripts/test-admin-http.cjs`.

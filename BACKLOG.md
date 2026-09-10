@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 10 septembre 2026 sur `develop`, commit `35e3af9`
-(fusion de la restauration SQLite, PR #31). Les douze priorités et leurs éléments
+État consolidé le 10 septembre 2026 sur `develop`, commit `b9fc400`
+(fusion de l’accessibilité frontend, PR #32). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -25,20 +25,20 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
 | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité structurelle des 20 dialogues ajoutée ; recette clavier et fusion à valider. Erreurs globales, suite du découpage JavaScript et tests navigateur automatisés restent à finaliser. |
+| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Erreurs globales, suite du découpage JavaScript et tests navigateur automatisés restent à finaliser. |
 
-## Incrément en validation : accessibilité des dialogues (priorité 12)
+## Incrément en validation : erreurs HTTP communes (priorité 12)
 
-La restauration est fusionnée (PR #31, `35e3af9`). Les livrables de la priorité
-11 sont intégrés et validés. La préparation du déploiement reste à organiser :
-objectifs de reprise, conservation des sauvegardes hors machine et rétention
-des logs. Cela ne constitue pas une validation de restauration en production.
+L’accessibilité est validée et fusionnée (PR #32). Cet incrément mutualise
+les requêtes et messages d’erreur des statistiques, alertes, historique client,
+exports CSV et paramètres. Il préserve les annulations de l’historique et les
+réponses CSV/204. Aucune modification n’est répétée automatiquement.
+Les autres modules restent à migrer ; les tests navigateur automatisés et
+la suite du découpage JavaScript restent à finaliser. Cet incrément attend
+la recette utilisateur et la fusion.
 
-Cet incrément ajoute les titres accessibles aux 20 dialogues, les noms des
-boutons de fermeture, les rôles d’erreur, les en-têtes de colonnes, un lien
-d’évitement et le focus visible. Les contrôles structurels et syntaxiques passent.
-La recette clavier/navigateur et la fusion restent à valider. L’harmonisation
-des erreurs globales et les tests navigateur automatisés restent à développer.
+La priorité 11 est réalisée dans le périmètre livré. Objectifs de reprise,
+sauvegardes hors machine et rétention des logs restent des décisions de déploiement.
 
 ## Ordre de poursuite
 
