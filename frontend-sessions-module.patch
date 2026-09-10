@@ -1,0 +1,449 @@
+diff --git a/BACKLOG.md b/BACKLOG.md
+index f0ab9e3..630019b 100644
+--- a/BACKLOG.md
++++ b/BACKLOG.md
+@@ -1,7 +1,7 @@
+ # Backlog de référence — Defta Librairie
+ 
+-État consolidé le 10 septembre 2026 sur `develop`, commit `f08f067`
+-(fusion des erreurs métier, PR #33). Les douze priorités et leurs éléments
++État consolidé le 10 septembre 2026 sur `develop`, commit `808a396`
++(fusion du module d’audit, PR #34). Les douze priorités et leurs éléments
+ principaux reprennent le périmètre rappelé par le propriétaire du projet.
+ Les validations et fusions annoncées sont prises en compte ; cette consolidation
+ n’exécute pas une nouvelle recette ni un audit de production.
+@@ -25,21 +25,21 @@ n’exécute pas une nouvelle recette ni un audit de production.
+ | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
+ | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
+ | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
+-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP commun validé et intégré pour cinq écrans. Erreurs des cinq modules métier validées et fusionnées (PR #33). Extraction du journal d’audit en validation ; suite du découpage, migration HTTP du module principal et tests navigateur automatisés restent à finaliser. |
++| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP commun validé et intégré pour cinq écrans. Erreurs des cinq modules métier validées et fusionnées (PR #33). Journal d’audit extrait et fusionné (PR #34). Extraction des sessions en validation ; suite du découpage, migration HTTP du module principal et tests navigateur automatisés restent à finaliser. |
+ 
+-## Incrément en validation : extraction du journal d’audit (priorité 12)
++## Incrément en validation : extraction des sessions (priorité 12)
+ 
+-Les erreurs des cinq modules métier sont validées et fusionnées (PR #33).
+-Cet incrément déplace le rendu, les filtres, la pagination et leur état dans
+-`admin-audit.js`. Le tableau de bord crée le module et lui fournit son client
+-HTTP existant : le renouvellement de session et les rechargements après les
+-opérations métier restent conservés. Le module ne démarre pas sur la page login.
+-Les tests Node couvrent les filtres, les pages, les erreurs et le branchement.
+-La recette navigateur et la fusion de cet incrément restent à valider.
++Le journal d’audit est validé et fusionné (PR #34). Cet incrément extrait
++le rendu des sessions, leurs filtres, pagination et révocations dans
++`admin-sessions.js`. Le tableau de bord fournit son client HTTP existant,
++le rechargement de l’audit et la déconnexion après révocation courante réussie.
++Le module ne démarre pas sur la page login. Les tests Node couvrent notamment
++les révocations courantes/autres, les refus et l’annulation de confirmation.
++Recette navigateur et fusion de cet incrément restent à valider.
+ 
+-Restent les autres responsabilités de `admin-auth.js` (sessions, propriétaires,
+-livres, stocks, ventes), la migration HTTP compatible avec l’authentification
+-et la suite de tests navigateur automatisés. La priorité 12 reste partielle.
++Restent les propriétaires, livres, stocks et ventes dans `admin-auth.js`,
++la migration HTTP compatible avec l’authentification et les tests navigateur
++automatisés. La priorité 12 reste partielle.
+ 
+ La priorité 11 est réalisée dans le périmètre livré ; objectifs de reprise,
+ sauvegardes hors machine et rétention des logs restent des décisions de déploiement.
+diff --git a/README.md b/README.md
+index 0ad0a56..7d52862 100644
+--- a/README.md
++++ b/README.md
+@@ -1515,3 +1515,7 @@ français pour les refus métier. La recette est détaillée dans
+ Le découpage du tableau de bord commence par le journal d’audit dans
+ `admin-audit.js`. Le fonctionnement et la recette sont décrits dans
+ [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
++
++La gestion des sessions est extraite dans `admin-sessions.js` : liste, filtres,
++pagination et révocations. Sa recette complète figure dans
++[FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+diff --git a/docs/FRONTEND_MODULES.md b/docs/FRONTEND_MODULES.md
+index e3fe76c..51ff7c3 100644
+--- a/docs/FRONTEND_MODULES.md
++++ b/docs/FRONTEND_MODULES.md
+@@ -33,3 +33,30 @@ navigateur. Après redémarrage et rechargement complet :
+ - Vérifier la reconnexion, la déconnexion et le changement de mot de passe obligatoire.
+ 
+ Les tests navigateur automatisés restent à développer.
++
++## Sessions
++
++`admin-sessions.js` extrait le rendu, les filtres, la pagination et les actions
++de révocation. Sa fabrique reçoit le client HTTP existant, le rechargement de
++l’audit et une fonction de déconnexion fournie par le tableau de bord.
++Cette dernière est appelée uniquement après la révocation courante réussie.
++Les rechargements après les opérations sur les propriétaires sont conservés.
++
++```sh
++node --test scripts/test-admin-sessions.cjs scripts/test-admin-audit.cjs scripts/test-admin-http.cjs
++```
++
++Recette navigateur avec des comptes de test :
++
++- Vérifier les sessions comme root et comme propriétaire, puis les filtres et pages.
++- Annuler une confirmation de révocation : aucune session ne doit être supprimée.
++- Révoquer une autre session : la session courante reste utilisable et la liste
++  ainsi que l’audit sont actualisés.
++- Déconnecter les autres appareils : vérifier le nombre affiché et le maintien
++  de la session courante.
++- Révoquer la session courante : vérifier le retour à la connexion.
++- Simuler un échec réseau de révocation : afficher l’erreur sans déconnexion
++  locale automatique ; rétablir le réseau et vérifier l’état réel de la session.
++
++Ces tests Node simulent le DOM et le client HTTP. L’authentification réelle et
++les autorisations restent à vérifier avec les tests Go et la recette navigateur.
+diff --git a/scripts/test-admin-sessions.cjs b/scripts/test-admin-sessions.cjs
+new file mode 100644
+index 0000000..362dc5a
+--- /dev/null
++++ b/scripts/test-admin-sessions.cjs
+@@ -0,0 +1,90 @@
++const {test} = require('node:test');
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const vm = require('node:vm');
++const read = name => fs.readFileSync(path.join(__dirname,'..',name),'utf8');
++const source = read('static/js/admin-sessions.js');
++const page = (offset=0, results=[{id:'current',username:'owner',role:'OWNER_LIBRARY'}], total=21) => ({offset,results,total,limit:20,currentSessionId:'current'});
++function setup(api) {
++  const nodes = new Map(), calls = [];
++  const h = {confirmed:true, disconnected:0, audits:0, calls};
++  const get = id => {
++    if (!nodes.has(id)) nodes.set(id,{handlers:{},rows:[],elements:{},
++      addEventListener(event,fn) { (this.handlers[event] ||= []).push(fn); },
++      replaceChildren() { this.rows=[]; },
++      insertRow() { const row={cells:[]}; this.rows.push(row); return row; }
++    });
++    return nodes.get(id);
++  };
++  for(const name of ['username','role','ipAddress','userAgent']) get('#session-filters').elements[name]={value:''};
++  const window={confirm:()=>h.confirmed};
++  vm.runInNewContext(source,{window,document:{querySelector:get},URLSearchParams});
++  h.errorBox={}; h.get=get;
++  h.module=window.DeftaSessions.create({
++    apiFetch:async (url,options) => {calls.push({url,options}); return api ? api(url,options) : page();},
++    textCell(row,value) {const cell={textContent:value,replaceChildren(button){this.button=button;}};row.cells.push(cell);return cell;},
++    actionButton:(label,action,id)=>({label,action,id}),formatDate:value=>value,
++    showError:(box,error)=>{box.textContent=error.message;box.hidden=false;},errorBox:h.errorBox,
++    reloadAudit:async()=>{h.audits++;},onCurrentRevoked:()=>{h.disconnected++;}
++  });
++  h.event=async(id,event='click',session='current')=>{
++    for(const fn of get(id).handlers[event]||[]) await fn({preventDefault(){},target:{closest:()=>({dataset:{id:session}})}});
++  };
++  return h;
++}
++test('module load is inert without a document or authentication',()=>{
++  const window={};vm.runInNewContext(source,{window});assert.equal(typeof window.DeftaSessions.create,'function');
++});
++test('filters encode values and render current session action',async()=>{
++  const h=setup();h.get('#session-filters').elements.username.value=' A & B ';
++  await h.module.reload();
++  assert.equal(new URL(h.calls[0].url,'https://example.test').searchParams.get('username'),'A & B');
++  assert.equal(h.get('#sessions-body').rows[0].cells[7].button.label,'Révoquer et quitter');
++});
++test('init once, pagination and filter reset',async()=>{
++  const h=setup(async url=>page(Number(new URL(url,'https://example.test').searchParams.get('offset'))));
++  h.module.init();h.module.init();
++  await h.event('#sessions-next');await h.event('#sessions-previous');await h.event('#sessions-next');
++  await h.event('#session-filters','submit');
++  assert.deepEqual(h.calls.map(c=>new URL(c.url,'https://example.test').searchParams.get('offset')),['20','0','20','0']);
++  assert.equal(h.get('#sessions-previous').disabled,true);
++});
++test('empty later page falls back to first',async()=>{
++  const h=setup(async url=>page(Number(new URL(url,'https://example.test').searchParams.get('offset')),[],0));
++  h.module.init();await h.event('#sessions-next');
++  assert.equal(h.calls.length,2);assert.equal(h.get('#sessions-body').rows[0].cells[0].colSpan,8);
++});
++test('current revocation disconnects only after DELETE resolves',async()=>{
++  let resolveDelete;
++  const h=setup(async (url,options)=>options?.method==='DELETE'?new Promise(resolve=>{resolveDelete=resolve;}):page());
++  h.module.init();await h.module.reload();
++  const pending=h.event('#sessions-body');
++  assert.equal(h.disconnected,0);resolveDelete(null);await pending;
++  assert.equal(h.disconnected,1);assert.equal(h.audits,0);assert.equal(h.calls.length,2);
++});
++test('refused revocation retains session and surfaces error',async()=>{
++  const h=setup(async (url,options)=>{if(options?.method==='DELETE')throw new Error('Accès refusé');return page();});
++  h.module.init();await h.module.reload();await h.event('#sessions-body');
++  assert.equal(h.disconnected,0);assert.equal(h.audits,0);assert.equal(h.errorBox.textContent,'Accès refusé');assert.equal(h.calls.length,2);
++});
++test('other session revocation refreshes list and audit',async()=>{
++  const h=setup();h.module.init();await h.module.reload();await h.event('#sessions-body','click','other');
++  assert.equal(h.calls[1].url,'/api/auth/sessions/other');assert.equal(h.calls[1].options.method,'DELETE');
++  assert.equal(h.audits,1);assert.equal(h.disconnected,0);assert.equal(h.calls.length,3);
++});
++test('revoke others keeps current session and displays count',async()=>{
++  const h=setup(async (url,options)=>options?.method==='POST'?{revoked:2}:page());
++  h.module.init();await h.event('#revoke-other-sessions-button');
++  assert.equal(h.calls[0].url,'/api/auth/sessions/revoke-others');assert.equal(h.calls[0].options.method,'POST');
++  assert.equal(h.disconnected,0);assert.equal(h.audits,1);assert.match(h.get('#session-scope-note').textContent,/2 autre/);
++});
++test('cancel confirmations send no requests',async()=>{
++  const h=setup();h.module.init();h.confirmed=false;
++  await h.event('#sessions-body');await h.event('#revoke-other-sessions-button');assert.equal(h.calls.length,0);
++});
++test('module loads before dashboard, not on login',()=>{
++  const template=read('templates/admin.html');assert.ok(template.indexOf('/static/js/admin-sessions.js')<template.indexOf('/static/js/admin-auth.js'));
++  assert.doesNotMatch(read('templates/login.html'),/admin-sessions/);
++  assert.match(read('static/js/admin-auth.js'),/const reloadSessions = \(\) => sessions.reload\(\)/);
++});
+diff --git a/static/js/admin-auth.js b/static/js/admin-auth.js
+index c93d50d..d740455 100644
+--- a/static/js/admin-auth.js
++++ b/static/js/admin-auth.js
+@@ -4,7 +4,7 @@
+   const ACCESS_KEY = "defta.accessToken";
+   const USERNAME_KEY = "defta.username";
+   const page = document.body.dataset.page;
+-  const state = {isRoot: false, passwordChangeRequired: false, owners: [], ownerOptions: [], books: [], sales: [], saleBooks: [], saleCustomers: [], inventory: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", saleOffset: 0, saleLimit: 10, inventoryOffset: 0, inventoryLimit: 10, sessionOffset: 0, sessionLimit: 20};
++  const state = {isRoot: false, passwordChangeRequired: false, owners: [], ownerOptions: [], books: [], sales: [], saleBooks: [], saleCustomers: [], inventory: [], tags: [], ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", saleOffset: 0, saleLimit: 10, inventoryOffset: 0, inventoryLimit: 10};
+ 
+   const tokens = {
+     access: () => sessionStorage.getItem(ACCESS_KEY),
+@@ -48,7 +48,8 @@
+     return json(response);
+   }
+ 
+-  let audit;
++  let audit, sessions;
++  const reloadSessions = () => sessions.reload();
+   const reloadAudit = () => audit.reload();
+ 
+   function textCell(row, value, className) {
+@@ -218,34 +219,6 @@
+     document.querySelector("#sales-next").disabled = payload.offset + payload.results.length >= payload.total;
+   }
+ 
+-  function renderSessions(payload) {
+-    state.currentSessionId = payload.currentSessionId;
+-    document.querySelector("#session-total").textContent = payload.total;
+-    const body = document.querySelector("#sessions-body");
+-    body.replaceChildren();
+-    if (!payload.results.length) {
+-      const row = body.insertRow(); textCell(row, "Aucune session active", "empty").colSpan = 8;
+-    } else payload.results.forEach((session) => {
+-      const row = body.insertRow();
+-      textCell(row, session.username);
+-      textCell(row, session.role, "pill");
+-      textCell(row, session.userAgent, "device");
+-      textCell(row, session.ipAddress);
+-      textCell(row, formatDate(session.createdAt));
+-      textCell(row, formatDate(session.expiresAt));
+-      const current = session.id === payload.currentSessionId;
+-      textCell(row, current ? "Session courante" : "Active", "pill");
+-      const actions = textCell(row, "");
+-      actions.className = "row-actions";
+-      actions.replaceChildren(actionButton(current ? "Révoquer et quitter" : "Révoquer", "revoke-session", session.id, true));
+-    });
+-    const page = Math.floor(payload.offset / payload.limit) + 1;
+-    const pages = Math.max(1, Math.ceil(payload.total / payload.limit));
+-    document.querySelector("#sessions-page-label").textContent = `Page ${page} sur ${pages}`;
+-    document.querySelector("#sessions-previous").disabled = payload.offset === 0;
+-    document.querySelector("#sessions-next").disabled = payload.offset + payload.results.length >= payload.total;
+-  }
+-
+   function formatDate(value) {
+     const date = new Date(value);
+     return Number.isNaN(date.getTime()) ? value || "—" : date.toLocaleString("fr-FR");
+@@ -662,21 +635,6 @@
+     renderTags(await apiFetch(`/api/manage/tags?${query}`));
+   }
+ 
+-  async function reloadSessions() {
+-    const form = document.querySelector("#session-filters");
+-    const query = new URLSearchParams({offset: String(state.sessionOffset), limit: String(state.sessionLimit)});
+-    ["username", "role", "ipAddress", "userAgent"].forEach((name) => {
+-      const value = form.elements[name].value.trim();
+-      if (value) query.set(name, value);
+-    });
+-    const payload = await apiFetch(`/api/auth/sessions?${query}`);
+-    if (!payload.results.length && state.sessionOffset > 0) {
+-      state.sessionOffset = Math.max(0, state.sessionOffset - state.sessionLimit);
+-      return reloadSessions();
+-    }
+-    renderSessions(payload);
+-  }
+-
+   function initEntityForms(errorBox) {
+     const passwordDialog = document.querySelector("#password-dialog");
+     passwordDialog.addEventListener("cancel", (event) => {
+@@ -825,47 +783,6 @@
+       state.bookOffset += state.bookLimit;
+       try { await reloadBooks(); } catch (error) { showError(errorBox, error); }
+     });
+-    document.querySelector("#refresh-sessions-button").addEventListener("click", async () => {
+-      errorBox.hidden = true;
+-      try { await reloadSessions(); }
+-      catch (error) { showError(errorBox, error); }
+-    });
+-    document.querySelector("#revoke-other-sessions-button").addEventListener("click", async () => {
+-      if (!window.confirm("Déconnecter tous les autres appareils de ce compte ?")) return;
+-      errorBox.hidden = true;
+-      try {
+-        const result = await apiFetch("/api/auth/sessions/revoke-others", {method: "POST"});
+-        document.querySelector("#session-scope-note").textContent = `${result.revoked} autre(s) appareil(s) déconnecté(s). La session courante reste active.`;
+-        state.sessionOffset = 0;
+-        await Promise.all([reloadSessions(), reloadAudit()]);
+-      } catch (error) { showError(errorBox, error); }
+-    });
+-    document.querySelector("#session-filters").addEventListener("submit", async (event) => {
+-      event.preventDefault();
+-      state.sessionOffset = 0;
+-      try { await reloadSessions(); } catch (error) { showError(errorBox, error); }
+-    });
+-    document.querySelector("#sessions-previous").addEventListener("click", async () => {
+-      state.sessionOffset = Math.max(0, state.sessionOffset - state.sessionLimit);
+-      try { await reloadSessions(); } catch (error) { showError(errorBox, error); }
+-    });
+-    document.querySelector("#sessions-next").addEventListener("click", async () => {
+-      state.sessionOffset += state.sessionLimit;
+-      try { await reloadSessions(); } catch (error) { showError(errorBox, error); }
+-    });
+-    document.querySelector("#sessions-body").addEventListener("click", async (event) => {
+-      const button = event.target.closest("button[data-action=revoke-session]");
+-      if (!button || !window.confirm("Révoquer cette session active ?")) return;
+-      const current = button.dataset.id === state.currentSessionId;
+-      try {
+-        await apiFetch(`/api/auth/sessions/${button.dataset.id}`, {method: "DELETE"});
+-        if (current) {
+-          tokens.clear(); window.location.replace("/login"); return;
+-        }
+-        await Promise.all([reloadSessions(), reloadAudit()]);
+-      } catch (error) { showError(errorBox, error); }
+-    });
+-
+     document.querySelector("#password-form").addEventListener("submit", async (event) => {
+       event.preventDefault();
+       const form = event.currentTarget;
+@@ -1093,6 +1010,11 @@
+     const errorBox = document.querySelector("#dashboard-error");
+     audit = window.DeftaAudit.create({apiFetch, textCell, showError, errorBox});
+     audit.init();
++    sessions = window.DeftaSessions.create({apiFetch, textCell, actionButton, formatDate,
++      showError, errorBox, reloadAudit,
++      onCurrentRevoked: () => { tokens.clear(); window.location.replace("/login"); }
++    });
++    sessions.init();
+     initEntityForms(errorBox);
+     try {
+       const user = await apiFetch("/api/auth/me");
+diff --git a/static/js/admin-sessions.js b/static/js/admin-sessions.js
+new file mode 100644
+index 0000000..4b39f8b
+--- /dev/null
++++ b/static/js/admin-sessions.js
+@@ -0,0 +1,100 @@
++(() => {
++  "use strict";
++
++  // The dashboard owns authentication and supplies its existing session-aware client.
++  function create({apiFetch, textCell, actionButton, formatDate, showError,
++    errorBox, reloadAudit, onCurrentRevoked}) {
++    const state = {currentSessionId: "", sessionOffset: 0, sessionLimit: 20};
++    let initialized = false;
++    function renderSessions(payload) {
++      state.currentSessionId = payload.currentSessionId;
++      document.querySelector("#session-total").textContent = payload.total;
++      const body = document.querySelector("#sessions-body");
++      body.replaceChildren();
++      if (!payload.results.length) {
++        const row = body.insertRow(); textCell(row, "Aucune session active", "empty").colSpan = 8;
++      } else payload.results.forEach((session) => {
++        const row = body.insertRow();
++        textCell(row, session.username);
++        textCell(row, session.role, "pill");
++        textCell(row, session.userAgent, "device");
++        textCell(row, session.ipAddress);
++        textCell(row, formatDate(session.createdAt));
++        textCell(row, formatDate(session.expiresAt));
++        const current = session.id === payload.currentSessionId;
++        textCell(row, current ? "Session courante" : "Active", "pill");
++        const actions = textCell(row, "");
++        actions.className = "row-actions";
++        actions.replaceChildren(actionButton(current ? "Révoquer et quitter" : "Révoquer", "revoke-session", session.id, true));
++      });
++      const page = Math.floor(payload.offset / payload.limit) + 1;
++      const pages = Math.max(1, Math.ceil(payload.total / payload.limit));
++      document.querySelector("#sessions-page-label").textContent = `Page ${page} sur ${pages}`;
++      document.querySelector("#sessions-previous").disabled = payload.offset === 0;
++      document.querySelector("#sessions-next").disabled = payload.offset + payload.results.length >= payload.total;
++    }
++
++    async function reloadSessions() {
++      const form = document.querySelector("#session-filters");
++      const query = new URLSearchParams({offset: String(state.sessionOffset), limit: String(state.sessionLimit)});
++      ["username", "role", "ipAddress", "userAgent"].forEach((name) => {
++        const value = form.elements[name].value.trim();
++        if (value) query.set(name, value);
++      });
++      const payload = await apiFetch(`/api/auth/sessions?${query}`);
++      if (!payload.results.length && state.sessionOffset > 0) {
++        state.sessionOffset = Math.max(0, state.sessionOffset - state.sessionLimit);
++        return reloadSessions();
++      }
++      renderSessions(payload);
++    }
++
++    function init() {
++      if (initialized) return;
++      initialized = true;
++      document.querySelector("#refresh-sessions-button").addEventListener("click", async () => {
++        errorBox.hidden = true;
++        try { await reloadSessions(); }
++        catch (error) { showError(errorBox, error); }
++      });
++      document.querySelector("#revoke-other-sessions-button").addEventListener("click", async () => {
++        if (!window.confirm("Déconnecter tous les autres appareils de ce compte ?")) return;
++        errorBox.hidden = true;
++        try {
++          const result = await apiFetch("/api/auth/sessions/revoke-others", {method: "POST"});
++          document.querySelector("#session-scope-note").textContent = `${result.revoked} autre(s) appareil(s) déconnecté(s). La session courante reste active.`;
++          state.sessionOffset = 0;
++          await Promise.all([reloadSessions(), reloadAudit()]);
++        } catch (error) { showError(errorBox, error); }
++      });
++      document.querySelector("#session-filters").addEventListener("submit", async (event) => {
++        event.preventDefault();
++        state.sessionOffset = 0;
++        try { await reloadSessions(); } catch (error) { showError(errorBox, error); }
++      });
++      document.querySelector("#sessions-previous").addEventListener("click", async () => {
++        state.sessionOffset = Math.max(0, state.sessionOffset - state.sessionLimit);
++        try { await reloadSessions(); } catch (error) { showError(errorBox, error); }
++      });
++      document.querySelector("#sessions-next").addEventListener("click", async () => {
++        state.sessionOffset += state.sessionLimit;
++        try { await reloadSessions(); } catch (error) { showError(errorBox, error); }
++      });
++      document.querySelector("#sessions-body").addEventListener("click", async (event) => {
++        const button = event.target.closest("button[data-action=revoke-session]");
++        if (!button || !window.confirm("Révoquer cette session active ?")) return;
++        const current = button.dataset.id === state.currentSessionId;
++        try {
++          await apiFetch(`/api/auth/sessions/${button.dataset.id}`, {method: "DELETE"});
++          if (current) {
++            onCurrentRevoked(); return;
++          }
++          await Promise.all([reloadSessions(), reloadAudit()]);
++        } catch (error) { showError(errorBox, error); }
++      });
++
++    }
++    return Object.freeze({init, reload: reloadSessions});
++  }
++  window.DeftaSessions = Object.freeze({create});
++})();
+diff --git a/templates/admin.html b/templates/admin.html
+index 2ede84e..7110e1c 100644
+--- a/templates/admin.html
++++ b/templates/admin.html
+@@ -613,6 +613,7 @@
+   <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
+   <script src="/static/js/admin-http.js" defer></script>
+ <script src="/static/js/admin-audit.js" defer></script>
++<script src="/static/js/admin-sessions.js" defer></script>
+ <script src="/static/js/admin-auth.js" defer></script>
+   <script src="/static/js/admin-procurement.js" defer></script>
+   <script src="/static/js/admin-customers.js" defer></script>
