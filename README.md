@@ -1523,3 +1523,7 @@ pagination et révocations. Sa recette complète figure dans
 La gestion des propriétaires est extraite dans `admin-owners.js` (liste,
 formulaires et actions administratives). Les sélecteurs de librairie restent
 coordonnés par le tableau de bord. Voir [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+La gestion des livres est extraite dans `admin-books.js` : recherche, pagination,
+formulaires, historique et suppression. Les interactions avec le stock et les
+tags sont décrites dans [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).

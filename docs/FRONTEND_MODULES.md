@@ -95,3 +95,33 @@ Recette navigateur sur des comptes de test :
 
 Les tests Node simulent le DOM et les réponses HTTP ; ils ne constituent pas
 une vérification navigateur ni un test des autorisations du serveur.
+
+## Livres
+
+`admin-books.js` contient la recherche, la pagination, les formulaires,
+l’historique et la suppression des livres. Il reçoit le rôle courant par une
+fonction et conserve le client HTTP du tableau de bord. La création et la
+suppression rechargent le stock, comme la modification. Les tags restent
+coordonnés avec la librairie sélectionnée par root. Le catalogue utilisé dans
+les ventes reste chargé séparément par `loadSaleBooks` dans le module principal.
+
+```sh
+node --test scripts/test-admin-books.cjs scripts/test-admin-owners.cjs scripts/test-admin-sessions.cjs scripts/test-admin-audit.cjs scripts/test-admin-http.cjs
+```
+
+Recette navigateur sur des données de test :
+
+- Comme propriétaire, rechercher et paginer, créer un livre puis vérifier son
+  stock initial. Modifier le livre et consulter son historique.
+- Comme root, créer un livre dans une librairie choisie et vérifier les tags
+  proposés ; en modification, la librairie du livre reste verrouillée.
+- Modifier le même livre dans deux onglets : la seconde sauvegarde avec une
+  version ancienne doit afficher le refus et garder le formulaire ouvert.
+- Annuler une suppression, puis supprimer un livre de test supprimable et
+  vérifier la liste ainsi que le stock. Vérifier aussi un refus de suppression.
+- Ouvrir une vente dans la librairie concernée et vérifier les livres proposés.
+- Vérifier qu’une session avec changement de mot de passe obligatoire conserve
+  son parcours de changement avant l’accès aux fonctions métier.
+
+Les tests Node emploient un DOM simulé. Les tests Go et la recette navigateur
+restent nécessaires pour valider les appels et autorisations réels.
