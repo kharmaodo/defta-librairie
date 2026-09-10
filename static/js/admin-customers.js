@@ -1,18 +1,9 @@
 (() => {
   "use strict";
 
-  const token = () => sessionStorage.getItem("defta.accessToken") || "";
   const state = {customers: [], libraries: [], isRoot: false, offset: 0, limit: 10, total: 0};
 
-  async function api(path, options = {}) {
-    const headers = new Headers(options.headers || {});
-    headers.set("Authorization", `Bearer ${token()}`);
-    const response = await fetch(path, {...options, headers});
-    const type = response.headers.get("content-type") || "";
-    const payload = type.includes("json") ? await response.json() : null;
-    if (!response.ok) throw new Error(payload?.message || `Requête refusée (${response.status})`);
-    return payload;
-  }
+  const api = (path, options) => window.DeftaHTTP.json(path, options);
 
   function fillLibraries(select, includeAll) {
     const items = includeAll ? [{id: "", name: "Toutes"}, ...state.libraries] : state.libraries;

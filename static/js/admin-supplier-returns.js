@@ -40,14 +40,7 @@
   let isRoot = false, offset = 0, editing = null, busy = false, purchaseGeneration = 0;
   const money = n => new Intl.NumberFormat('fr-FR', {maximumFractionDigits:2}).format(n);
   const states = {DRAFT:'Brouillon', SHIPPED:'Expédié', CANCELLED:'Annulé'};
-  async function api(path, options = {}) {
-    const headers = new Headers(options.headers);
-    headers.set('Authorization', `Bearer ${sessionStorage.getItem('defta.accessToken') || ''}`);
-    const response = await fetch(path, {...options, headers});
-    const data = (response.headers.get('content-type') || '').includes('json') ? await response.json() : null;
-    if (!response.ok) throw new Error(response.status === 401 ? 'Session expirée : reconnectez-vous.' : data?.message || `Erreur HTTP ${response.status}`);
-    return data;
-  }
+  const api = (path, options) => window.DeftaHTTP.json(path, options);
   function error(e) { const box = dialog.open ? $('[data-form-error]') : $('[data-error]'); box.textContent = e.message; box.hidden = false; }
   async function run(task) {
     if (busy) return;

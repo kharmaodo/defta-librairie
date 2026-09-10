@@ -1506,3 +1506,8 @@ Aucune migration ni modification de l’API.
 Les statistiques, alertes, historiques clients, exports et paramètres utilisent
 le client HTTP commun décrit dans [FRONTEND_HTTP.md](docs/FRONTEND_HTTP.md).
 Ses tests sans dépendance s’exécutent avec `node --test scripts/test-admin-http.cjs`.
+
+Le client HTTP commun couvre également les clients, l’approvisionnement,
+les paiements/caisses et les retours clients/fournisseurs, avec des messages
+français pour les refus métier. La recette est détaillée dans
+[FRONTEND_HTTP.md](docs/FRONTEND_HTTP.md).
