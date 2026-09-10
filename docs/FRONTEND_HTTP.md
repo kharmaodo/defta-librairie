@@ -3,7 +3,9 @@
 `admin-http.js`, chargé avant les modules de l’administration, expose
 `window.DeftaHTTP.request` (Response) et `window.DeftaHTTP.json` (JSON ou null
 pour HTTP 204). Statistiques, alertes, historique client, exports CSV et
-paramètres l’utilisent. Les autres modules seront migrés progressivement.
+paramètres l’utilisent, ainsi que les clients, l’approvisionnement, les
+paiements/caisses et les retours clients/fournisseurs. Le module principal
+`admin-auth.js` reste à migrer progressivement.
 
 Le client conserve les en-têtes fournis, ajoute le jeton courant et refuse les
 adresses hors API de même origine et les redirections. Il ne répète aucune
@@ -36,3 +38,20 @@ Recette navigateur après redémarrage et rechargement complet de la page :
 
 Les tests Node couvrent le client HTTP, pas le comportement d’un navigateur.
 La suite navigateur automatisée reste à réaliser dans la priorité 12.
+
+## Recette des modules métier
+
+Sur des données de test, vérifier les listes et une création/modification dans
+chacun des cinq modules migrés. Vérifier aussi un paiement valide et son solde,
+un retour client et son règlement, puis un retour fournisseur et son expédition.
+
+Provoquer un doublon de référence client, un paiement supérieur au reste à payer,
+un remboursement supérieur aux encaissements disponibles et une expédition de
+retour fournisseur avec stock insuffisant. Chaque refus doit afficher son motif
+français et laisser le formulaire disponible pour correction. Vérifier le stock
+et les soldes après les opérations pour confirmer qu’un refus n’a rien modifié.
+
+Les messages métier reposent sur une liste explicite de couples statut/code API.
+Les erreurs inconnues conservent le message générique du statut. Les erreurs
+401, 403 et 5xx restent prioritaires. Aucun texte brut renvoyé par le serveur
+n’est affiché et aucune requête n’est répétée automatiquement.

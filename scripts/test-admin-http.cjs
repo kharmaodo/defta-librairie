@@ -67,3 +67,32 @@ test('unexpected and malformed success bodies', async () => {
   await assert.rejects(setup(async () => response(200,'{')).json('/api/test'), /JSON invalide/);
   await assert.rejects(setup(async () => response(503,'<html>', 'text/html')).json('/api/test'), /indisponible/);
 });
+
+for (const [code, match] of [
+  ['payment_exceeds_balance', /reste à payer/],
+  ['refund_exceeds_payments', /encaissements disponibles/],
+  ['payment_has_issued_refunds', /ne peut pas être annulé/],
+  ['supplier_return_insufficient_stock', /Stock insuffisant/],
+  ['supplier_return_quantity_exceeded', /achat réceptionné/],
+  ['return_quantity_exceeded', /retournable de la vente/],
+  ['customer_conflict', /référence client existe/],
+  ['cash_register_conflict', /caisse porte déjà/],
+  ['purchase_not_editable', /état actuel/],
+  ['return_settlement_conflict', /référence de règlement/]
+]) test(`business refusal ${code}`, async () => {
+  await assert.rejects(setup(async () => response(409, JSON.stringify({error:code, message:'PRIVATE'}))).json('/api/test'),
+    e => match.test(e.message) && e.code === code && e.status === 409 && !e.message.includes('PRIVATE'));
+});
+test('business messages require the matching HTTP status', async () => {
+  for (const status of [401,403,500]) {
+    await assert.rejects(setup(async () => response(status, '{"error":"payment_exceeds_balance"}')).json('/api/test'),
+      e => !e.message.includes('reste à payer'));
+  }
+  await assert.rejects(setup(async () => response(422, '{"error":"supplier_unavailable"}')).json('/api/test'), /fournisseur est indisponible/);
+  await assert.rejects(setup(async () => response(400, '{"error":"invalid_purchase_line"}')).json('/api/test'), /ligne sélectionnée/);
+});
+test('unknown and prototype property codes have safe fallbacks', async () => {
+  for (const code of ['new_business_code','__proto__','constructor','toString']) {
+    await assert.rejects(setup(async () => response(409, JSON.stringify({error:code, message:'PRIVATE'}))).json('/api/test'), /rechargez/);
+  }
+});

@@ -2,18 +2,9 @@
   "use strict";
 
   const state = {isRoot: false, libraries: [], returns: [], sales: [], offset: 0, limit: 10, total: 0, current: null, balance: null, settlements: []};
-  const token = () => sessionStorage.getItem("defta.accessToken") || "";
   const money = (value) => new Intl.NumberFormat("fr-FR", {style: "currency", currency: "XOF", maximumFractionDigits: 2}).format(value || 0);
 
-  async function api(path, options = {}) {
-    const headers = new Headers(options.headers || {});
-    headers.set("Authorization", `Bearer ${token()}`);
-    const response = await fetch(path, {...options, headers});
-    const type = response.headers.get("content-type") || "";
-    const payload = type.includes("json") ? await response.json() : null;
-    if (!response.ok) throw new Error(payload?.message || `Requête refusée (${response.status})`);
-    return payload;
-  }
+  const api = (path, options) => window.DeftaHTTP.json(path, options);
 
   function showError(selector, error) { const box = document.querySelector(selector); box.textContent = error.message || "Une erreur est survenue."; box.hidden = false; }
   function cell(row, value, className = "") { const item = row.insertCell(); item.textContent = value ?? "—"; item.className = className; return item; }
