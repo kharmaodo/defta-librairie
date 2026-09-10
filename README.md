@@ -1349,7 +1349,7 @@ concurrence et application du seuil. Le changement de devise reste au backlog.
 ### Contrat OpenAPI et consultation locale
 
 Le contrat **OpenAPI 3.0.3** est `static/openapi.json`, servi à
-`http://localhost:8080/static/openapi.json`. Il couvre les 93 opérations
+`http://localhost:8080/static/openapi.json`. Il couvre les 95 opérations
 `/api/` enregistrées dans `cmd/main.go`, les schémas JSON, paramètres, droits,
 codes d’erreur par famille, cookies de renouvellement, exports CSV et XOF.
 Les pages HTML et ressources statiques ne sont pas des opérations de ce contrat.
@@ -1382,4 +1382,38 @@ route API est ajoutée, retirée ou renommée sans mise à jour du contrat.
 Recette : démarrer l’application, ouvrir la page, filtrer `payments`, développer
 une opération et un schéma, puis télécharger le JSON. Aucune migration ajoutée.
 La priorité 9 est clôturée après validation de XOF comme devise unique ; la
-priorité 10 reste en validation jusqu’à la recette et la fusion.
+priorité 10 est validée et fusionnée (PR #27).
+
+
+### Contrôles de santé
+
+Les sondes publiques ne nécessitent pas de JWT :
+
+| Route | Succès | Indisponibilité |
+|---|---|---|
+| `GET /api/health/live` | 200, `{"status":"alive"}` | Dépend uniquement de la capacité du serveur à répondre. |
+| `GET /api/health/ready` | 200, `{"status":"ready"}` | 503, `{"status":"not_ready","reason":"database_unavailable"}` ou motif `shutting_down`. |
+
+La sonde ready lit `libraries` et `schema_migrations`, avec un contexte de
+2 secondes au plus. Elle exige au moins une migration enregistrée ; le démarrage
+applique toutes les migrations avant d’ouvrir le serveur HTTP. Elle ne renvoie
+ni chemin SQLite, ni détail d’erreur. Les réponses portent `Cache-Control: no-store`.
+
+Lors d’un SIGINT/SIGTERM, ready passe non prêt avant `Shutdown`. Le serveur
+ferme ensuite l’écoute et termine les requêtes en cours : une nouvelle sonde
+peut donc rencontrer un refus de connexion plutôt qu’un JSON 503. Live reste
+indépendant de SQLite tant que la requête peut être traitée.
+
+```bash
+curl --fail-with-body -sS http://localhost:8080/api/health/live
+curl --fail-with-body -sS http://localhost:8080/api/health/ready
+python3 scripts/check-openapi.py
+go test -tags fts5 ./internal/handlers -run TestHealthChecks -count=1 -v
+go test -tags fts5 ./...
+```
+
+Utiliser live pour observer le processus, ready pour décider de lui envoyer du
+trafic. La lecture ne teste pas les écritures, l’espace disque, l’intégrité
+complète ou les restaurations. Ne pas déplacer la base active pour simuler une
+panne : les tests utilisent une base temporaire, fermeture de connexion et
+saturation du pool avec expiration du contexte. Aucune nouvelle migration.

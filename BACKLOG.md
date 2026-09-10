@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 9 septembre 2026 sur `develop`, commit `d24d82f`
-(fusion du paramétrage de librairie, PR #26). Les douze priorités et leurs éléments
+État consolidé le 10 septembre 2026 sur `develop`, commit `2cff7be`
+(fusion de la documentation OpenAPI, PR #27). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -23,26 +23,25 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 7 | Alertes métier | Stock faible, rupture, commandes en attente, fournisseurs désactivés | Réalisé | Tableau commun validé et fusionné. Les achats DRAFT sont explicitement désignés comme achats en brouillon. |
 | 8 | Exports | CSV des stocks, ventes, achats, fournisseurs et audit | Réalisé | Cinq exports validés et fusionnés. Audit limité aux événements propres du propriétaire, global pour root. |
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
-| 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Partiel | Contrat OpenAPI 3.0.3 des 93 opérations API, consultation locale et exemples curl implémentés. Contrôles structurels validés ; tests Go et recette navigateur à valider avant fusion. |
-| 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Partiel | Sauvegardes SQLite contrôlées et arrêt gracieux existants. Ajouter les contrôles de santé, métriques, logs structurés et procédure de restauration testée. |
+| 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
+| 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Partiel | Sondes live/ready implémentées dans cet incrément ; tests Go et recette à valider. Métriques, logs structurés et restauration testée restent à finaliser. |
 | 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Modules JavaScript métier déjà séparés. Harmoniser les erreurs, revoir l’accessibilité et intégrer les tests navigateur. Les recettes Go/HTTP ne couvrent pas le rendu visuel. |
 
-## Incrément en validation : documentation API (priorité 10)
+## Incrément en validation : contrôles de santé (priorité 11)
 
-Le paramétrage est validé et fusionné au commit `d24d82f`. Le propriétaire du
-projet valide XOF comme devise unique du périmètre actuel. La priorité 9 est
-donc réalisée : aucun changement de devise ni conversion des montants
-historiques n’est prévu dans cette version. Une éventuelle prise en charge de
-plusieurs devises nécessitera un périmètre distinct et une nouvelle décision.
+La documentation OpenAPI est validée et fusionnée (PR #27, `2cff7be`).
+Les sondes publiques live/ready sont ajoutées, avec lecture SQLite bornée par
+un contexte de deux secondes et retrait de disponibilité avant l’arrêt gracieux.
+Le contrat et les exemples couvrent désormais 95 opérations API.
+Tests Go et recette locale restent à valider avant fusion de cet incrément.
 
-Le contrat `static/openapi.json` documente les 93 opérations enregistrées dans
-`cmd/main.go`. La page locale, les exemples curl et les contrôles de dérive
-routes/schémas sont ajoutés. Les contrôles Python et JavaScript passent ; les
-tests Go et la recette navigateur restent à valider avant fusion.
+Les sondes ne certifient ni l’intégrité complète, ni la capacité d’écriture,
+ni la restauration. Les métriques, logs structurés et restauration testée
+restent des travaux de la priorité 11.
 
 ## Ordre de poursuite
 
-Poursuivre les priorités 10, 11 et 12 dans cet ordre. Les tests et la
+Finaliser la priorité 11, puis poursuivre la priorité 12. Les tests et la
 qualité des nouveaux écrans s’appliquent à chaque incrément, sans attendre la ligne 12.
 
 La règle livrée pour les alertes reste explicite : les achats DRAFT sont des

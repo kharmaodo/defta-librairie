@@ -12128,6 +12128,102 @@
           }
         ]
       }
+    },
+    "/api/health/live": {
+      "get": {
+        "operationId": "HealthHandler_live",
+        "summary": "Vivacité du serveur",
+        "tags": [
+          "health"
+        ],
+        "security": [],
+        "description": "Sonde publique, sans JWT. Cache-Control: no-store. Répond 200 tant que le serveur peut traiter cette requête ; ne consulte pas SQLite.",
+        "responses": {
+          "200": {
+            "description": "Serveur vivant.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "no-store"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                },
+                "example": {
+                  "status": "alive"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl --fail-with-body -sS \"${BASE_URL}/api/health/live\""
+          }
+        ]
+      }
+    },
+    "/api/health/ready": {
+      "get": {
+        "operationId": "HealthHandler_ready",
+        "summary": "Disponibilité de SQLite",
+        "tags": [
+          "health"
+        ],
+        "security": [],
+        "description": "Sonde publique, sans JWT. Cache-Control: no-store. Lit libraries et schema_migrations avec un contexte de deux secondes maximum (ou le délai client si plus court). 503 si lecture impossible, aucune migration enregistrée, ou arrêt gracieux en cours. Ne vérifie ni intégrité complète, ni espace disque, ni capacité d’écriture. Le démarrage applique déjà les migrations avant d’écouter.",
+        "responses": {
+          "200": {
+            "description": "SQLite lisible et migrations présentes.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "no-store"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                },
+                "example": {
+                  "status": "ready"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Non prêt ; motif générique.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthStatus"
+                },
+                "example": {
+                  "status": "not_ready",
+                  "reason": "database_unavailable"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl --fail-with-body -sS \"${BASE_URL}/api/health/ready\""
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -15260,6 +15356,29 @@
           ]
         },
         "description": "Modification du brouillon : rattachement et librairie conservés. purchaseId et libraryId ne changent pas le rattachement."
+      },
+      "HealthStatus": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "alive",
+              "ready",
+              "not_ready"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "database_unavailable",
+              "shutting_down"
+            ]
+          }
+        }
       }
     }
   }
