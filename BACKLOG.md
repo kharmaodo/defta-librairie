@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 10 septembre 2026 sur `develop`, commit `808a396`
-(fusion du module d’audit, PR #34). Les douze priorités et leurs éléments
+État consolidé le 10 septembre 2026 sur `develop`, commit `4c273f1`
+(fusion du module des sessions, PR #35). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -25,21 +25,22 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
 | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP commun validé et intégré pour cinq écrans. Erreurs des cinq modules métier validées et fusionnées (PR #33). Journal d’audit extrait et fusionné (PR #34). Extraction des sessions en validation ; suite du découpage, migration HTTP du module principal et tests navigateur automatisés restent à finaliser. |
+| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP commun validé et intégré pour cinq écrans. Erreurs des cinq modules métier validées et fusionnées (PR #33). Journal d’audit extrait et fusionné (PR #34). Sessions extraites et fusionnées (PR #35). Extraction des propriétaires en validation ; suite du découpage, migration HTTP du module principal et tests navigateur automatisés restent à finaliser. |
 
-## Incrément en validation : extraction des sessions (priorité 12)
+## Incrément en validation : extraction des propriétaires (priorité 12)
 
-Le journal d’audit est validé et fusionné (PR #34). Cet incrément extrait
-le rendu des sessions, leurs filtres, pagination et révocations dans
-`admin-sessions.js`. Le tableau de bord fournit son client HTTP existant,
-le rechargement de l’audit et la déconnexion après révocation courante réussie.
-Le module ne démarre pas sur la page login. Les tests Node couvrent notamment
-les révocations courantes/autres, les refus et l’annulation de confirmation.
+Les sessions sont validées et fusionnées (PR #35). Cet incrément extrait
+la liste, les filtres, la pagination, les formulaires et actions administratives
+des propriétaires dans `admin-owners.js`. Le tableau de bord initialise ses
+événements uniquement pour root après le contrôle du mot de passe obligatoire.
+Le client HTTP existant et les rechargements des sessions/audit sont conservés.
+Les options des librairies actives sont transmises au tableau de bord pour ses
+sélecteurs ; une page vide arrête leur pagination si la liste diminue.
 Recette navigateur et fusion de cet incrément restent à valider.
 
-Restent les propriétaires, livres, stocks et ventes dans `admin-auth.js`,
-la migration HTTP compatible avec l’authentification et les tests navigateur
-automatisés. La priorité 12 reste partielle.
+Restent les livres, stocks et ventes dans `admin-auth.js`, la migration HTTP
+compatible avec l’authentification et les tests navigateur automatisés.
+La priorité 12 reste partielle.
 
 La priorité 11 est réalisée dans le périmètre livré ; objectifs de reprise,
 sauvegardes hors machine et rétention des logs restent des décisions de déploiement.

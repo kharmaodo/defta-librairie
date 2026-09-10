@@ -60,3 +60,38 @@ Recette navigateur avec des comptes de test :
 
 Ces tests Node simulent le DOM et le client HTTP. L’authentification réelle et
 les autorisations restent à vérifier avec les tests Go et la recette navigateur.
+
+## Propriétaires
+
+`admin-owners.js` regroupe le rendu, les filtres, la pagination, les formulaires
+et les actions administratives. Son état est privé. Le tableau de bord lui
+fournit le client HTTP existant et les fonctions de rechargement des sessions,
+de l’audit et des sélecteurs de librairie. Les événements sont initialisés
+uniquement pour root après le contrôle du changement obligatoire de mot de passe.
+Les autorisations restent contrôlées par le serveur.
+
+Le chargement des options conserve les filtres propriétaire/librairie ACTIVE
+et parcourt les pages. Une page vide interrompt le parcours si les résultats
+diminuent pendant la lecture. Une action sur une ligne devenue inconnue est ignorée.
+
+```sh
+node --test scripts/test-admin-owners.cjs scripts/test-admin-sessions.cjs scripts/test-admin-audit.cjs scripts/test-admin-http.cjs
+```
+
+Recette navigateur sur des comptes de test :
+
+- Comme root, créer un propriétaire et vérifier sa librairie dans les sélecteurs
+  des livres, stocks et ventes. Modifier ses coordonnées sans saisir de mot de
+  passe : son mot de passe doit rester utilisable.
+- Filtrer et paginer la liste ; vérifier les actions proposées pour ACTIVE,
+  LOCKED et DISABLED.
+- Annuler une confirmation de désactivation, puis désactiver et réactiver un
+  propriétaire de test. Vérifier les sélecteurs après chaque changement.
+- Réinitialiser un mot de passe temporaire, vérifier la confirmation, les
+  sessions et l’audit, puis la connexion avec changement obligatoire.
+- Déverrouiller un compte de test verrouillé et vérifier son nouvel état.
+- Comme propriétaire, vérifier le fonctionnement du tableau de bord et
+  l’absence des contrôles réservés à root.
+
+Les tests Node simulent le DOM et les réponses HTTP ; ils ne constituent pas
+une vérification navigateur ni un test des autorisations du serveur.
