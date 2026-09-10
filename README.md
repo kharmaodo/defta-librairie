@@ -1461,3 +1461,24 @@ vérifier le refus avec un propriétaire, puis comparer X-Request-ID de la répo
 et request_id du log. Redémarrer pour constater la remise à zéro. Aucune nouvelle
 migration. La collecte externe, la rotation/rétention des fichiers de logs et
 la restauration testée restent à organiser pour l’exploitation.
+
+
+### Restauration SQLite vers un nouveau fichier
+
+La procédure complète est dans [docs/SQLITE_RESTORE.md](docs/SQLITE_RESTORE.md).
+Elle couvre préparation, maintenance, bascule par DB_PATH, recette et retour
+arrière. Le script restaure une sauvegarde vers un nom neuf, vérifie intégrité,
+clés étrangères et schéma, puis affiche l’empreinte du fichier restauré. Il
+n’arrête pas le serveur et ne remplace jamais la base active.
+
+```bash
+python3 scripts/test-restore-db.py
+# Préparation d’une restauration ; adapter les chemins, destination inexistante.
+python3 scripts/restore-db.py ./data/backups/SAUVEGARDE.db \
+  --output ./data/restores/NOUVEAU_FICHIER.db
+```
+
+Créer le répertoire parent au préalable. Python 3.10+ avec SQLite/FTS5 est requis
+sur Linux/WSL. La recette automatisée utilise uniquement des bases temporaires.
+Aucune migration ni route HTTP n’est ajoutée. Ne modifier DB_PATH qu’en suivant
+la procédure de maintenance et conserver l’ancienne base pour le retour arrière.
