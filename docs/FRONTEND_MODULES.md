@@ -33,3 +33,30 @@ navigateur. Après redémarrage et rechargement complet :
 - Vérifier la reconnexion, la déconnexion et le changement de mot de passe obligatoire.
 
 Les tests navigateur automatisés restent à développer.
+
+## Sessions
+
+`admin-sessions.js` extrait le rendu, les filtres, la pagination et les actions
+de révocation. Sa fabrique reçoit le client HTTP existant, le rechargement de
+l’audit et une fonction de déconnexion fournie par le tableau de bord.
+Cette dernière est appelée uniquement après la révocation courante réussie.
+Les rechargements après les opérations sur les propriétaires sont conservés.
+
+```sh
+node --test scripts/test-admin-sessions.cjs scripts/test-admin-audit.cjs scripts/test-admin-http.cjs
+```
+
+Recette navigateur avec des comptes de test :
+
+- Vérifier les sessions comme root et comme propriétaire, puis les filtres et pages.
+- Annuler une confirmation de révocation : aucune session ne doit être supprimée.
+- Révoquer une autre session : la session courante reste utilisable et la liste
+  ainsi que l’audit sont actualisés.
+- Déconnecter les autres appareils : vérifier le nombre affiché et le maintien
+  de la session courante.
+- Révoquer la session courante : vérifier le retour à la connexion.
+- Simuler un échec réseau de révocation : afficher l’erreur sans déconnexion
+  locale automatique ; rétablir le réseau et vérifier l’état réel de la session.
+
+Ces tests Node simulent le DOM et le client HTTP. L’authentification réelle et
+les autorisations restent à vérifier avec les tests Go et la recette navigateur.

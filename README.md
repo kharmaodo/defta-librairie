@@ -1515,3 +1515,7 @@ français pour les refus métier. La recette est détaillée dans
 Le découpage du tableau de bord commence par le journal d’audit dans
 `admin-audit.js`. Le fonctionnement et la recette sont décrits dans
 [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+La gestion des sessions est extraite dans `admin-sessions.js` : liste, filtres,
+pagination et révocations. Sa recette complète figure dans
+[FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
