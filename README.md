@@ -1519,3 +1519,7 @@ Le découpage du tableau de bord commence par le journal d’audit dans
 La gestion des sessions est extraite dans `admin-sessions.js` : liste, filtres,
 pagination et révocations. Sa recette complète figure dans
 [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+La gestion des propriétaires est extraite dans `admin-owners.js` (liste,
+formulaires et actions administratives). Les sélecteurs de librairie restent
+coordonnés par le tableau de bord. Voir [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
