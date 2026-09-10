@@ -1344,3 +1344,42 @@ les coordonnées, logo, conflit de version, nouveau livre (seuil configuré),
 livre existant (seuil conservé), aperçu et impression vente/achat. Le test
 `TestLibrarySettingsLifecycle` couvre défauts, isolation, validations, audit,
 concurrence et application du seuil. Le changement de devise reste au backlog.
+
+
+### Contrat OpenAPI et consultation locale
+
+Le contrat **OpenAPI 3.0.3** est `static/openapi.json`, servi à
+`http://localhost:8080/static/openapi.json`. Il couvre les 93 opérations
+`/api/` enregistrées dans `cmd/main.go`, les schémas JSON, paramètres, droits,
+codes d’erreur par famille, cookies de renouvellement, exports CSV et XOF.
+Les pages HTML et ressources statiques ne sont pas des opérations de ce contrat.
+Référence du format : https://spec.openapis.org/oas/v3.0.3.html.
+
+Ouvrir `http://localhost:8080/static/api-docs.html` pour consulter et filtrer les
+opérations, afficher les schémas et les exemples curl. Cette page utilise les
+ressources locales et le contrat JSON ; elle n’envoie aucune opération métier.
+Le fichier est importable dans les outils compatibles OpenAPI/Swagger.
+
+`docs/API_EXAMPLES.md` contient un exemple par opération, la préparation des
+variables et les variantes JSON/cookie. Adapter les identifiants, versions et
+identifiants de librairie : les exemples sont indépendants, pas un script de
+recette à exécuter en bloc. Ils couvrent aussi les mutations et suppressions.
+
+```bash
+python3 scripts/check-openapi.py
+go test -tags fts5 ./cmd -run TestOpenAPI -count=1 -v
+go test -tags fts5 ./...
+```
+
+Le contrôle Python sans dépendance vérifie la correspondance des routes,
+les références, paramètres et exemples de requête. Ce contrôle structurel
+n’est pas un validateur exhaustif de la norme OpenAPI. Les tests Go comparent
+également les champs documentés à ceux des principaux modèles JSON.
+À chaque modification d’une route ou d’un modèle, actualiser le contrat,
+les exemples curl et la documentation associée. Le test doit échouer si une
+route API est ajoutée, retirée ou renommée sans mise à jour du contrat.
+
+Recette : démarrer l’application, ouvrir la page, filtrer `payments`, développer
+une opération et un schéma, puis télécharger le JSON. Aucune migration ajoutée.
+La priorité 9 est clôturée après validation de XOF comme devise unique ; la
+priorité 10 reste en validation jusqu’à la recette et la fusion.
