@@ -1245,3 +1245,19 @@ curl --fail-with-body -sS -X POST "${BASE_URL}/api/manage/return-settlements/${R
 }
 JSON
 ```
+
+### GET /api/health/live
+
+Sonde publique, sans JWT. Cache-Control: no-store. Répond 200 tant que le serveur peut traiter cette requête ; ne consulte pas SQLite.
+
+```bash
+curl --fail-with-body -sS "${BASE_URL}/api/health/live"
+```
+
+### GET /api/health/ready
+
+Sonde publique, sans JWT. Cache-Control: no-store. Lit libraries et schema_migrations avec un contexte de deux secondes maximum (ou le délai client si plus court). 503 si lecture impossible, aucune migration enregistrée, ou arrêt gracieux en cours. Ne vérifie ni intégrité complète, ni espace disque, ni capacité d’écriture. Le démarrage applique déjà les migrations avant d’écouter.
+
+```bash
+curl --fail-with-body -sS "${BASE_URL}/api/health/ready"
+```

@@ -125,6 +125,9 @@ func main() {
 	// Routes de base
 	mux := http.NewServeMux()
 	registerPublicRoutes(mux, adminUIHandler)
+	healthHandler := handlers.NewHealthHandler(database.DB)
+	mux.HandleFunc("GET /api/health/live", healthHandler.Live)
+	mux.HandleFunc("GET /api/health/ready", healthHandler.Ready)
 	mux.Handle("POST /api/auth/login", authRateLimiter.Limit(http.HandlerFunc(authHandler.Login)))
 	mux.Handle("POST /api/auth/refresh", authRateLimiter.Limit(http.HandlerFunc(authHandler.Refresh)))
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
@@ -237,6 +240,7 @@ func main() {
 			log.Printf("Échec serveur : %v", err)
 		}
 	case <-signalContext.Done():
+		healthHandler.BeginShutdown()
 		log.Println("Arrêt gracieux du serveur...")
 		shutdownContext, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
