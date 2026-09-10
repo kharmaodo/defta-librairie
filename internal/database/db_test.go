@@ -1,0 +1,124 @@
+//go:build fts5
+
+package database
+
+import (
+	"database/sql"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+func TestEnsureDatabaseFileCopiesSeedWithoutOverwritingRuntimeData(t *testing.T) {
+	directory := t.TempDir()
+	seedPath := filepath.Join(directory, "catalogue.seed.db")
+	runtimePath := filepath.Join(directory, "defta.db")
+	if err := os.WriteFile(seedPath, []byte("catalogue"), 0o600); err != nil {
+		t.Fatalf("write seed: %v", err)
+	}
+	seeded, err := ensureDatabaseFile(runtimePath)
+	if err != nil || !seeded {
+		t.Fatalf("seeded=%t err=%v", seeded, err)
+	}
+	content, err := os.ReadFile(runtimePath)
+	if err != nil || string(content) != "catalogue" {
+		t.Fatalf("runtime content=%q err=%v", content, err)
+	}
+	if err = os.WriteFile(runtimePath, []byte("private runtime data"), 0o600); err != nil {
+		t.Fatalf("write runtime data: %v", err)
+	}
+	seeded, err = ensureDatabaseFile(runtimePath)
+	if err != nil || seeded {
+		t.Fatalf("second seeded=%t err=%v", seeded, err)
+	}
+	content, err = os.ReadFile(runtimePath)
+	if err != nil || string(content) != "private runtime data" {
+		t.Fatalf("overwritten runtime content=%q err=%v", content, err)
+	}
+}
+
+func TestBackupDatabaseCreatesConsistentSnapshot(t *testing.T) {
+	directory := t.TempDir()
+	databasePath := filepath.Join(directory, "defta.db")
+	db, err := sql.Open("sqlite3", databasePath)
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	defer db.Close()
+	if _, err = db.Exec(`CREATE TABLE example(value TEXT); INSERT INTO example(value) VALUES ('preserved');`); err != nil {
+		t.Fatalf("prepare database: %v", err)
+	}
+	backupPath, err := backupDatabase(db, databasePath, time.Date(2026, 9, 3, 9, 30, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatalf("backup database: %v", err)
+	}
+	backup, err := sql.Open("sqlite3", backupPath+"?mode=ro")
+	if err != nil {
+		t.Fatalf("open backup: %v", err)
+	}
+	defer backup.Close()
+	var value string
+	if err = backup.QueryRow(`SELECT value FROM example`).Scan(&value); err != nil || value != "preserved" {
+		t.Fatalf("backup value=%q err=%v", value, err)
+	}
+}
+
+func TestSearchBooksUsesFTS5AndKeepsTotal(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "catalogue.db")
+
+	var err error
+	DB, err = sql.Open("sqlite3", dbPath)
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = DB.Close() })
+
+	schema := `
+		CREATE TABLE defta (
+			id INTEGER PRIMARY KEY,
+			title TEXT NOT NULL,
+			auteur TEXT,
+			editeur TEXT,
+			price REAL NOT NULL DEFAULT 0,
+			volume INTEGER NOT NULL DEFAULT 0,
+			status TEXT,
+			tags TEXT,
+			categorie TEXT,
+			coverUrl TEXT,
+			deleted_at TEXT
+		);
+		CREATE VIRTUAL TABLE defta_fts USING fts5(
+			title, editeur, auteur, tags, categorie,
+			content='defta', content_rowid='id'
+		);
+		CREATE TRIGGER defta_ai AFTER INSERT ON defta BEGIN
+			INSERT INTO defta_fts(rowid, title, editeur, auteur, tags, categorie)
+			VALUES (new.id, new.title, new.editeur, new.auteur, new.tags, new.categorie);
+		END;
+	`
+	if _, err = DB.Exec(schema); err != nil {
+		t.Fatalf("create schema: %v", err)
+	}
+
+	books := []string{"ديوان طرفة", "ديوان النابغة", "شرح أسماء الله الحسنى"}
+	for _, title := range books {
+		if _, err = DB.Exec(`INSERT INTO defta(title, auteur) VALUES (?, ?)`, title, "Anonyme"); err != nil {
+			t.Fatalf("insert %q: %v", title, err)
+		}
+	}
+
+	results, total, err := SearchBooks("ديوان", 0, 1)
+	if err != nil {
+		t.Fatalf("search books: %v", err)
+	}
+	if total != 2 {
+		t.Fatalf("expected total 2, got %d", total)
+	}
+	if len(results) != 1 {
+		t.Fatalf("expected one paginated result, got %d", len(results))
+	}
+	if !results[0].Score.Valid {
+		t.Fatal("expected an FTS5 relevance score")
+	}
+}

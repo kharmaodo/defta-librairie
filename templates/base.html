@@ -1,22 +1,31 @@
 <!DOCTYPE html>
-<html lang="{{.Lang | default "ar"}}" {{if eq (.Lang | default "ar") "ar"}}dir="rtl"{{end}}>
+<html lang="{{.Lang | default "ar"}}" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{.Title}}</title>   <!-- on gère la valeur par défaut dans le handler -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="description" content="فهرس رقمي سريع للبحث في كتب مكتبة دفتا">
+    <title>{{.Title}} | دفتا</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <header>
-        <h1>{{.Title}}</h1>
+    <header class="site-header">
+        <div class="container header-inner">
+            <a class="brand" href="/" aria-label="العودة إلى الصفحة الرئيسية">
+                <span class="brand-mark" aria-hidden="true">د</span>
+                <span><strong>مكتبة دفتا</strong><small>المعرفة بين يديك</small></span>
+            </a>
+            <span class="header-badge">فهرس رقمي</span>
+        </div>
     </header>
-    <main>
-        {{block "content" .}}{{end}}
-    </main>
-    <footer>
-        <p>جميع الحقوق محفوظة © 2025-2026</p>
-        <p>{{GetMsg .Lang "footer_version"}} : {{.Version}} – آخر تحديث : {{.BuildDate}}</p>
+    <main>{{block "content" .}}{{end}}</main>
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <p>{{GetMsg .Lang "footer_copyright"}}</p>
+            <p>{{GetMsg .Lang "footer_version"}} {{.Version}} · آخر تحديث {{.BuildDate}}</p>
+        </div>
     </footer>
     <script src="/static/js/main.js" defer></script>
 </body>

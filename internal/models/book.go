@@ -32,15 +32,33 @@ func (ifld IntField) MarshalJSON() ([]byte, error) {
 }
 
 type Book struct {
-	ID        int         `json:"id"`
-	Title     string      `json:"title"`
-	Auteur    StringField `json:"auteur"`
-	Editeur   StringField `json:"editeur"`
-	Price     float64     `json:"price"`
-	Volume    int         `json:"volume"`
-	Status    StringField `json:"status"`
-	Tags      StringField    `json:"tags"`
-	Categorie StringField    `json:"categorie"`
-	CoverURL  StringField `json:"coverUrl"`
+	ID        int             `json:"id"`
+	Title     string          `json:"title"`
+	Auteur    StringField     `json:"auteur"`
+	Editeur   StringField     `json:"editeur"`
+	Price     float64         `json:"price"`
+	Volume    int             `json:"volume"`
+	Status    StringField     `json:"status"`
+	Tags      StringField     `json:"tags"`
+	Categorie StringField     `json:"categorie"`
+	CoverURL  StringField     `json:"coverUrl"`
 	Score     sql.NullFloat64 `json:"score,omitempty"`
+	LibraryID string          `json:"libraryId,omitempty"`
+	CreatedAt string          `json:"createdAt,omitempty"`
+	UpdatedAt string          `json:"updatedAt,omitempty"`
+	Version   int             `json:"version,omitempty"`
+}
+
+type BookInput struct {
+	Title     string  `json:"title"`
+	Auteur    string  `json:"auteur"`
+	Editeur   string  `json:"editeur"`
+	Price     float64 `json:"price"`
+	Volume    int     `json:"volume"`
+	Status    string  `json:"status"`
+	Tags      string  `json:"tags"`
+	Categorie string  `json:"categorie"`
+	CoverURL  string  `json:"coverUrl"`
+	LibraryID string  `json:"libraryId,omitempty"`
+	Version   int     `json:"version,omitempty"`
 }

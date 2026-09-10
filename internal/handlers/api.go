@@ -16,53 +16,72 @@ import (
 
 var globalCfg *config.Config
 
+const maxAPIBooksLimit = 100
+
 func SetConfig(c *config.Config) {
 	globalCfg = c
 }
 
 // cleanBook transforme les champs sql.Null* en valeurs simples ou null
 func cleanBook(b models.Book) map[string]interface{} {
-    return map[string]interface{}{
-        "id":        b.ID,
-        "title":     b.Title,
-        "auteur":    nullableString(b.Auteur),
-        "editeur":   nullableString(b.Editeur),
-        "price":     b.Price,
-        "volume":    b.Volume,
-        "status":    nullableString(b.Status),
-        "tags":      nullableString(b.Tags),
-        "categorie": nullableString(b.Categorie),
-        "coverUrl":  nullableString(b.CoverURL),
-        "score":     nullableFloat(b.Score),
-    }
+	return map[string]interface{}{
+		"id":        b.ID,
+		"title":     b.Title,
+		"auteur":    nullableString(b.Auteur),
+		"editeur":   nullableString(b.Editeur),
+		"price":     b.Price,
+		"volume":    b.Volume,
+		"status":    nullableString(b.Status),
+		"tags":      nullableString(b.Tags),
+		"categorie": nullableString(b.Categorie),
+		"coverUrl":  nullableString(b.CoverURL),
+		"score":     nullableFloat(b.Score),
+	}
 }
 
 func nullableString(sf models.StringField) interface{} {
-    if sf.Valid {
-        return sf.String
-    }
-    return nil
+	if sf.Valid {
+		return sf.String
+	}
+	return nil
 }
 
 func nullableInt64(i models.IntField) interface{} {
-    if i.Valid {
-        return i.Int64
-    }
-    return nil
+	if i.Valid {
+		return i.Int64
+	}
+	return nil
 }
 
 func nullableSQLInt64(i sql.NullInt64) interface{} {
-    if i.Valid {
-        return i.Int64
-    }
-    return nil
+	if i.Valid {
+		return i.Int64
+	}
+	return nil
 }
 
 func nullableFloat(f sql.NullFloat64) interface{} {
-    if f.Valid {
-        return f.Float64
-    }
-    return nil
+	if f.Valid {
+		return f.Float64
+	}
+	return nil
+}
+
+func normalizeAPIPagination(offsetStr, limitStr string, defaultLimit int) (int, int) {
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		offset = 0
+	}
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit < 1 {
+		limit = defaultLimit
+	}
+	if limit > maxAPIBooksLimit {
+		limit = maxAPIBooksLimit
+	}
+
+	return offset, limit
 }
 
 func APIBooksHandler(w http.ResponseWriter, r *http.Request) {
@@ -73,19 +92,11 @@ func APIBooksHandler(w http.ResponseWriter, r *http.Request) {
 	offsetStr := r.URL.Query().Get("offset")
 	limitStr := r.URL.Query().Get("limit")
 
-	offset, _ := strconv.Atoi(offsetStr)
-	if offset < 0 {
-		offset = 0
+	defaultLimit := 30
+	if globalCfg != nil && globalCfg.PageSize > 0 {
+		defaultLimit = globalCfg.PageSize
 	}
-
-	limit, _ := strconv.Atoi(limitStr)
-	if limit < 1 {
-		if globalCfg != nil && globalCfg.PageSize > 0 {
-			limit = globalCfg.PageSize
-		} else {
-			limit = 30
-		}
-	}
+	offset, limit := normalizeAPIPagination(offsetStr, limitStr, defaultLimit)
 
 	books, total, err := database.SearchBooks(q, offset, limit)
 	if err != nil {
