@@ -25,3 +25,9 @@
 @media(max-width:900px){.payment-balance{grid-template-columns:1fr 1fr}.payment-balance .button{grid-column:1/-1}}
 @media print{body.printing-sale{background:#fff}body.printing-sale>:not(#sale-detail-dialog){display:none!important}body.printing-sale #sale-detail-dialog{display:block!important;position:static;width:100%;max-width:none;margin:0;padding:0;border:0;box-shadow:none}body.printing-sale #sale-detail-dialog::backdrop{display:none}body.printing-sale #sale-detail-dialog .entity-form{padding:0}body.printing-sale .no-print{display:none!important}body.printing-sale .sale-receipt{color:#000}body.printing-sale .receipt-total{border:1px solid #ccd5d0;background:#fff}body.printing-sale table{page-break-inside:auto}body.printing-sale tr{page-break-inside:avoid}}
 @media print{body.printing-purchase{background:#fff}body.printing-purchase>:not(#purchase-detail-dialog){display:none!important}body.printing-purchase #purchase-detail-dialog{display:block!important;position:static;width:100%;max-width:none;margin:0;padding:0;border:0;box-shadow:none}body.printing-purchase #purchase-detail-dialog::backdrop{display:none}body.printing-purchase #purchase-detail-dialog .entity-form{padding:0}body.printing-purchase .no-print{display:none!important}body.printing-purchase .sale-receipt{color:#000}body.printing-purchase .receipt-total{border:1px solid #ccd5d0;background:#fff}body.printing-purchase tr{page-break-inside:avoid}}
+
+/* Keyboard navigation: preserve a visible focus indicator across admin controls. */
+.dashboard-page :is(a,button,input,select,textarea,summary,[tabindex]):focus-visible{outline:3px solid #125ea5;outline-offset:3px}
+.skip-link{position:absolute;top:0;left:1rem;transform:translateY(-150%);padding:.75rem 1rem;background:#fff;color:#125ea5;border:2px solid currentColor;z-index:1000}
+.skip-link:focus{transform:translateY(0)}
+@media print{.skip-link{display:none!important}}

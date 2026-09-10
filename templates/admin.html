@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/static/css/admin.css">
 </head>
 <body class="dashboard-page" data-page="dashboard">
+  <a class="skip-link" href="#dashboard-main">Aller au contenu principal</a>
   <header class="topbar">
     <a class="brand compact" href="/">
       <span class="brand-mark" aria-hidden="true">د</span>
@@ -23,7 +24,7 @@
     </div>
   </header>
 
-  <main class="dashboard">
+  <main class="dashboard" id="dashboard-main" tabindex="-1">
     <section class="welcome">
       <div><p class="eyebrow">Tableau de bord</p><h1>Bonjour, <span id="user-name">utilisateur</span></h1></div>
       <p id="scope-text" class="muted">Vérification de vos droits…</p>
@@ -117,7 +118,7 @@
 
     <section class="panel">
       <div class="panel-heading"><div><p class="eyebrow">Approvisionnement</p><h2>Fournisseurs</h2></div><button id="add-supplier-button" class="button primary" type="button">Nouveau fournisseur</button></div>
-      <div class="table-wrap"><table><thead><tr><th>Nom</th><th>Contact</th><th>Téléphone</th><th>État</th><th>Actions</th></tr></thead>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Nom</th><th scope="col">Contact</th><th scope="col">Téléphone</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead>
         <tbody id="suppliers-body"><tr><td colspan="5" class="empty">Chargement…</td></tr></tbody></table></div>
     </section>
 
@@ -130,7 +131,7 @@
         <button class="button ghost" type="submit">Filtrer</button><button id="reset-purchase-filters" class="button ghost" type="button">Réinitialiser</button>
       </form><button id="add-purchase-button" class="button primary" type="button">Nouvel achat</button></div></div>
       <p class="scope-note">La réception augmente atomiquement le stock de chaque article.</p>
-      <div class="table-wrap"><table><thead><tr><th>Référence</th><th>Fournisseur</th><th>Articles</th><th>Total</th><th>État</th><th>Actions</th></tr></thead>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Référence</th><th scope="col">Fournisseur</th><th scope="col">Articles</th><th scope="col">Total</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead>
         <tbody id="purchases-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody></table></div>
       <div class="pagination"><button id="purchases-previous" class="button ghost" type="button">Précédent</button><span id="purchases-page-label" class="hint">Page 1</span><button id="purchases-next" class="button ghost" type="button">Suivant</button></div>
     </section>
@@ -147,7 +148,7 @@
         </form><button id="add-customer-button" class="button primary" type="button">Nouveau client</button></div>
       </div>
       <p class="scope-note">Les clients désactivés restent disponibles dans l’historique commercial.</p>
-      <div class="table-wrap"><table><thead><tr><th>Référence</th><th>Client</th><th>Téléphone</th><th>E-mail</th><th>État</th><th>Actions</th></tr></thead>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Référence</th><th scope="col">Client</th><th scope="col">Téléphone</th><th scope="col">E-mail</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead>
         <tbody id="customers-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody></table></div>
       <div class="pagination"><button id="customers-previous" class="button ghost" type="button">Précédent</button><span id="customers-page-label" class="hint">Page 1</span><button id="customers-next" class="button ghost" type="button">Suivant</button></div>
     </section>
@@ -172,7 +173,7 @@
         </form><button id="add-cash-register-button" class="button primary" type="button">Nouvelle caisse</button></div>
       </div>
       <p class="scope-note">Une caisse désactivée conserve son historique, mais ne peut plus recevoir de règlement.</p>
-      <div class="table-wrap"><table><thead><tr><th>Caisse</th><th>Librairie</th><th>État</th><th>Version</th><th>Actions</th></tr></thead>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Caisse</th><th scope="col">Librairie</th><th scope="col">État</th><th scope="col">Version</th><th scope="col">Actions</th></tr></thead>
         <tbody id="cash-registers-body"><tr><td colspan="5" class="empty">Chargement…</td></tr></tbody></table></div>
       <div class="pagination"><button id="cash-registers-previous" class="button ghost" type="button">Précédent</button><span id="cash-registers-page-label" class="hint">Page 1</span><button id="cash-registers-next" class="button ghost" type="button">Suivant</button></div>
     </section>
@@ -194,7 +195,7 @@
         <button id="add-payment-button" class="button primary" type="button">Enregistrer un règlement</button>
       </div>
       <p id="payment-error" class="alert" role="alert" hidden></p>
-      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Méthode</th><th>Montant</th><th>Référence externe</th><th>État</th><th>Actions</th></tr></thead>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Date</th><th scope="col">Méthode</th><th scope="col">Montant</th><th scope="col">Référence externe</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead>
         <tbody id="payments-body"><tr><td colspan="6" class="empty">Sélectionnez une vente confirmée.</td></tr></tbody></table></div>
     </section>
 
@@ -211,7 +212,7 @@
       </div>
       <p class="scope-note">Confirmer une vente retire son stock. L’annuler restitue exactement les quantités vendues.</p>
       <div class="table-wrap">
-        <table><thead><tr><th>Référence</th><th>Client</th><th>Articles</th><th>Total</th><th>État</th><th>Date</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th scope="col">Référence</th><th scope="col">Client</th><th scope="col">Articles</th><th scope="col">Total</th><th scope="col">État</th><th scope="col">Date</th><th scope="col">Actions</th></tr></thead>
           <tbody id="sales-body"><tr><td colspan="7" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
@@ -231,7 +232,7 @@
       </div>
       <p class="scope-note">Un retour finalisé restitue le stock ; son remboursement ou son avoir reste intégralement traçable.</p>
       <p id="return-error" class="alert" role="alert" hidden></p>
-      <div class="table-wrap"><table><thead><tr><th>Référence</th><th>Vente</th><th>Résolution</th><th>Total</th><th>Règlement</th><th>État</th><th>Actions</th></tr></thead>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Référence</th><th scope="col">Vente</th><th scope="col">Résolution</th><th scope="col">Total</th><th scope="col">Règlement</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead>
         <tbody id="returns-body"><tr><td colspan="7" class="empty">Chargement…</td></tr></tbody></table></div>
       <div class="pagination"><button id="returns-previous" class="button ghost" type="button">Précédent</button><span id="returns-page-label" class="hint">Page 1</span><button id="returns-next" class="button ghost" type="button">Suivant</button></div>
     </section>
@@ -247,7 +248,7 @@
       </div>
       <p class="scope-note">Les ruptures et alertes de stock sont affichées en priorité.</p>
       <div class="table-wrap">
-        <table><thead><tr><th>Livre</th><th>Quantité</th><th>Seuil</th><th>État</th><th>Mise à jour</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th scope="col">Livre</th><th scope="col">Quantité</th><th scope="col">Seuil</th><th scope="col">État</th><th scope="col">Mise à jour</th><th scope="col">Actions</th></tr></thead>
           <tbody id="inventory-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
@@ -257,7 +258,7 @@
     <section id="owners-section" class="panel root-only" hidden>
       <div class="panel-heading owner-heading"><div><p class="eyebrow">Administration globale</p><h2>Propriétaires et librairies</h2></div><div class="heading-actions"><form id="owner-filters" class="filters"><label>Recherche<input name="q" maxlength="200" placeholder="Compte ou librairie"></label><label>Compte<select name="status"><option value="">Tous</option><option value="ACTIVE">Actif</option><option value="LOCKED">Verrouillé</option><option value="DISABLED">Désactivé</option></select></label><label>Librairie<select name="libraryStatus"><option value="">Toutes</option><option value="ACTIVE">Active</option><option value="DISABLED">Désactivée</option></select></label><button class="button ghost" type="submit">Filtrer</button></form><button id="add-owner-button" class="button primary" type="button">Nouveau propriétaire</button></div></div>
       <div class="table-wrap">
-        <table><thead><tr><th>Propriétaire</th><th>Librairie</th><th>Compte</th><th>Librairie</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th scope="col">Propriétaire</th><th scope="col">Librairie</th><th scope="col">Compte</th><th scope="col">Librairie</th><th scope="col">Actions</th></tr></thead>
           <tbody id="owners-body"><tr><td colspan="5" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
@@ -273,7 +274,7 @@
     <section class="panel">
       <div class="panel-heading book-heading"><div><p class="eyebrow">Catalogue privé</p><h2>Livres</h2></div><div class="heading-actions"><form id="book-search-form" class="inline-search"><input name="q" maxlength="200" placeholder="Titre, auteur, tag…" aria-label="Rechercher dans les livres"><button class="button ghost" type="submit">Rechercher</button></form><button id="add-book-button" class="button primary" type="button">Nouveau livre</button></div></div>
       <div class="table-wrap">
-        <table><thead><tr><th>Titre</th><th>Auteur</th><th>Prix</th><th>Tags</th><th>Statut</th><th>Actions</th></tr></thead>
+        <table><thead><tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">Prix</th><th scope="col">Tags</th><th scope="col">Statut</th><th scope="col">Actions</th></tr></thead>
           <tbody id="books-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
@@ -296,7 +297,7 @@
       </div>
       <p class="scope-note owner-audit-note" hidden>Seuls les événements associés à votre compte sont affichés.</p>
       <div class="table-wrap">
-        <table><thead><tr><th>Date</th><th>Action</th><th>Acteur</th><th>Ressource</th><th>Résultat</th><th>Adresse IP</th></tr></thead>
+        <table><thead><tr><th scope="col">Date</th><th scope="col">Action</th><th scope="col">Acteur</th><th scope="col">Ressource</th><th scope="col">Résultat</th><th scope="col">Adresse IP</th></tr></thead>
           <tbody id="audit-body"><tr><td colspan="6" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
@@ -307,7 +308,7 @@
       <div class="panel-heading session-heading"><div><p class="eyebrow">Sécurité</p><h2>Sessions actives</h2></div><div class="heading-actions"><form id="session-filters" class="filters"><label class="root-only-field" hidden>Utilisateur<input name="username" maxlength="64" placeholder="Nom d’utilisateur"></label><label class="root-only-field" hidden>Rôle<select name="role"><option value="">Tous</option><option value="SUPER_ADMIN_ROOT">Root</option><option value="OWNER_LIBRARY">Propriétaire</option></select></label><label>Adresse IP<input name="ipAddress" maxlength="64" placeholder="Adresse partielle"></label><label>Appareil<input name="userAgent" maxlength="200" placeholder="Navigateur ou client"></label><button class="button ghost" type="submit">Filtrer</button></form><button id="revoke-other-sessions-button" class="button danger" type="button">Déconnecter les autres appareils</button><button id="refresh-sessions-button" class="button ghost" type="button">Actualiser</button></div></div>
       <p id="session-scope-note" class="scope-note">Chargement du périmètre des sessions…</p>
       <div class="table-wrap">
-        <table><thead><tr><th>Utilisateur</th><th>Rôle</th><th>Appareil</th><th>Adresse IP</th><th>Créée</th><th>Expiration</th><th>État</th><th>Action</th></tr></thead>
+        <table><thead><tr><th scope="col">Utilisateur</th><th scope="col">Rôle</th><th scope="col">Appareil</th><th scope="col">Adresse IP</th><th scope="col">Créée</th><th scope="col">Expiration</th><th scope="col">État</th><th scope="col">Action</th></tr></thead>
           <tbody id="sessions-body"><tr><td colspan="8" class="empty">Chargement…</td></tr></tbody>
         </table>
       </div>
@@ -316,7 +317,7 @@
     <section class="panel" id="supplier-returns-panel" aria-label="Retours fournisseurs"></section>
   </main>
 
-  <dialog id="owner-dialog" class="modal">
+  <dialog id="owner-dialog" class="modal" aria-labelledby="owner-form-title">
     <form id="owner-form" class="entity-form">
       <div class="modal-heading"><div><p class="eyebrow">Compte propriétaire</p><h2 id="owner-form-title">Nouveau propriétaire</h2></div><button class="icon-button" type="button" data-close="owner-dialog" aria-label="Fermer">×</button></div>
       <input name="id" type="hidden">
@@ -334,7 +335,7 @@
     </form>
   </dialog>
 
-  <dialog id="owner-password-reset-dialog" class="modal">
+  <dialog id="owner-password-reset-dialog" class="modal" aria-labelledby="owner-password-reset-title">
     <form id="owner-password-reset-form" class="entity-form">
       <div class="modal-heading"><div><p class="eyebrow">Sécurité du propriétaire</p><h2 id="owner-password-reset-title">Nouveau mot de passe temporaire</h2></div><button class="icon-button" type="button" data-close="owner-password-reset-dialog" aria-label="Fermer">×</button></div>
       <input name="id" type="hidden">
@@ -348,7 +349,7 @@
     </form>
   </dialog>
 
-  <dialog id="book-dialog" class="modal">
+  <dialog id="book-dialog" class="modal" aria-labelledby="book-form-title">
     <form id="book-form" class="entity-form">
       <div class="modal-heading"><div><p class="eyebrow">Catalogue</p><h2 id="book-form-title">Nouveau livre</h2></div><button class="icon-button" type="button" data-close="book-dialog" aria-label="Fermer">×</button></div>
       <input name="id" type="hidden"><input name="version" type="hidden">
@@ -368,17 +369,17 @@
     </form>
   </dialog>
 
-  <dialog id="book-history-dialog" class="modal history-modal">
+  <dialog id="book-history-dialog" class="modal history-modal" aria-labelledby="book-history-title">
     <div class="entity-form">
       <div class="modal-heading"><div><p class="eyebrow">Prix, statut et tags</p><h2 id="book-history-title">Historique du livre</h2></div><button class="icon-button" type="button" data-close="book-history-dialog" aria-label="Fermer">×</button></div>
       <div class="table-wrap">
-        <table><thead><tr><th>Date</th><th>Acteur</th><th>Action</th><th>Avant</th><th>Après</th></tr></thead><tbody id="book-history-body"></tbody></table>
+        <table><thead><tr><th scope="col">Date</th><th scope="col">Acteur</th><th scope="col">Action</th><th scope="col">Avant</th><th scope="col">Après</th></tr></thead><tbody id="book-history-body"></tbody></table>
       </div>
       <div class="modal-actions"><button class="button ghost" type="button" data-close="book-history-dialog">Fermer</button></div>
     </div>
   </dialog>
 
-  <dialog id="inventory-dialog" class="modal narrow">
+  <dialog id="inventory-dialog" class="modal narrow" aria-labelledby="inventory-form-title">
     <form id="inventory-form" class="entity-form">
       <div class="modal-heading"><div><p class="eyebrow">Mouvement de stock</p><h2 id="inventory-form-title">Modifier le stock</h2></div><button class="icon-button" type="button" data-close="inventory-dialog" aria-label="Fermer">×</button></div>
       <input name="bookId" type="hidden"><input name="version" type="hidden">
@@ -393,7 +394,7 @@
     </form>
   </dialog>
 
-  <dialog id="sale-dialog" class="modal sale-modal">
+  <dialog id="sale-dialog" class="modal sale-modal" aria-labelledby="sale-form-title">
     <form id="sale-form" class="entity-form">
       <div class="modal-heading"><div><p class="eyebrow">Vente</p><h2 id="sale-form-title">Nouvelle vente</h2></div><button class="icon-button" type="button" data-close="sale-dialog" aria-label="Fermer">×</button></div>
       <input name="id" type="hidden"><input name="version" type="hidden">
@@ -419,7 +420,7 @@
     </div>
   </template>
 
-  <dialog id="sale-detail-dialog" class="modal receipt-modal">
+  <dialog id="sale-detail-dialog" class="modal receipt-modal" aria-labelledby="sale-detail-reference">
     <div class="entity-form">
       <div id="sale-receipt" class="sale-receipt">
         <div class="receipt-header">
@@ -432,7 +433,7 @@
           <p id="sale-detail-transition-row" hidden><span id="sale-detail-transition-label">Traitée le</span><strong id="sale-detail-transition-date">—</strong></p>
         </div>
         <div class="table-wrap">
-          <table><thead><tr><th>Article</th><th>Quantité</th><th>Prix unitaire</th><th>Total</th></tr></thead><tbody id="sale-detail-lines"></tbody></table>
+          <table><thead><tr><th scope="col">Article</th><th scope="col">Quantité</th><th scope="col">Prix unitaire</th><th scope="col">Total</th></tr></thead><tbody id="sale-detail-lines"></tbody></table>
         </div>
         <div class="receipt-total"><span>Total</span><strong id="sale-detail-total">0 F CFA</strong></div>
         <p class="receipt-note">Les titres et prix correspondent aux valeurs figées lors de l’enregistrement de la vente.</p>
@@ -442,19 +443,19 @@
     </div>
   </dialog>
 
-  <dialog id="inventory-history-dialog" class="modal history-modal">
+  <dialog id="inventory-history-dialog" class="modal history-modal" aria-labelledby="inventory-history-title">
     <div class="entity-form">
       <div class="modal-heading"><div><p class="eyebrow">Traçabilité du stock</p><h2 id="inventory-history-title">Mouvements</h2></div><button class="icon-button" type="button" data-close="inventory-history-dialog" aria-label="Fermer">×</button></div>
       <div class="table-wrap">
-        <table><thead><tr><th>Date</th><th>Type</th><th>Variation</th><th>Avant</th><th>Après</th><th>Motif</th></tr></thead><tbody id="inventory-history-body"></tbody></table>
+        <table><thead><tr><th scope="col">Date</th><th scope="col">Type</th><th scope="col">Variation</th><th scope="col">Avant</th><th scope="col">Après</th><th scope="col">Motif</th></tr></thead><tbody id="inventory-history-body"></tbody></table>
       </div>
       <div class="modal-actions"><button class="button ghost" type="button" data-close="inventory-history-dialog">Fermer</button></div>
     </div>
   </dialog>
 
-  <dialog id="password-dialog" class="modal narrow">
+  <dialog id="password-dialog" class="modal narrow" aria-labelledby="password-dialog-title">
     <form id="password-form" class="entity-form">
-      <div class="modal-heading"><div><p class="eyebrow">Sécurité du compte</p><h2>Changer le mot de passe</h2></div><button class="icon-button password-optional-action" type="button" data-close="password-dialog" aria-label="Fermer">×</button></div>
+      <div class="modal-heading"><div><p class="eyebrow">Sécurité du compte</p><h2 id="password-dialog-title">Changer le mot de passe</h2></div><button class="icon-button password-optional-action" type="button" data-close="password-dialog" aria-label="Fermer">×</button></div>
       <p class="muted form-note">Toutes vos sessions seront révoquées. Vous devrez vous reconnecter avec le nouveau mot de passe.</p>
       <div class="form-grid single">
         <label>Mot de passe actuel<input name="currentPassword" type="password" autocomplete="current-password" required></label>
@@ -466,18 +467,18 @@
     </form>
   </dialog>
 
-  <dialog id="supplier-dialog" class="modal narrow">
+  <dialog id="supplier-dialog" class="modal narrow" aria-labelledby="supplier-dialog-title">
     <form id="supplier-form" class="entity-form">
-      <div class="modal-heading"><div><p class="eyebrow">Approvisionnement</p><h2>Fournisseur</h2></div><button class="icon-button" type="button" data-procurement-close="supplier-dialog">×</button></div>
+      <div class="modal-heading"><div><p class="eyebrow">Approvisionnement</p><h2 id="supplier-dialog-title">Fournisseur</h2></div><button class="icon-button" type="button" data-procurement-close="supplier-dialog" aria-label="Fermer">×</button></div>
       <input name="id" type="hidden"><input name="version" type="hidden">
       <div class="form-grid single"><label class="procurement-root" hidden>Librairie<select name="libraryId"></select></label><label>Nom<input name="name" minlength="2" maxlength="160" required></label><label>Contact<input name="contactName" maxlength="160"></label><label>Téléphone<input name="phone" maxlength="40"></label><label>E-mail<input name="email" type="email"></label><label>Adresse<textarea name="address" maxlength="500"></textarea></label></div>
-      <p id="supplier-error" class="alert" hidden></p><div class="modal-actions"><button class="button ghost" type="button" data-procurement-close="supplier-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+      <p id="supplier-error" class="alert" hidden role="alert"></p><div class="modal-actions"><button class="button ghost" type="button" data-procurement-close="supplier-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
     </form>
   </dialog>
 
-  <dialog id="customer-dialog" class="modal narrow">
+  <dialog id="customer-dialog" class="modal narrow" aria-labelledby="customer-form-title">
     <form id="customer-form" class="entity-form">
-      <div class="modal-heading"><div><p class="eyebrow">Relation client</p><h2 id="customer-form-title">Client</h2></div><button class="icon-button" type="button" data-customer-close>×</button></div>
+      <div class="modal-heading"><div><p class="eyebrow">Relation client</p><h2 id="customer-form-title">Client</h2></div><button class="icon-button" type="button" data-customer-close aria-label="Fermer">×</button></div>
       <input name="id" type="hidden"><input name="version" type="hidden">
       <div class="form-grid">
         <label class="customer-root full" hidden>Librairie<select name="libraryId"></select></label>
@@ -487,20 +488,20 @@
         <label class="full">Adresse<textarea name="address" maxlength="500"></textarea></label>
         <label class="full">Notes<textarea name="notes" maxlength="1000"></textarea></label>
       </div>
-      <p id="customer-error" class="alert" hidden></p>
+      <p id="customer-error" class="alert" hidden role="alert"></p>
       <div class="modal-actions"><button class="button ghost" type="button" data-customer-close>Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
     </form>
   </dialog>
 
-  <dialog id="purchase-dialog" class="modal narrow">
+  <dialog id="purchase-dialog" class="modal narrow" aria-labelledby="purchase-dialog-title">
     <form id="purchase-form" class="entity-form">
-      <div class="modal-heading"><div><p class="eyebrow">Approvisionnement</p><h2>Bon d'achat</h2></div><button class="icon-button" type="button" data-procurement-close="purchase-dialog">×</button></div>
+      <div class="modal-heading"><div><p class="eyebrow">Approvisionnement</p><h2 id="purchase-dialog-title">Bon d'achat</h2></div><button class="icon-button" type="button" data-procurement-close="purchase-dialog" aria-label="Fermer">×</button></div>
       <input name="id" type="hidden"><input name="version" type="hidden">
       <div class="form-grid single"><label class="procurement-root" hidden>Librairie<select name="libraryId"></select></label><label>Fournisseur<select name="supplierId" required></select></label></div>
       <div class="sale-lines-heading"><div><strong>Livres commandés</strong><p class="hint">Chaque livre ne peut apparaître qu'une fois.</p></div><button id="add-purchase-line-button" class="button ghost" type="button">Ajouter une ligne</button></div>
       <div id="purchase-lines" class="sale-lines"></div>
       <div class="sale-summary"><span>Total prévisionnel</span><strong id="purchase-estimated-total">0 F CFA</strong></div>
-      <p id="purchase-error" class="alert" hidden></p><div class="modal-actions"><button class="button ghost" type="button" data-procurement-close="purchase-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer le brouillon</button></div>
+      <p id="purchase-error" class="alert" hidden role="alert"></p><div class="modal-actions"><button class="button ghost" type="button" data-procurement-close="purchase-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer le brouillon</button></div>
     </form>
   </dialog>
 
@@ -513,32 +514,32 @@
     </div>
   </template>
 
-  <dialog id="purchase-detail-dialog" class="modal receipt-modal">
+  <dialog id="purchase-detail-dialog" class="modal receipt-modal" aria-labelledby="purchase-detail-reference">
     <div class="entity-form"><div id="purchase-receipt" class="sale-receipt">
       <div class="receipt-header"><div><p class="eyebrow">Bon d'achat</p><h2 id="purchase-detail-reference">Achat</h2></div><span id="purchase-detail-status" class="pill">—</span></div>
       <div class="receipt-meta"><p><span>Fournisseur</span><strong id="purchase-detail-supplier">—</strong></p><p><span>Créé le</span><strong id="purchase-detail-created">—</strong></p><p><span>Traité le</span><strong id="purchase-detail-transition">—</strong></p></div>
-      <div class="table-wrap"><table><thead><tr><th>Livre</th><th>Quantité</th><th>Coût unitaire</th><th>Total</th></tr></thead><tbody id="purchase-detail-lines"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Livre</th><th scope="col">Quantité</th><th scope="col">Coût unitaire</th><th scope="col">Total</th></tr></thead><tbody id="purchase-detail-lines"></tbody></table></div>
       <div class="receipt-total"><span>Total</span><strong id="purchase-detail-total">0 F CFA</strong></div>
       <p class="receipt-note">Les titres et coûts correspondent aux valeurs enregistrées dans le bon d'achat.</p>
-    </div><p id="purchase-detail-error" class="alert" hidden></p><div class="modal-actions no-print"><button class="button ghost" type="button" data-procurement-close="purchase-detail-dialog">Fermer</button><button id="print-purchase-button" class="button primary" type="button">Imprimer</button></div></div>
+    </div><p id="purchase-detail-error" class="alert" hidden role="alert"></p><div class="modal-actions no-print"><button class="button ghost" type="button" data-procurement-close="purchase-detail-dialog">Fermer</button><button id="print-purchase-button" class="button primary" type="button">Imprimer</button></div></div>
   </dialog>
 
-  <dialog id="cash-register-dialog" class="modal narrow">
+  <dialog id="cash-register-dialog" class="modal narrow" aria-labelledby="cash-register-form-title">
     <form id="cash-register-form" class="entity-form">
-      <div class="modal-heading"><div><p class="eyebrow">Trésorerie</p><h2 id="cash-register-form-title">Nouvelle caisse</h2></div><button class="icon-button" type="button" data-payment-close="cash-register-dialog">×</button></div>
+      <div class="modal-heading"><div><p class="eyebrow">Trésorerie</p><h2 id="cash-register-form-title">Nouvelle caisse</h2></div><button class="icon-button" type="button" data-payment-close="cash-register-dialog" aria-label="Fermer">×</button></div>
       <input name="id" type="hidden"><input name="version" type="hidden">
       <div class="form-grid single">
         <label class="payment-root" hidden>Librairie<select name="libraryId"></select></label>
         <label>Nom de la caisse<input name="name" minlength="2" maxlength="80" required></label>
       </div>
-      <p id="cash-register-error" class="alert" hidden></p>
+      <p id="cash-register-error" class="alert" hidden role="alert"></p>
       <div class="modal-actions"><button class="button ghost" type="button" data-payment-close="cash-register-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
     </form>
   </dialog>
 
-  <dialog id="payment-dialog" class="modal narrow">
+  <dialog id="payment-dialog" class="modal narrow" aria-labelledby="payment-dialog-title">
     <form id="payment-form" class="entity-form">
-      <div class="modal-heading"><div><p class="eyebrow">Encaissement</p><h2>Nouveau règlement</h2></div><button class="icon-button" type="button" data-payment-close="payment-dialog">×</button></div>
+      <div class="modal-heading"><div><p class="eyebrow">Encaissement</p><h2 id="payment-dialog-title">Nouveau règlement</h2></div><button class="icon-button" type="button" data-payment-close="payment-dialog" aria-label="Fermer">×</button></div>
       <div class="form-grid">
         <label class="full">Caisse<select name="cashRegisterId" required></select></label>
         <label>Méthode<select name="method" required><option value="CASH">Espèces</option><option value="MOBILE_MONEY">Mobile money</option><option value="CARD">Carte</option></select></label>
@@ -546,12 +547,12 @@
         <label class="full">Référence externe<input name="externalReference" maxlength="160" placeholder="Transaction mobile money ou carte"></label>
         <label class="full">Notes<textarea name="notes" maxlength="1000" rows="3"></textarea></label>
       </div>
-      <p id="payment-form-error" class="alert" hidden></p>
+      <p id="payment-form-error" class="alert" hidden role="alert"></p>
       <div class="modal-actions"><button class="button ghost" type="button" data-payment-close="payment-dialog">Annuler</button><button class="button primary" type="submit">Encaisser</button></div>
     </form>
   </dialog>
 
-  <dialog id="return-detail-dialog" class="modal return-modal">
+  <dialog id="return-detail-dialog" class="modal return-modal" aria-labelledby="return-detail-title">
     <div class="entity-form">
       <div class="modal-heading"><div><p class="eyebrow">Retour client</p><h2 id="return-detail-title">Détails du retour</h2></div><button class="icon-button" type="button" data-return-close="return-detail-dialog" aria-label="Fermer">×</button></div>
       <div id="return-balance" class="payment-balance" hidden>
@@ -560,14 +561,14 @@
         <p data-refund-capacity-note class="hint"></p>
         <button id="add-return-settlement-button" class="button primary" type="button">Régler</button>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Date</th><th>Méthode</th><th>Montant</th><th>Référence</th><th>État</th><th>Actions</th></tr></thead><tbody id="return-settlements-body"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th scope="col">Date</th><th scope="col">Méthode</th><th scope="col">Montant</th><th scope="col">Référence</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead><tbody id="return-settlements-body"></tbody></table></div>
       <div class="modal-actions"><button class="button ghost" type="button" data-return-close="return-detail-dialog">Fermer</button></div>
     </div>
   </dialog>
 
-  <dialog id="return-dialog" class="modal sale-modal">
+  <dialog id="return-dialog" class="modal sale-modal" aria-labelledby="return-dialog-title">
     <form id="return-form" class="entity-form">
-      <div class="modal-heading"><div><p class="eyebrow">Service après-vente</p><h2>Nouveau retour client</h2></div><button class="icon-button" type="button" data-return-close="return-dialog" aria-label="Fermer">×</button></div>
+      <div class="modal-heading"><div><p class="eyebrow">Service après-vente</p><h2 id="return-dialog-title">Nouveau retour client</h2></div><button class="icon-button" type="button" data-return-close="return-dialog" aria-label="Fermer">×</button></div>
       <div class="form-grid">
         <label class="return-root" hidden>Librairie<select name="libraryId"></select></label>
         <label class="full">Vente confirmée<select name="saleId" required><option value="">Choisir une vente</option></select></label>
@@ -580,9 +581,9 @@
     </form>
   </dialog>
 
-  <dialog id="return-settlement-dialog" class="modal narrow">
+  <dialog id="return-settlement-dialog" class="modal narrow" aria-labelledby="return-settlement-dialog-title">
     <form id="return-settlement-form" class="entity-form">
-      <div class="modal-heading"><div><p class="eyebrow">Règlement du retour</p><h2>Remboursement ou avoir</h2></div><button class="icon-button" type="button" data-return-close="return-settlement-dialog" aria-label="Fermer">×</button></div>
+      <div class="modal-heading"><div><p class="eyebrow">Règlement du retour</p><h2 id="return-settlement-dialog-title">Remboursement ou avoir</h2></div><button class="icon-button" type="button" data-return-close="return-settlement-dialog" aria-label="Fermer">×</button></div>
       <div class="form-grid">
         <label>Méthode<select name="method" required><option value="CASH">Espèces</option><option value="MOBILE_MONEY">Mobile money</option><option value="CARD">Carte</option><option value="CREDIT_NOTE">Avoir</option></select></label>
         <label>Montant<input name="amount" type="number" min="0.01" step="0.01" required></label>

@@ -1482,3 +1482,23 @@ Créer le répertoire parent au préalable. Python 3.10+ avec SQLite/FTS5 est re
 sur Linux/WSL. La recette automatisée utilise uniquement des bases temporaires.
 Aucune migration ni route HTTP n’est ajoutée. Ne modifier DB_PATH qu’en suivant
 la procédure de maintenance et conserver l’ancienne base pour le retour arrière.
+
+
+### Accessibilité des dialogues de l’administration
+
+Les 20 dialogues de `/admin`, y compris le retour fournisseur créé en JavaScript,
+ont un titre accessible. Les boutons × portent le nom « Fermer », les messages
+d’erreur utilisent `role="alert"` et les en-têtes de tableaux indiquent leur
+portée de colonne. Le lien « Aller au contenu principal » apparaît au clavier
+et les contrôles disposent d’un indicateur de focus visible.
+
+```bash
+python3 scripts/check-admin-accessibility.py
+node --check static/js/admin-supplier-returns.js
+```
+
+La [recette clavier](docs/FRONTEND_ACCESSIBILITY.md) couvre ouverture, fermeture,
+retour de focus, erreurs et impressions. Le contrôle Python est structurel ;
+il ne remplace pas les tests navigateur/lecteur d’écran. Les erreurs globales
+et les tests navigateur automatisés restent à finaliser dans la priorité 12.
+Aucune migration ni modification de l’API.
