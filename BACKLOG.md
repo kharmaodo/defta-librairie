@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 10 septembre 2026 sur `develop`, commit `ce29ebc`
-(fusion des métriques HTTP et logs structurés, PR #30). Les douze priorités et leurs éléments
+État consolidé le 10 septembre 2026 sur `develop`, commit `35e3af9`
+(fusion de la restauration SQLite, PR #31). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -24,28 +24,25 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 8 | Exports | CSV des stocks, ventes, achats, fournisseurs et audit | Réalisé | Cinq exports validés et fusionnés. Audit limité aux événements propres du propriétaire, global pour root. |
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
-| 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Partiel | Sondes fusionnées (PR #29), métriques HTTP et logs JSON fusionnés (PR #30). Restauration et six tests Python validés ; fusion restante. Organisation de la collecte/rétention et objectifs de reprise à cadrer avec l’exploitant. |
-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Modules JavaScript métier déjà séparés. Harmoniser les erreurs, revoir l’accessibilité et intégrer les tests navigateur. Les recettes Go/HTTP ne couvrent pas le rendu visuel. |
+| 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
+| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité structurelle des 20 dialogues ajoutée ; recette clavier et fusion à valider. Erreurs globales, suite du découpage JavaScript et tests navigateur automatisés restent à finaliser. |
 
-## Incrément à fusionner : restauration SQLite (priorité 11)
+## Incrément en validation : accessibilité des dialogues (priorité 12)
 
-Les sondes live/ready sont fusionnées (PR #29, `7ac84bb`). Les métriques HTTP
-et logs JSON sont également fusionnés (PR #30, `ce29ebc`). L’accès root aux
-métriques et le refus propriétaire ont été vérifiés.
+La restauration est fusionnée (PR #31, `35e3af9`). Les livrables de la priorité
+11 sont intégrés et validés. La préparation du déploiement reste à organiser :
+objectifs de reprise, conservation des sauvegardes hors machine et rétention
+des logs. Cela ne constitue pas une validation de restauration en production.
 
-La restauration vers un nouveau fichier, ses six tests Python et sa procédure
-de bascule/retour arrière sont validés. Cet incrément les intègre sur la base
-actualisée de develop, sans retirer la documentation des métriques. Sa fusion
-reste à effectuer. Aucun test de restauration en production n’est présumé.
-
-Après cette fusion, vérifier les livrables de la priorité 11 et poursuivre la
-qualité frontend (priorité 12). Les objectifs de reprise, la conservation des
-sauvegardes hors machine et la rétention des logs restent des décisions de
-préparation à l’exploitation, distinctes de la recette sur bases temporaires.
+Cet incrément ajoute les titres accessibles aux 20 dialogues, les noms des
+boutons de fermeture, les rôles d’erreur, les en-têtes de colonnes, un lien
+d’évitement et le focus visible. Les contrôles structurels et syntaxiques passent.
+La recette clavier/navigateur et la fusion restent à valider. L’harmonisation
+des erreurs globales et les tests navigateur automatisés restent à développer.
 
 ## Ordre de poursuite
 
-Finaliser la priorité 11, puis poursuivre la priorité 12. Les tests et la
+Finaliser les incréments de la priorité 12. Les tests et la
 qualité des nouveaux écrans s’appliquent à chaque incrément, sans attendre la ligne 12.
 
 La règle livrée pour les alertes reste explicite : les achats DRAFT sont des
@@ -74,6 +71,7 @@ achats en brouillon ; aucun état SENT ou ORDERED n’est présumé.
 | Stock et alertes existantes | `internal/repositories/business_alert_repository.go`, `internal/services/business_alert_service_test.go`, `internal/handlers/business_alerts_test.go`, `static/js/admin-business-alerts.js` |
 | Documentation API | `static/openapi.json`, `static/api-docs.html`, `docs/API_EXAMPLES.md`, `cmd/openapi_contract_test.go`, `scripts/check-openapi.py` |
 | Paramétrage livré | `internal/migrations/sql/023_create_library_settings.sql`, `internal/services/library_settings_service_test.go`, `static/js/admin-library-settings.js` |
+| Accessibilité frontend | `templates/admin.html`, `static/js/admin-supplier-returns.js`, `scripts/check-admin-accessibility.py`, `docs/FRONTEND_ACCESSIBILITY.md` |
 | Exploitation existante | `scripts/backup-db.sh`, `scripts/restore-db.py`, `scripts/test-restore-db.py`, `docs/SQLITE_RESTORE.md`, `internal/middleware/observability.go`, `cmd/main.go` |
 
 ## Mise à jour après chaque validation

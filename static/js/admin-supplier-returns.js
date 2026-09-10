@@ -12,10 +12,10 @@
     </form>
     <p class="alert" role="alert" data-error hidden></p>
     <p class="scope-note">Expédier retire les quantités du stock. Un retour expédié reste conservé dans l’historique.</p>
-    <div class="table-wrap"><table><thead><tr><th>Référence</th><th>Motif</th><th>Total</th><th>État</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th scope="col">Référence</th><th scope="col">Motif</th><th scope="col">Total</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead><tbody></tbody></table></div>
     <div class="pagination"><button class="button ghost" data-prev>Précédent</button><span data-page></span><button class="button ghost" data-next>Suivant</button></div>
-    <dialog class="modal sale-modal"><form class="entity-form" data-editor>
-      <h2 data-title>Nouveau retour fournisseur</h2>
+    <dialog class="modal sale-modal" aria-labelledby="supplier-return-form-title"><form class="entity-form" data-editor>
+      <h2 data-title id="supplier-return-form-title">Nouveau retour fournisseur</h2>
       <div class="form-grid">
         <label data-root hidden>Librairie<select name="libraryId"></select></label>
         <label class="full">Achat réceptionné<select name="purchaseId" required></select></label>
