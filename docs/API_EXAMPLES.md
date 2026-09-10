@@ -1261,3 +1261,11 @@ Sonde publique, sans JWT. Cache-Control: no-store. Lit libraries et schema_migra
 ```bash
 curl --fail-with-body -sS "${BASE_URL}/api/health/ready"
 ```
+
+### GET /api/admin/metrics
+
+SUPER_ADMIN_ROOT uniquement, session active et mot de passe changé. Compteurs en mémoire remis à zéro au redémarrage. La requête de métriques courante est incluse dans inFlight, pas encore dans completed. Aucun identifiant métier, corps ou paramètre URL. Durées cumulées et maximales en secondes. Pas de percentiles ni de persistance.
+
+```bash
+curl --fail-with-body -sS "${BASE_URL}/api/admin/metrics" -H "Authorization: Bearer ${TOKEN}"
+```
