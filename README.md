@@ -1417,3 +1417,24 @@ trafic. La lecture ne teste pas les écritures, l’espace disque, l’intégrit
 complète ou les restaurations. Ne pas déplacer la base active pour simuler une
 panne : les tests utilisent une base temporaire, fermeture de connexion et
 saturation du pool avec expiration du contexte. Aucune nouvelle migration.
+
+
+### Restauration SQLite vers un nouveau fichier
+
+La procédure complète est dans [docs/SQLITE_RESTORE.md](docs/SQLITE_RESTORE.md).
+Elle couvre préparation, maintenance, bascule par DB_PATH, recette et retour
+arrière. Le script restaure une sauvegarde vers un nom neuf, vérifie intégrité,
+clés étrangères et schéma, puis affiche l’empreinte du fichier restauré. Il
+n’arrête pas le serveur et ne remplace jamais la base active.
+
+```bash
+python3 scripts/test-restore-db.py
+# Préparation d’une restauration ; adapter les chemins, destination inexistante.
+python3 scripts/restore-db.py ./data/backups/SAUVEGARDE.db \
+  --output ./data/restores/NOUVEAU_FICHIER.db
+```
+
+Créer le répertoire parent au préalable. Python 3.10+ avec SQLite/FTS5 est requis
+sur Linux/WSL. La recette automatisée utilise uniquement des bases temporaires.
+Aucune migration ni route HTTP n’est ajoutée. Ne modifier DB_PATH qu’en suivant
+la procédure de maintenance et conserver l’ancienne base pour le retour arrière.

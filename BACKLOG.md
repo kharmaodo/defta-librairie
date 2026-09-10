@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 10 septembre 2026 sur `develop`, commit `2cff7be`
-(fusion de la documentation OpenAPI, PR #27). Les douze priorités et leurs éléments
+État consolidé le 10 septembre 2026 sur `develop`, commit `7ac84bb`
+(fusion des contrôles de santé, PR #29). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -24,20 +24,21 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 8 | Exports | CSV des stocks, ventes, achats, fournisseurs et audit | Réalisé | Cinq exports validés et fusionnés. Audit limité aux événements propres du propriétaire, global pour root. |
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
-| 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Partiel | Sondes live/ready implémentées dans cet incrément ; tests Go et recette à valider. Métriques, logs structurés et restauration testée restent à finaliser. |
+| 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Partiel | Sondes fusionnées (PR #29). Métriques et logs livrés en patch, accès root/propriétaire validés, fusion non constatée. Restauration et six tests Python ajoutés ; recette locale et fusion à valider. RPO/RTO, conservation hors machine et rétention des logs à cadrer avec l’exploitant. |
 | 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Modules JavaScript métier déjà séparés. Harmoniser les erreurs, revoir l’accessibilité et intégrer les tests navigateur. Les recettes Go/HTTP ne couvrent pas le rendu visuel. |
 
-## Incrément en validation : contrôles de santé (priorité 11)
+## Incrément en validation : restauration SQLite (priorité 11)
 
-La documentation OpenAPI est validée et fusionnée (PR #27, `2cff7be`).
-Les sondes publiques live/ready sont ajoutées, avec lecture SQLite bornée par
-un contexte de deux secondes et retrait de disponibilité avant l’arrêt gracieux.
-Le contrat et les exemples couvrent désormais 95 opérations API.
-Tests Go et recette locale restent à valider avant fusion de cet incrément.
+Les sondes sont fusionnées (PR #29, `7ac84bb`). Les métriques/logs ont été livrés
+et l’accès root/propriétaire aux métriques a été validé ; leur fusion n’est pas
+encore visible dans origin/develop lors de cette vérification.
 
-Les sondes ne certifient ni l’intégrité complète, ni la capacité d’écriture,
-ni la restauration. Les métriques, logs structurés et restauration testée
-restent des travaux de la priorité 11.
+La restauration vers un nouveau fichier, les contrôles d’intégrité et de clés
+étrangères, la procédure de bascule et le retour arrière sont ajoutés. Six tests
+Python passent sur des bases temporaires, dont une écriture encore dans le WAL.
+La recette locale et la fusion de cet incrément restent à valider. La préparation
+opérationnelle (objectifs de reprise, sauvegarde hors machine, rétention) reste
+à cadrer ; aucun test de restauration réelle en production n’est présumé.
 
 ## Ordre de poursuite
 
@@ -70,7 +71,7 @@ achats en brouillon ; aucun état SENT ou ORDERED n’est présumé.
 | Stock et alertes existantes | `internal/repositories/business_alert_repository.go`, `internal/services/business_alert_service_test.go`, `internal/handlers/business_alerts_test.go`, `static/js/admin-business-alerts.js` |
 | Documentation API | `static/openapi.json`, `static/api-docs.html`, `docs/API_EXAMPLES.md`, `cmd/openapi_contract_test.go`, `scripts/check-openapi.py` |
 | Paramétrage livré | `internal/migrations/sql/023_create_library_settings.sql`, `internal/services/library_settings_service_test.go`, `static/js/admin-library-settings.js` |
-| Exploitation existante | `scripts/backup-db.sh`, `cmd/main.go` |
+| Exploitation existante | `scripts/backup-db.sh`, `scripts/restore-db.py`, `scripts/test-restore-db.py`, `docs/SQLITE_RESTORE.md`, `cmd/main.go` |
 
 ## Mise à jour après chaque validation
 
