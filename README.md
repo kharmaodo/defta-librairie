@@ -1511,3 +1511,7 @@ Le client HTTP commun couvre également les clients, l’approvisionnement,
 les paiements/caisses et les retours clients/fournisseurs, avec des messages
 français pour les refus métier. La recette est détaillée dans
 [FRONTEND_HTTP.md](docs/FRONTEND_HTTP.md).
+
+Le découpage du tableau de bord commence par le journal d’audit dans
+`admin-audit.js`. Le fonctionnement et la recette sont décrits dans
+[FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).

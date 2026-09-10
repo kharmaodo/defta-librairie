@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 10 septembre 2026 sur `develop`, commit `0e79f71`
-(intégration du client HTTP commun, commit `0f75673`). Les douze priorités et leurs éléments
+État consolidé le 10 septembre 2026 sur `develop`, commit `f08f067`
+(fusion des erreurs métier, PR #33). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -25,21 +25,22 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
 | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP commun validé et intégré pour cinq écrans. Migration des modules métier en validation ; module principal, suite du découpage et tests navigateur automatisés restent à finaliser. |
+| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP commun validé et intégré pour cinq écrans. Erreurs des cinq modules métier validées et fusionnées (PR #33). Extraction du journal d’audit en validation ; suite du découpage, migration HTTP du module principal et tests navigateur automatisés restent à finaliser. |
 
-## Incrément en validation : erreurs des modules métier (priorité 12)
+## Incrément en validation : extraction du journal d’audit (priorité 12)
 
-Le client HTTP commun des cinq écrans récents est validé et intégré dans
-`develop` (`0f75673`). Cet incrément migre les clients, l’approvisionnement,
-les paiements/caisses, les retours clients/remboursements et les retours
-fournisseurs. Les refus métier reçoivent des messages français précis d’après
-le couple statut HTTP/code, sans exposer les messages bruts du serveur.
-Les tests automatisés du client sont étendus ; recette navigateur et fusion
-restent à valider pour cet incrément.
+Les erreurs des cinq modules métier sont validées et fusionnées (PR #33).
+Cet incrément déplace le rendu, les filtres, la pagination et leur état dans
+`admin-audit.js`. Le tableau de bord crée le module et lui fournit son client
+HTTP existant : le renouvellement de session et les rechargements après les
+opérations métier restent conservés. Le module ne démarre pas sur la page login.
+Les tests Node couvrent les filtres, les pages, les erreurs et le branchement.
+La recette navigateur et la fusion de cet incrément restent à valider.
 
-Le module principal `admin-auth.js` reste à découper et à migrer avec les
-précautions propres à la connexion et au renouvellement de session. Les tests
-navigateur automatisés restent à finaliser.
+Restent les autres responsabilités de `admin-auth.js` (sessions, propriétaires,
+livres, stocks, ventes), la migration HTTP compatible avec l’authentification
+et la suite de tests navigateur automatisés. La priorité 12 reste partielle.
+
 La priorité 11 est réalisée dans le périmètre livré ; objectifs de reprise,
 sauvegardes hors machine et rétention des logs restent des décisions de déploiement.
 

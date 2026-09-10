@@ -4,7 +4,7 @@
   const ACCESS_KEY = "defta.accessToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
-  const state = {isRoot: false, passwordChangeRequired: false, owners: [], ownerOptions: [], books: [], sales: [], saleBooks: [], saleCustomers: [], inventory: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", saleOffset: 0, saleLimit: 10, inventoryOffset: 0, inventoryLimit: 10, auditOffset: 0, auditLimit: 20, sessionOffset: 0, sessionLimit: 20};
+  const state = {isRoot: false, passwordChangeRequired: false, owners: [], ownerOptions: [], books: [], sales: [], saleBooks: [], saleCustomers: [], inventory: [], tags: [], currentSessionId: "", ownerOffset: 0, ownerLimit: 10, bookOffset: 0, bookLimit: 10, bookQuery: "", saleOffset: 0, saleLimit: 10, inventoryOffset: 0, inventoryLimit: 10, sessionOffset: 0, sessionLimit: 20};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
@@ -47,6 +47,9 @@
     }
     return json(response);
   }
+
+  let audit;
+  const reloadAudit = () => audit.reload();
 
   function textCell(row, value, className) {
     const cell = row.insertCell();
@@ -213,29 +216,6 @@
     document.querySelector("#sales-page-label").textContent = `Page ${page} sur ${pages}`;
     document.querySelector("#sales-previous").disabled = payload.offset === 0;
     document.querySelector("#sales-next").disabled = payload.offset + payload.results.length >= payload.total;
-  }
-
-  function renderAudit(payload) {
-    document.querySelector("#audit-total").textContent = payload.total;
-    const body = document.querySelector("#audit-body");
-    body.replaceChildren();
-    if (!payload.results.length) {
-      const row = body.insertRow(); textCell(row, "Aucun événement correspondant", "empty").colSpan = 6;
-    } else payload.results.forEach((entry) => {
-      const row = body.insertRow();
-      const parsedDate = new Date(entry.createdAt);
-      textCell(row, Number.isNaN(parsedDate.getTime()) ? entry.createdAt : parsedDate.toLocaleString("fr-FR"));
-      textCell(row, entry.action);
-      textCell(row, entry.actorUsername || entry.actorUserId || "Système");
-      textCell(row, `${entry.resourceType}${entry.resourceId ? ` · ${entry.resourceId}` : ""}`);
-      textCell(row, entry.success ? "Succès" : "Échec", entry.success ? "pill" : "pill failure");
-      textCell(row, entry.ipAddress);
-    });
-    const page = Math.floor(payload.offset / payload.limit) + 1;
-    const pages = Math.max(1, Math.ceil(payload.total / payload.limit));
-    document.querySelector("#audit-page-label").textContent = `Page ${page} sur ${pages}`;
-    document.querySelector("#audit-previous").disabled = payload.offset === 0;
-    document.querySelector("#audit-next").disabled = payload.offset + payload.results.length >= payload.total;
   }
 
   function renderSessions(payload) {
@@ -682,25 +662,6 @@
     renderTags(await apiFetch(`/api/manage/tags?${query}`));
   }
 
-  async function reloadAudit() {
-    const form = document.querySelector("#audit-filters");
-    const query = new URLSearchParams({offset: String(state.auditOffset), limit: String(state.auditLimit)});
-    ["actor", "action", "resourceType", "resourceId", "success"].forEach((name) => {
-      const value = form.elements[name].value.trim();
-      if (value) query.set(name, value);
-    });
-    ["from", "to"].forEach((name) => {
-      const value = form.elements[name].value;
-      if (value) query.set(name, new Date(value).toISOString());
-    });
-    const payload = await apiFetch(`/api/audit-logs?${query}`);
-    if (!payload.results.length && state.auditOffset > 0) {
-      state.auditOffset = Math.max(0, state.auditOffset - state.auditLimit);
-      return reloadAudit();
-    }
-    renderAudit(payload);
-  }
-
   async function reloadSessions() {
     const form = document.querySelector("#session-filters");
     const query = new URLSearchParams({offset: String(state.sessionOffset), limit: String(state.sessionLimit)});
@@ -732,13 +693,6 @@
       form.reset();
       document.querySelector("#password-form-error").hidden = true;
       document.querySelector("#password-dialog").showModal();
-    });
-    document.querySelector("#audit-filters").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      state.auditOffset = 0;
-      errorBox.hidden = true;
-      try { await reloadAudit(); }
-      catch (error) { showError(errorBox, error); }
     });
     document.querySelector("#inventory-filters").addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -812,14 +766,6 @@
         if (!id) state.saleOffset = 0;
         await Promise.all([reloadSales(), reloadAudit()]);
       } catch (error) { showError(formError, error); }
-    });
-    document.querySelector("#audit-previous").addEventListener("click", async () => {
-      state.auditOffset = Math.max(0, state.auditOffset - state.auditLimit);
-      try { await reloadAudit(); } catch (error) { showError(errorBox, error); }
-    });
-    document.querySelector("#audit-next").addEventListener("click", async () => {
-      state.auditOffset += state.auditLimit;
-      try { await reloadAudit(); } catch (error) { showError(errorBox, error); }
     });
     document.querySelector("#owner-filters").addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -1145,6 +1091,8 @@
     }
     document.querySelector("#logout-button").addEventListener("click", logout);
     const errorBox = document.querySelector("#dashboard-error");
+    audit = window.DeftaAudit.create({apiFetch, textCell, showError, errorBox});
+    audit.init();
     initEntityForms(errorBox);
     try {
       const user = await apiFetch("/api/auth/me");
