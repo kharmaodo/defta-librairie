@@ -4,7 +4,7 @@
   const ACCESS_KEY = "defta.accessToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
-  const state = {isRoot: false, passwordChangeRequired: false, books: [], sales: [], saleBooks: [], saleCustomers: [], inventory: [], tags: [], bookOffset: 0, bookLimit: 10, bookQuery: "", saleOffset: 0, saleLimit: 10, inventoryOffset: 0, inventoryLimit: 10};
+  const state = {isRoot: false, passwordChangeRequired: false, sales: [], saleBooks: [], saleCustomers: [], inventory: [], tags: [], saleOffset: 0, saleLimit: 10, inventoryOffset: 0, inventoryLimit: 10};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
@@ -48,7 +48,8 @@
     return json(response);
   }
 
-  let audit, sessions, owners;
+  let audit, sessions, owners, books;
+  const reloadBooks = () => books.reload();
   const reloadOwners = () => owners.reload();
   const reloadOwnerOptions = () => owners.reloadOptions();
   const reloadSessions = () => sessions.reload();
@@ -108,31 +109,6 @@
         button.disabled = false;
       }
     });
-  }
-
-  function renderBooks(payload) {
-    state.books = payload.results;
-    document.querySelector("#book-total").textContent = payload.total;
-    const body = document.querySelector("#books-body");
-    body.replaceChildren();
-    if (!payload.results.length) {
-      const row = body.insertRow(); textCell(row, "Aucun livre dans ce périmètre", "empty").colSpan = 6;
-    } else {
-      payload.results.forEach((book) => {
-        const row = body.insertRow();
-        textCell(row, book.title); textCell(row, book.auteur);
-        textCell(row, new Intl.NumberFormat("fr-FR").format(book.price || 0));
-        textCell(row, book.tags); textCell(row, book.status, "pill");
-        const actions = textCell(row, "");
-        actions.className = "row-actions";
-        actions.replaceChildren(actionButton("Historique", "history-book", book.id), actionButton("Modifier", "edit-book", book.id), actionButton("Supprimer", "delete-book", book.id, true));
-      });
-    }
-    const page = Math.floor(payload.offset / payload.limit) + 1;
-    const pages = Math.max(1, Math.ceil(payload.total / payload.limit));
-    document.querySelector("#books-page-label").textContent = `Page ${page} sur ${pages}`;
-    document.querySelector("#books-previous").disabled = payload.offset === 0;
-    document.querySelector("#books-next").disabled = payload.offset + payload.results.length >= payload.total;
   }
 
   function renderInventory(payload) {
@@ -227,67 +203,6 @@
     suggestions.replaceChildren(...payload.results.map((tag) => {
       const option = document.createElement("option"); option.value = tag.name; return option;
     }));
-  }
-
-  function openBookForm(book = null) {
-    const dialog = document.querySelector("#book-dialog");
-    const form = document.querySelector("#book-form");
-    form.reset();
-    form.elements.id.value = book ? book.id : "";
-    form.elements.version.value = book ? book.version : "";
-    form.elements.title.value = book ? book.title : "";
-    form.elements.auteur.value = book ? book.auteur || "" : "";
-    form.elements.editeur.value = book ? book.editeur || "" : "";
-    form.elements.price.value = book ? book.price : 0;
-    form.elements.volume.value = book ? book.volume : 0;
-    form.elements.status.value = book ? book.status || "AVAILABLE" : "AVAILABLE";
-    form.elements.categorie.value = book ? book.categorie || "" : "";
-    form.elements.tags.value = book ? book.tags || "" : "";
-    form.elements.coverUrl.value = book ? book.coverUrl || "" : "";
-    form.elements.libraryId.value = book ? book.libraryId || "" : "";
-    form.elements.libraryId.disabled = Boolean(book);
-    if (state.isRoot) {
-      document.querySelector("#tag-library").value = form.elements.libraryId.value;
-      reloadTags().catch(() => renderTags({results: [], total: 0}));
-    }
-    document.querySelector("#book-form-title").textContent = book ? "Modifier le livre" : "Nouveau livre";
-    document.querySelector("#book-form-error").hidden = true;
-    dialog.showModal();
-  }
-
-  function bookPayload(form) {
-    const payload = {
-      title: form.elements.title.value,
-      auteur: form.elements.auteur.value,
-      editeur: form.elements.editeur.value,
-      price: Number(form.elements.price.value),
-      volume: Number(form.elements.volume.value),
-      status: form.elements.status.value,
-      tags: form.elements.tags.value,
-      categorie: form.elements.categorie.value,
-      coverUrl: form.elements.coverUrl.value
-    };
-    if (state.isRoot && form.elements.libraryId.value) payload.libraryId = form.elements.libraryId.value;
-    if (form.elements.id.value) payload.version = Number(form.elements.version.value);
-    return payload;
-  }
-
-  async function openBookHistory(book) {
-    const payload = await apiFetch(`/api/manage/books/${book.id}/history?offset=0&limit=100`);
-    document.querySelector("#book-history-title").textContent = `Historique · ${book.title}`;
-    const body = document.querySelector("#book-history-body");
-    body.replaceChildren();
-    if (!payload.results.length) {
-      const row = body.insertRow(); textCell(row, "Aucune évolution enregistrée", "empty").colSpan = 5;
-    } else payload.results.forEach((entry) => {
-      const row = body.insertRow();
-      textCell(row, formatDate(entry.createdAt));
-      textCell(row, entry.actorUsername || entry.actorUserId || "Système");
-      textCell(row, entry.action, "pill");
-      textCell(row, entry.oldValues || "—", "audit-json");
-      textCell(row, entry.newValues || "—", "audit-json");
-    });
-    document.querySelector("#book-history-dialog").showModal();
   }
 
   function openInventoryForm(item) {
@@ -492,17 +407,6 @@
     document.querySelector("#inventory-history-dialog").showModal();
   }
 
-  async function reloadBooks() {
-    const query = new URLSearchParams({offset: String(state.bookOffset), limit: String(state.bookLimit)});
-    if (state.bookQuery) query.set("q", state.bookQuery);
-    const payload = await apiFetch(`/api/manage/books?${query}`);
-    if (!payload.results.length && state.bookOffset > 0) {
-      state.bookOffset = Math.max(0, state.bookOffset - state.bookLimit);
-      return reloadBooks();
-    }
-    renderBooks(payload);
-  }
-
   async function reloadInventory() {
     const form = document.querySelector("#inventory-filters");
     const query = new URLSearchParams({offset: String(state.inventoryOffset), limit: String(state.inventoryLimit)});
@@ -554,7 +458,6 @@
       if (state.passwordChangeRequired) event.preventDefault();
     });
     document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => document.querySelector(`#${button.dataset.close}`).close()));
-    document.querySelector("#add-book-button").addEventListener("click", () => openBookForm());
     document.querySelector("#add-sale-button").addEventListener("click", async () => {
       try { await openSaleForm(); } catch (error) { showError(errorBox, error); }
     });
@@ -638,24 +541,10 @@
       } catch (error) { showError(formError, error); }
     });
 
-
-
-    document.querySelector("#book-search-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      state.bookQuery = event.currentTarget.elements.q.value.trim();
-      state.bookOffset = 0;
-      errorBox.hidden = true;
-      try { await reloadBooks(); }
-      catch (error) { showError(errorBox, error); }
-    });
     document.querySelector("#tag-library").addEventListener("change", async () => {
       try { await reloadTags(); } catch (error) { showError(errorBox, error); }
     });
-    document.querySelector("#book-form [name=libraryId]").addEventListener("change", async (event) => {
-      if (!state.isRoot) return;
-      document.querySelector("#tag-library").value = event.currentTarget.value;
-      try { await reloadTags(); } catch (error) { showError(errorBox, error); }
-    });
+
     document.querySelector("#tag-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
@@ -676,14 +565,7 @@
       try { await apiFetch(`/api/manage/tags/${tag.id}`, {method: "DELETE"}); await Promise.all([reloadTags(), reloadAudit()]); }
       catch (error) { showError(errorBox, error); }
     });
-    document.querySelector("#books-previous").addEventListener("click", async () => {
-      state.bookOffset = Math.max(0, state.bookOffset - state.bookLimit);
-      try { await reloadBooks(); } catch (error) { showError(errorBox, error); }
-    });
-    document.querySelector("#books-next").addEventListener("click", async () => {
-      state.bookOffset += state.bookLimit;
-      try { await reloadBooks(); } catch (error) { showError(errorBox, error); }
-    });
+
     document.querySelector("#password-form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
@@ -700,29 +582,6 @@
         });
         tokens.clear();
         window.location.replace("/login?passwordChanged=1");
-      } catch (error) { showError(formError, error); }
-    });
-
-
-
-
-
-    document.querySelector("#book-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const formError = document.querySelector("#book-form-error");
-      formError.hidden = true;
-      const id = form.elements.id.value;
-      if (state.isRoot && !id && !form.elements.libraryId.value) {
-        showError(formError, new Error("Choisissez la librairie destinataire.")); return;
-      }
-      try {
-        await apiFetch(id ? `/api/manage/books/${id}` : "/api/manage/books", {
-          method: id ? "PUT" : "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(bookPayload(form))
-        });
-        document.querySelector("#book-dialog").close();
-        if (!id) state.bookOffset = 0;
-        await Promise.all([reloadBooks(), reloadInventory()]);
       } catch (error) { showError(formError, error); }
     });
 
@@ -811,22 +670,6 @@
       } finally { button.disabled = false; }
     });
 
-
-
-    document.querySelector("#books-body").addEventListener("click", async (event) => {
-      const button = event.target.closest("button[data-action]");
-      if (!button) return;
-      const id = Number(button.dataset.id);
-      const book = state.books.find((item) => item.id === id);
-      if (button.dataset.action === "history-book") {
-        try { await openBookHistory(book); } catch (error) { showError(errorBox, error); }
-      }
-      if (button.dataset.action === "edit-book") openBookForm(book);
-      if (button.dataset.action === "delete-book" && window.confirm(`Supprimer « ${book.title} » ?`)) {
-        try { await apiFetch(`/api/manage/books/${id}`, {method: "DELETE"}); await Promise.all([reloadBooks(), reloadInventory()]); }
-        catch (error) { showError(errorBox, error); }
-      }
-    });
   }
 
   async function logout() {
@@ -855,6 +698,8 @@
     sessions.init();
     owners = window.DeftaOwners.create({apiFetch, textCell, actionButton, showError,
       errorBox, updateLibraryOptions, reloadAudit, reloadSessions});
+    books = window.DeftaBooks.create({apiFetch, textCell, actionButton, formatDate,
+      showError, errorBox, isRoot: () => state.isRoot, reloadInventory, reloadTags, renderTags});
     initEntityForms(errorBox);
     try {
       const user = await apiFetch("/api/auth/me");
@@ -878,6 +723,7 @@
         document.querySelector("#password-dialog").showModal();
         return;
       }
+      books.init();
       const requests = [
         reloadBooks(),
         reloadSales(),
