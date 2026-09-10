@@ -24,20 +24,20 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 8 | Exports | CSV des stocks, ventes, achats, fournisseurs et audit | Réalisé | Cinq exports validés et fusionnés. Audit limité aux événements propres du propriétaire, global pour root. |
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
-| 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Partiel | Sondes live/ready implémentées dans cet incrément ; tests Go et recette à valider. Métriques, logs structurés et restauration testée restent à finaliser. |
+| 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Partiel | Sondes live/ready validées, fusion non encore constatée. Métriques HTTP et logs JSON ajoutés, tests Go et recette à valider. Restauration testée et organisation de la collecte/rétention restent à finaliser. |
 | 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Modules JavaScript métier déjà séparés. Harmoniser les erreurs, revoir l’accessibilité et intégrer les tests navigateur. Les recettes Go/HTTP ne couvrent pas le rendu visuel. |
 
-## Incrément en validation : contrôles de santé (priorité 11)
+## Incrément en validation : métriques HTTP et logs JSON (priorité 11)
 
-La documentation OpenAPI est validée et fusionnée (PR #27, `2cff7be`).
-Les sondes publiques live/ready sont ajoutées, avec lecture SQLite bornée par
-un contexte de deux secondes et retrait de disponibilité avant l’arrêt gracieux.
-Le contrat et les exemples couvrent désormais 95 opérations API.
-Tests Go et recette locale restent à valider avant fusion de cet incrément.
+La dernière fusion vérifiée reste la PR #27 (`2cff7be`). L’utilisateur a validé
+les sondes live/ready ; leur fusion n’est pas encore visible dans origin/develop.
+Cet incrément se base sur leur version validée et doit être intégré après elles.
 
-Les sondes ne certifient ni l’intégrité complète, ni la capacité d’écriture,
-ni la restauration. Les métriques, logs structurés et restauration testée
-restent des travaux de la priorité 11.
+Les métriques HTTP en mémoire, réservées au root, et les logs JSON de requêtes
+sont ajoutés. Patterns de routes sans identifiants, absence de corps/jetons/query
+dans les événements HTTP et plafond de groupes limitent les données collectées.
+Le contrat décrit désormais 96 opérations. Tests Go, race detector et recette
+restent à valider. La restauration testée reste à développer.
 
 ## Ordre de poursuite
 

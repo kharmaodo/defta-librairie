@@ -1349,7 +1349,7 @@ concurrence et application du seuil. Le changement de devise reste au backlog.
 ### Contrat OpenAPI et consultation locale
 
 Le contrat **OpenAPI 3.0.3** est `static/openapi.json`, servi à
-`http://localhost:8080/static/openapi.json`. Il couvre les 95 opérations
+`http://localhost:8080/static/openapi.json`. Il couvre les 96 opérations
 `/api/` enregistrées dans `cmd/main.go`, les schémas JSON, paramètres, droits,
 codes d’erreur par famille, cookies de renouvellement, exports CSV et XOF.
 Les pages HTML et ressources statiques ne sont pas des opérations de ce contrat.
@@ -1417,3 +1417,47 @@ trafic. La lecture ne teste pas les écritures, l’espace disque, l’intégrit
 complète ou les restaurations. Ne pas déplacer la base active pour simuler une
 panne : les tests utilisent une base temporaire, fermeture de connexion et
 saturation du pool avec expiration du contexte. Aucune nouvelle migration.
+
+
+### Métriques HTTP et logs structurés
+
+`GET /api/admin/metrics` est réservé à SUPER_ADMIN_ROOT, avec session active et
+mot de passe changé. Il retourne `startedAt`, `uptimeSeconds`, `inFlight`,
+`completed` et `routes`. Chaque groupe contient le pattern de route, le statut,
+le nombre de requêtes, les octets écrits et les durées cumulée/maximale en secondes.
+La requête de métriques elle-même est encore en cours lors de son instantané.
+
+Les compteurs sont en mémoire et repartent de zéro à chaque démarrage. Les
+routes non reconnues partagent `unmatched` ; après 1 024 groupes distincts,
+les nouveaux groupes sont cumulés sous `overflow` (statut 0), soit 1 025 groupes
+maximum. Les métriques ne fournissent pas de percentiles et ne constituent pas
+un journal d’audit. Elles couvrent aussi catalogue, fichiers statiques et sondes.
+
+Au démarrage, slog configure la sortie standard en JSON. Les messages existants
+émis par le logger standard sont également encodés en JSON. Chaque requête
+terminée produit un événement `http_request` avec `request_id`, `route`, `status`,
+`bytes`, `duration_ms` et `aborted`. Le pattern déclaré contient les emplacements
+comme `{id}`, pas leur valeur. Aucun header d’authentification, corps JSON,
+paramètre URL, adresse IP ou agent utilisateur n’est ajouté à ces événements.
+Les erreurs 5xx et interruptions sont de niveau ERROR, les autres de niveau INFO.
+
+Une panique continue de se propager vers le serveur HTTP ; l’observation libère
+le compteur en cours et indique `aborted=true`. Un statut déjà envoyé reste
+conservé ; sinon l’événement comptabilise 500, sans garantir qu’une réponse 500
+a été reçue par le client. Les diagnostics de panique du serveur Go restent
+sous sa responsabilité. `ResponseController` peut accéder au writer original.
+
+```bash
+curl --fail-with-body -sS http://localhost:8080/api/admin/metrics \
+  -H "Authorization: Bearer $TOKEN"
+python3 scripts/check-openapi.py
+go test -tags fts5 ./internal/middleware -run 'TestHTTPObservability|TestMetricsRootGuard' -count=1 -v
+go test -race -tags fts5 ./internal/middleware
+go test -tags fts5 ./...
+```
+
+Recette : générer une requête catalogue, consulter les compteurs avec root,
+vérifier le refus avec un propriétaire, puis comparer X-Request-ID de la réponse
+et request_id du log. Redémarrer pour constater la remise à zéro. Aucune nouvelle
+migration. La collecte externe, la rotation/rétention des fichiers de logs et
+la restauration testée restent à organiser pour l’exploitation.

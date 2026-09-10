@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -32,6 +33,7 @@ var (
 )
 
 func main() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	// Charger la configuration depuis .env
 	var err error
 	cfg, err = config.Load()
@@ -123,6 +125,7 @@ func main() {
 	handlers.InitTemplates()
 
 	// Routes de base
+	observability := middleware.NewHTTPObservability(slog.Default())
 	mux := http.NewServeMux()
 	registerPublicRoutes(mux, adminUIHandler)
 	healthHandler := handlers.NewHealthHandler(database.DB)
@@ -146,6 +149,7 @@ func main() {
 	rootOnly := func(handler http.Handler) http.Handler {
 		return passwordChanged(middleware.RequireRoles(handler, models.RoleSuperAdminRoot))
 	}
+	mux.Handle("GET /api/admin/metrics", rootOnly(http.HandlerFunc(observability.Metrics)))
 	mux.Handle("GET /api/admin/owners", rootOnly(http.HandlerFunc(ownerHandler.List)))
 	mux.Handle("POST /api/admin/owners", rootOnly(http.HandlerFunc(ownerHandler.Create)))
 	mux.Handle("GET /api/admin/owners/{id}", rootOnly(http.HandlerFunc(ownerHandler.Get)))
@@ -221,7 +225,7 @@ func main() {
 	log.Printf("Version %s | Build %s", cfg.Version, cfg.BuildDate)
 
 	server := &http.Server{
-		Addr: addr, Handler: middleware.SecureHTTP(mux),
+		Addr: addr, Handler: middleware.SecureHTTP(observability.Wrap(mux)),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
