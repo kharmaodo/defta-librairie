@@ -1535,3 +1535,6 @@ mouvements, seuils et historiques est décrite dans
 La gestion des ventes est extraite dans `admin-sales.js`, avec ses catalogues
 livres/clients, formulaires, transitions et impression. Voir la recette dans
 [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+Les tags sont extraits dans `admin-tags.js`, avec leurs suggestions pour les
+livres. La recette est décrite dans [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
