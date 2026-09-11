@@ -125,3 +125,28 @@ Recette navigateur sur des données de test :
 
 Les tests Node emploient un DOM simulé. Les tests Go et la recette navigateur
 restent nécessaires pour valider les appels et autorisations réels.
+
+## Stock
+
+`admin-inventory.js` regroupe liste, filtres, pagination, mouvements, seuil et
+historique. Il reçoit le client HTTP existant, le rôle courant et le rechargement
+de l’audit. Les livres et ventes continuent d’appeler le rechargement du stock.
+Les versions et méthodes HTTP des opérations sont conservées.
+
+```sh
+node --test scripts/test-admin-*.cjs
+```
+
+Recette navigateur avec un livre de test :
+
+- Vérifier les filtres de statut, les pages et la sélection de librairie comme root.
+- Effectuer une entrée puis une sortie ; contrôler quantité, historique et audit.
+- Effectuer un ajustement avec motif et changer le seuil ; vérifier le statut affiché.
+- Provoquer une sortie supérieure au stock ou un conflit de version entre deux
+  onglets : le refus doit laisser le formulaire ouvert.
+- Créer un livre puis confirmer/annuler une vente de test : vérifier le rechargement
+  du stock et les quantités attendues.
+- Comme propriétaire, vérifier que seuls les stocks de sa librairie sont affichés.
+
+Les tests Node simulent le DOM et le client HTTP ; tests Go et recette navigateur
+restent nécessaires pour vérifier le fonctionnement réel.

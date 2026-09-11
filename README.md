@@ -1527,3 +1527,7 @@ coordonnés par le tableau de bord. Voir [FRONTEND_MODULES.md](docs/FRONTEND_MOD
 La gestion des livres est extraite dans `admin-books.js` : recherche, pagination,
 formulaires, historique et suppression. Les interactions avec le stock et les
 tags sont décrites dans [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+La gestion du stock est extraite dans `admin-inventory.js`. La recette des
+mouvements, seuils et historiques est décrite dans
+[FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).

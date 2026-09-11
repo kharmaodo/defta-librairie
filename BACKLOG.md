@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 10 septembre 2026 sur `develop`, commit `8623c96`
-(fusion du module des propriétaires, PR #36). Les douze priorités et leurs éléments
+État consolidé le 11 septembre 2026 sur `develop`, commit `9f568d9`
+(fusion du module des livres, PR #37). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -25,20 +25,20 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
 | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP commun validé et intégré pour cinq écrans. Erreurs des cinq modules métier validées et fusionnées (PR #33). Journal d’audit extrait et fusionné (PR #34). Sessions extraites et fusionnées (PR #35). Propriétaires extraits et fusionnés (PR #36). Extraction des livres en validation ; suite du découpage, migration HTTP du module principal et tests navigateur automatisés restent à finaliser. |
+| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP commun validé et intégré pour cinq écrans. Erreurs des cinq modules métier validées et fusionnées (PR #33). Journal d’audit extrait et fusionné (PR #34). Sessions extraites et fusionnées (PR #35). Propriétaires extraits et fusionnés (PR #36). Livres extraits et fusionnés (PR #37). Extraction du stock en validation ; suite du découpage, migration HTTP du module principal et tests navigateur automatisés restent à finaliser. |
 
-## Incrément en validation : extraction des livres (priorité 12)
+## Incrément en validation : extraction du stock (priorité 12)
 
-Les propriétaires sont validés et fusionnés (PR #36). Cet incrément extrait
-la recherche, la pagination, les formulaires, l’historique et la suppression
-des livres dans `admin-books.js`. Le tableau de bord fournit le rôle courant,
-le client HTTP existant et les fonctions de rechargement du stock et des tags.
-Le chargement des livres des ventes reste dans le module principal.
+Les livres sont validés et fusionnés (PR #37). Cet incrément extrait
+la liste, les filtres, la pagination, les mouvements, le seuil et l’historique
+du stock dans `admin-inventory.js`. Le tableau de bord fournit le rôle courant,
+le client HTTP existant et le rechargement de l’audit. Les rechargements de
+stock déclenchés par les livres et les ventes sont conservés.
 Les événements sont initialisés après le contrôle du mot de passe obligatoire.
 Recette navigateur et fusion de cet incrément restent à valider.
 
-Restent les stocks, ventes et tags dans `admin-auth.js`, la migration HTTP
-compatible avec l’authentification et les tests navigateur automatisés.
+Restent les ventes et tags dans `admin-auth.js`, la migration HTTP compatible
+avec l’authentification et les tests navigateur automatisés.
 La priorité 12 reste partielle.
 
 La priorité 11 est réalisée dans le périmètre livré ; objectifs de reprise,
