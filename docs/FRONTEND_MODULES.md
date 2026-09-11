@@ -178,3 +178,22 @@ Recette navigateur sur des données de test :
 
 Les  tests Node utilisent un DOM et un client HTTP simulés. Le parcours complet
 navigateur, notamment les listes de choix et l’impression, reste à valider.
+
+## Tags
+
+`admin-tags.js` regroupe affichage, suggestions, création et suppression.
+Les fonctions `reload` et `render` restent accessibles aux formulaires des
+livres par le tableau de bord. Le rôle courant et le client HTTP sont injectés.
+
+```sh
+node --test scripts/test-admin-*.cjs
+```
+
+Recette navigateur : créer puis supprimer un tag de test comme propriétaire,
+vérifier les suggestions dans un livre, puis comme root changer de librairie
+et vérifier la portée des tags. Sans librairie sélectionnée, root doit voir
+les suggestions vides et ne pas pouvoir créer de tag. Annuler une suppression
+et provoquer un refus de création : vérifier que la saisie reste disponible.
+
+Les tests Node simulent le DOM et les réponses HTTP. La recette navigateur
+et les tests Go restent nécessaires pour valider le fonctionnement réel.

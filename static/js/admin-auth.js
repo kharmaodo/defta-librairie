@@ -4,7 +4,7 @@
   const ACCESS_KEY = "defta.accessToken";
   const USERNAME_KEY = "defta.username";
   const page = document.body.dataset.page;
-  const state = {isRoot: false, passwordChangeRequired: false, tags: []};
+  const state = {isRoot: false, passwordChangeRequired: false};
 
   const tokens = {
     access: () => sessionStorage.getItem(ACCESS_KEY),
@@ -48,7 +48,9 @@
     return json(response);
   }
 
-  let audit, sessions, owners, books, inventory, sales;
+  let audit, sessions, owners, books, inventory, sales, tags;
+  const reloadTags = () => tags.reload();
+  const renderTags = payload => tags.render(payload);
   const reloadSales = () => sales.reload();
   const reloadInventory = () => inventory.reload();
   const reloadBooks = () => books.reload();
@@ -135,33 +137,6 @@
     });
   }
 
-  function renderTags(payload) {
-    state.tags = payload.results;
-    const list = document.querySelector("#tags-list");
-    list.replaceChildren();
-    if (!payload.results.length) {
-      const empty = document.createElement("span"); empty.className = "hint"; empty.textContent = "Aucun tag défini"; list.append(empty);
-    } else payload.results.forEach((tag) => {
-      const chip = document.createElement("span"); chip.className = "tag-chip"; chip.append(document.createTextNode(tag.name));
-      const remove = document.createElement("button"); remove.type = "button"; remove.dataset.id = tag.id; remove.setAttribute("aria-label", `Supprimer ${tag.name}`); remove.textContent = "×"; chip.append(remove); list.append(chip);
-    });
-    const suggestions = document.querySelector("#tag-suggestions");
-    suggestions.replaceChildren(...payload.results.map((tag) => {
-      const option = document.createElement("option"); option.value = tag.name; return option;
-    }));
-  }
-
-  async function reloadTags() {
-    const libraryID = state.isRoot ? document.querySelector("#tag-library").value : "";
-    if (state.isRoot && !libraryID) {
-      renderTags({results: [], total: 0});
-      return;
-    }
-    const query = new URLSearchParams();
-    if (libraryID) query.set("libraryId", libraryID);
-    renderTags(await apiFetch(`/api/manage/tags?${query}`));
-  }
-
   function initEntityForms(errorBox) {
     const passwordDialog = document.querySelector("#password-dialog");
     passwordDialog.addEventListener("cancel", (event) => {
@@ -173,31 +148,6 @@
       form.reset();
       document.querySelector("#password-form-error").hidden = true;
       document.querySelector("#password-dialog").showModal();
-    });
-
-    document.querySelector("#tag-library").addEventListener("change", async () => {
-      try { await reloadTags(); } catch (error) { showError(errorBox, error); }
-    });
-
-    document.querySelector("#tag-form").addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const payload = {name: form.elements.name.value.trim()};
-      if (state.isRoot) payload.libraryId = form.elements.libraryId.value;
-      if (state.isRoot && !payload.libraryId) { showError(errorBox, new Error("Choisissez une librairie.")); return; }
-      try {
-        await apiFetch("/api/manage/tags", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
-        form.elements.name.value = "";
-        await Promise.all([reloadTags(), reloadAudit()]);
-      } catch (error) { showError(errorBox, error); }
-    });
-    document.querySelector("#tags-list").addEventListener("click", async (event) => {
-      const button = event.target.closest("button[data-id]");
-      if (!button) return;
-      const tag = state.tags.find((item) => item.id === button.dataset.id);
-      if (!tag || !window.confirm(`Supprimer le tag « ${tag.name} » ?`)) return;
-      try { await apiFetch(`/api/manage/tags/${tag.id}`, {method: "DELETE"}); await Promise.all([reloadTags(), reloadAudit()]); }
-      catch (error) { showError(errorBox, error); }
     });
 
     document.querySelector("#password-form").addEventListener("submit", async (event) => {
@@ -253,6 +203,8 @@
       showError, errorBox, isRoot: () => state.isRoot, reloadAudit});
     sales = window.DeftaSales.create({apiFetch, textCell, actionButton, formatDate,
       showError, errorBox, isRoot: () => state.isRoot, reloadInventory, reloadAudit});
+    tags = window.DeftaTags.create({apiFetch, showError, errorBox,
+      isRoot: () => state.isRoot, reloadAudit});
     initEntityForms(errorBox);
     try {
       const user = await apiFetch("/api/auth/me");
@@ -279,6 +231,7 @@
       books.init();
       inventory.init();
       sales.init();
+      tags.init();
       const requests = [
         reloadBooks(),
         reloadSales(),
