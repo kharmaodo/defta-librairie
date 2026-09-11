@@ -82,5 +82,5 @@ test('root library change refreshes tags; owner does not',async()=>{
 test('dashboard integrates module and retains independent sales catalogue',()=>{
  const template=read('templates/admin.html');assert.ok(template.indexOf('/static/js/admin-books.js')<template.indexOf('/static/js/admin-auth.js'));
  assert.doesNotMatch(read('templates/login.html'),/admin-books/);
- const auth=read('static/js/admin-auth.js');assert.match(auth,/const reloadBooks = \(\) => books.reload\(\)/);assert.match(auth,/async function loadSaleBooks\(/);
+ const auth=read('static/js/admin-auth.js');assert.match(auth,/const reloadBooks = \(\) => books.reload\(\)/);assert.match(read('static/js/admin-sales.js'),/async function loadSaleBooks\(/);
 });

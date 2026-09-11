@@ -1531,3 +1531,7 @@ tags sont décrites dans [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
 La gestion du stock est extraite dans `admin-inventory.js`. La recette des
 mouvements, seuils et historiques est décrite dans
 [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+La gestion des ventes est extraite dans `admin-sales.js`, avec ses catalogues
+livres/clients, formulaires, transitions et impression. Voir la recette dans
+[FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
