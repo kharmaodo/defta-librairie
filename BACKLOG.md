@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 11 septembre 2026 sur `develop`, commit `17416e7`
-(fusion du module des ventes, PR #39). Les douze priorités et leurs éléments
+État consolidé le 11 septembre 2026 sur `develop`, commit `95ccbff`
+(fusion du module des tags, PR #40). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -25,20 +25,21 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
 | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP commun validé et intégré pour cinq écrans. Erreurs des cinq modules métier validées et fusionnées (PR #33). Journal d’audit extrait et fusionné (PR #34). Sessions extraites et fusionnées (PR #35). Propriétaires extraits et fusionnés (PR #36). Livres extraits et fusionnés (PR #37). Stock extrait et fusionné (PR #38). Ventes extraites et fusionnées (PR #39). Extraction des tags en validation ; suite du découpage, migration HTTP du module principal et tests navigateur automatisés restent à finaliser. |
+| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP commun validé et intégré pour cinq écrans. Erreurs des cinq modules métier validées et fusionnées (PR #33). Journal d’audit extrait et fusionné (PR #34). Sessions extraites et fusionnées (PR #35). Propriétaires extraits et fusionnés (PR #36). Livres extraits et fusionnés (PR #37). Stock extrait et fusionné (PR #38). Ventes extraites et fusionnées (PR #39). Tags extraits et fusionnés (PR #40). Migration HTTP/session en validation ; suite du découpage, migration HTTP du module principal et tests navigateur automatisés restent à finaliser. |
 
-## Incrément en validation : extraction des tags (priorité 12)
+## Incrément en validation : client HTTP et sessions (priorité 12)
 
-Les ventes sont validées et fusionnées (PR #39). Cet incrément extrait
-l’affichage, les suggestions, la création et la suppression des tags dans
-`admin-tags.js`. Les livres conservent leurs fonctions de rechargement et de
-remise à vide des suggestions. Le rôle courant, le client HTTP existant et
-le rechargement de l’audit sont fournis par le tableau de bord.
+Les tags sont validés et fusionnés (PR #40). Le module principal utilise
+maintenant le client HTTP commun pour les appels authentifiés, la connexion,
+le renouvellement et la déconnexion. Dans le tableau de bord, les demandes
+simultanées partagent le renouvellement ; une requête refusée en 401 est reprise
+une seule fois. Aucun nouvel essai après erreur réseau, 403, conflit ou 5xx.
+Une déconnexion invalide l’enregistrement d’un renouvellement en cours.
+Les erreurs de connexion et de mot de passe sont traduites sans texte brut serveur.
 Recette navigateur et fusion restent à valider.
 
-Le découpage métier du module principal est réalisé dans ces incréments ;
-restent la migration HTTP compatible avec l’authentification et les tests
-navigateur automatisés. La priorité 12 reste partielle.
+Le découpage métier est fusionné. Les tests navigateur automatisés restent
+à développer. La priorité 12 reste partielle.
 
 La priorité 11 est réalisée dans le périmètre livré ; objectifs de reprise,
 sauvegardes hors machine et rétention des logs restent des décisions de déploiement.

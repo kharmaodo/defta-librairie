@@ -11,42 +11,12 @@
     save: (payload) => {
       sessionStorage.setItem(ACCESS_KEY, payload.accessToken);
     },
-    clear: () => {
-      sessionStorage.removeItem(ACCESS_KEY);
-      sessionStorage.removeItem(USERNAME_KEY);
-    }
+    clear: () => window.DeftaHTTP.clearSession()
   };
 
-  async function json(response) {
-    const contentType = response.headers.get("content-type") || "";
-    const payload = contentType.includes("application/json") ? await response.json() : {};
-    if (!response.ok) {
-      const error = new Error(payload.message || `Requête refusée (${response.status})`);
-      error.status = response.status;
-      error.retryAfter = response.headers.get("retry-after");
-      throw error;
-    }
-    return payload;
-  }
-
-  async function refreshSession() {
-    const response = await fetch("/api/auth/refresh", {
-      method: "POST", headers: {"X-Defta-Session": "cookie"}
-    });
-    const payload = await json(response);
-    tokens.save(payload);
-  }
-
-  async function apiFetch(path, options = {}, retry = true) {
-    const headers = new Headers(options.headers || {});
-    headers.set("Authorization", `Bearer ${tokens.access() || ""}`);
-    const response = await fetch(path, {...options, headers});
-    if (response.status === 401 && retry) {
-      await refreshSession();
-      return apiFetch(path, options, false);
-    }
-    return json(response);
-  }
+  const refreshSession = () => window.DeftaHTTP.refreshSession();
+  const apiFetch = (path, options) => window.DeftaHTTP.json(path, options);
+  if (page === "dashboard") window.DeftaHTTP.enableSessionRefresh();
 
   let audit, sessions, owners, books, inventory, sales, tags;
   const reloadTags = () => tags.reload();
@@ -86,6 +56,9 @@
   async function initLogin() {
     const form = document.querySelector("#login-form");
     const errorBox = document.querySelector("#login-error");
+    if (new URLSearchParams(window.location.search).get("logoutFailed") === "1") {
+      showError(errorBox, new Error("La déconnexion du serveur n’a pas été confirmée. Reconnectez-vous pour révoquer les sessions si nécessaire."));
+    }
     if (new URLSearchParams(window.location.search).get("passwordChanged") === "1") {
       const notice = document.querySelector("#login-notice");
       notice.textContent = "Mot de passe modifié. Reconnectez-vous avec votre nouveau mot de passe.";
@@ -99,11 +72,12 @@
       button.disabled = true;
       try {
         const data = new FormData(form);
-        const response = await fetch("/api/auth/login", {
-          method: "POST", headers: {"Content-Type": "application/json", "X-Defta-Session": "cookie"},
-          body: JSON.stringify({username: data.get("username"), password: data.get("password")})
+        const payload = await window.DeftaHTTP.authJSON("login", {
+          username: data.get("username"), password: data.get("password")
         });
-        const payload = await json(response);
+        if (!payload || typeof payload.accessToken !== "string" || !payload.accessToken || !payload.user?.username) {
+          throw new Error("Réponse de connexion invalide.");
+        }
         tokens.save(payload);
         sessionStorage.setItem(USERNAME_KEY, payload.user.username);
         window.location.replace("/admin");
@@ -173,12 +147,14 @@
 
   async function logout() {
     try {
-      await fetch("/api/auth/logout", {
-        method: "POST", headers: {"X-Defta-Session": "cookie"}
-      });
+      tokens.clear();
+      await window.DeftaHTTP.authJSON("logout");
+    } catch (_) {
+      window.location.replace("/login?logoutFailed=1"); return;
     } finally {
-      tokens.clear(); window.location.replace("/login");
+      tokens.clear();
     }
+    window.location.replace("/login");
   }
 
   async function initDashboard() {
