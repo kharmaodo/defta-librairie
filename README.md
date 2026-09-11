@@ -1542,3 +1542,6 @@ livres. La recette est décrite dans [FRONTEND_MODULES.md](docs/FRONTEND_MODULES
 L’authentification utilise désormais le client HTTP commun, avec renouvellement
 partagé et reprise limitée après 401. Voir [FRONTEND_HTTP.md](docs/FRONTEND_HTTP.md)
 pour les règles et la recette des sessions.
+
+Une première suite Chromium teste l’authentification avec un serveur et une base
+SQLite temporaires. Installation et exécution : [BROWSER_TESTS.md](docs/BROWSER_TESTS.md).

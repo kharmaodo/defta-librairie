@@ -1,0 +1,9 @@
+{
+  "name": "defta-librairie-browser-tests",
+  "private": true,
+  "scripts": {
+    "test:browser": "playwright test",
+    "test:frontend": "node --test scripts/test-admin-*.cjs"
+  },
+  "devDependencies": {"@playwright/test": "1.63.0"}
+}
