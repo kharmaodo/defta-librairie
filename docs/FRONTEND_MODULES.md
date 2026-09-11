@@ -150,3 +150,31 @@ Recette navigateur avec un livre de test :
 
 Les tests Node simulent le DOM et le client HTTP ; tests Go et recette navigateur
 restent nécessaires pour vérifier le fonctionnement réel.
+
+## Ventes
+
+`admin-sales.js` contient liste, filtres, formulaires, catalogues des livres et
+clients, détails, impression et transitions des ventes. Le tableau de bord
+fournit le client HTTP, le rôle courant et les rechargements stock/audit.
+`loadSaleBooks` est désormais dans ce module ; les paragraphes précédents
+concernant son emplacement décrivaient les étapes antérieures.
+
+```sh
+node --test scripts/test-admin-*.cjs
+```
+
+Recette navigateur sur des données de test :
+
+- Créer puis modifier un brouillon avec plusieurs livres et un client rattaché.
+  Vérifier les quantités, le total estimé et les détails enregistrés.
+- Comme root, changer de librairie et vérifier le renouvellement des livres,
+  clients et lignes du formulaire ; comme propriétaire, vérifier sa portée.
+- Confirmer une vente puis l’annuler : contrôler stock, statut et audit.
+- Provoquer un stock insuffisant ou une version ancienne : conserver le refus
+  initial affiché et vérifier qu’aucune transition supplémentaire n’est envoyée.
+- Annuler une confirmation de suppression, puis supprimer un brouillon de test.
+- Filtrer et paginer, consulter les détails et vérifier l’impression avec les
+  coordonnées de la librairie de la vente.
+
+Les  tests Node utilisent un DOM et un client HTTP simulés. Le parcours complet
+navigateur, notamment les listes de choix et l’impression, reste à valider.
