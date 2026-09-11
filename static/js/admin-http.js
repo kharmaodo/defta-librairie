@@ -12,6 +12,14 @@
   // Only known status/code pairs produce business messages; never display server text.
   const businessMessages = {
     "409": {
+      "insufficient_stock": "Stock insuffisant pour cette opération.",
+      "sale_not_editable": "L’état actuel de la vente ne permet pas cette opération.",
+      "sale_has_recorded_payments": "Cette vente possède des paiements enregistrés.",
+      "sale_has_completed_returns": "Cette vente possède des retours terminés.",
+      "tag_conflict": "Ce tag existe déjà dans cette librairie.",
+      "owner_conflict": "Ce propriétaire entre en conflit avec un compte existant.",
+      "owner_not_locked": "Ce propriétaire n’est pas verrouillé.",
+      "owner_not_disabled": "Ce propriétaire n’est pas désactivé.",
       "customer_conflict": "Cette référence client existe déjà.",
       "supplier_conflict": "Ce fournisseur existe déjà dans cette librairie.",
       "cash_register_conflict": "Une caisse porte déjà ce nom.",
@@ -48,7 +56,9 @@
     }
   };
   function message(status, code) {
-    if (status === 401) return sessionMessage;
+    if (status === 401) return code === 'invalid_credentials' ? 'Identifiant ou mot de passe incorrect.' : sessionMessage;
+    if (status === 400 && code === 'invalid_current_password') return 'Le mot de passe actuel est incorrect.';
+    if (status === 400 && code === 'invalid_new_password') return 'Le nouveau mot de passe ne respecte pas les exigences.';
     if (status === 403) return code === 'password_change_required'
       ? 'Changez votre mot de passe pour poursuivre.' : 'Vous ne disposez pas des droits nécessaires.';
     const known = businessMessages[status];
@@ -65,11 +75,62 @@
     if (error.name === 'AbortError' || error instanceof APIError) return error;
     return new APIError('Connexion interrompue. Vérifiez votre réseau. Avant de répéter une modification, vérifiez si elle a été enregistrée.');
   }
-  async function request(path, options = {}) {
+  let refreshEnabled = false, pendingRefresh = null, generation = 0;
+  function enableSessionRefresh() { refreshEnabled = true; }
+  function clearSession() {
+    generation++;
+    refreshEnabled = false;
+    sessionStorage.removeItem('defta.accessToken');
+    sessionStorage.removeItem('defta.username');
+  }
+  async function checked(response) {
+    if (!response.ok) {
+      let code = '';
+      try {
+        const body = await response.json();
+        if (typeof body?.error === 'string') code = body.error;
+      } catch (error) { if (error.name === 'AbortError') throw error; }
+      const error = new APIError(message(response.status, code), response.status, code);
+      const retryAfter = response.headers.get('Retry-After');
+      if (/^\d{1,6}$/.test(retryAfter || '')) error.retryAfter = retryAfter;
+      throw error;
+    }
+    return response;
+  }
+  async function authJSON(action, body) {
+    if (!['login', 'refresh', 'logout'].includes(action)) throw new APIError('Action de session non autorisée.');
+    let response;
+    try {
+      response = await fetch(`${window.location.origin}/api/auth/${action}`, {
+        method: 'POST', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
+        headers: {'X-Defta-Session': 'cookie', 'Content-Type': 'application/json'},
+        ...(body === undefined ? {} : {body: JSON.stringify(body)})
+      });
+    } catch (error) { throw transportError(error); }
+    return decode(await checked(response));
+  }
+  function refreshSession() {
+    if (pendingRefresh) return pendingRefresh;
+    const started = generation;
+    pendingRefresh = (async () => {
+      const payload = await authJSON('refresh');
+      if (started !== generation) throw new APIError(sessionMessage, 401, 'unauthorized');
+      if (!payload || typeof payload.accessToken !== 'string' || !payload.accessToken) {
+        throw new APIError('Réponse de session invalide.');
+      }
+      sessionStorage.setItem('defta.accessToken', payload.accessToken);
+    })().finally(() => { pendingRefresh = null; });
+    return pendingRefresh;
+  }
+  async function request(path, options = {}, retry = true) {
     const url = new URL(path, window.location.origin);
     if (url.origin !== window.location.origin || !url.pathname.startsWith('/api/') || url.username || url.password) {
       throw new APIError('Adresse API non autorisée.');
     }
+    options.signal?.throwIfAborted();
+    const started = generation;
+    if (!sessionStorage.getItem('defta.accessToken') && refreshEnabled) await refreshSession();
+    options.signal?.throwIfAborted();
     const token = sessionStorage.getItem('defta.accessToken');
     if (!token) throw new APIError(sessionMessage, 401, 'unauthorized');
     const headers = new Headers(options.headers);
@@ -79,18 +140,18 @@
     try {
       response = await fetch(url.href, {...options, headers, cache: 'no-store', redirect: 'error'});
     } catch (error) { throw transportError(error); }
-    if (!response.ok) {
-      let code = '';
-      try {
-        const body = await response.json();
-        if (typeof body?.error === 'string') code = body.error;
-      } catch (error) { if (error.name === 'AbortError') throw error; }
-      throw new APIError(message(response.status, code), response.status, code);
+    if (response.status === 401 && retry && refreshEnabled && started === generation) {
+      if (sessionStorage.getItem('defta.accessToken') === token) await refreshSession();
+      options.signal?.throwIfAborted();
+      if (started !== generation) throw new APIError(sessionMessage, 401, 'unauthorized');
+      return request(path, options, false);
     }
-    return response;
+    return checked(response);
   }
   async function json(path, options) {
-    const response = await request(path, options);
+    return decode(await request(path, options));
+  }
+  async function decode(response) {
     if (response.status === 204) return null;
     if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get('Content-Type') || '')) {
       throw new APIError('Réponse inattendue du serveur.', response.status);
@@ -101,5 +162,5 @@
       throw transportError(error);
     }
   }
-  window.DeftaHTTP = Object.freeze({request, json, APIError});
+  window.DeftaHTTP = Object.freeze({request, json, APIError, authJSON, refreshSession, clearSession, enableSessionRefresh});
 })();

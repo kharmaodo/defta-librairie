@@ -1538,3 +1538,7 @@ livres/clients, formulaires, transitions et impression. Voir la recette dans
 
 Les tags sont extraits dans `admin-tags.js`, avec leurs suggestions pour les
 livres. La recette est décrite dans [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+L’authentification utilise désormais le client HTTP commun, avec renouvellement
+partagé et reprise limitée après 401. Voir [FRONTEND_HTTP.md](docs/FRONTEND_HTTP.md)
+pour les règles et la recette des sessions.
