@@ -36,6 +36,10 @@ mots de passe et jetons. Les rapports locaux et dépendances sont ignorés par G
 - Cycle commercial root sur une librairie de test : création d’un livre sans
   stock, entrée de sept unités, brouillon de vente de deux unités, confirmation
   avec stock à cinq, puis annulation avec stock restauré à sept.
+- Approvisionnement root : fournisseur, deux achats réceptionnés respectivement
+  à `4 × 1 000` et `6 × 2 000`, stock final de dix, puis vente à `3 000`.
+  Les statistiques doivent exposer un coût connu de `1 600`, une marge de
+  `1 400` et aucun coût inconnu, ce qui vérifie le coût moyen pondé.
 
 Le dernier scénario exerce le chemin 401 sans attendre une expiration réelle.
 Les cookies, requêtes et serveur sont réels ; aucune réponse API n’est simulée.
@@ -43,7 +47,8 @@ Les cookies, requêtes et serveur sont réels ; aucune réponse API n’est simu
 ## Portée et validation
 
 Le cycle commercial vérifie le DOM et les appels réels jusqu’à la restauration
-du stock. La suite ne couvre pas encore approvisionnement, paiements, retours,
+du stock. L’approvisionnement vérifie ses réceptions et le CMP par l’effet
+observable sur la marge d’une vente réelle. La suite ne couvre pas encore paiements, retours,
 exports, impression ni une recette d’accessibilité exhaustive. Ne déclarer ce
 nouvel incrément validé qu’après l’exécution réelle de Chromium.
 
