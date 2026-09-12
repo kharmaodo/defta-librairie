@@ -25,7 +25,7 @@ pour chaque test ; un seul worker et aucun retry sont configurés.
 Les traces, vidéos et captures sont désactivées pour ne pas enregistrer les
 mots de passe et jetons. Les rapports locaux et dépendances sont ignorés par Git.
 
-## Scénarios de cette première suite
+## Scénarios couverts
 
 - Connexion invalide et message d’erreur accessible.
 - Connexion root, écran des propriétaires, déconnexion et cookie révoqué.
@@ -33,15 +33,19 @@ mots de passe et jetons. Les rapports locaux et dépendances sont ignorés par G
   obligatoire dans le navigateur, nouvelle connexion et refus d’une API root.
 - Deux appels protégés avec un jeton d’accès volontairement invalide : un seul
   renouvellement par cookie et récupération du rôle attendu.
+- Cycle commercial root sur une librairie de test : création d’un livre sans
+  stock, entrée de sept unités, brouillon de vente de deux unités, confirmation
+  avec stock à cinq, puis annulation avec stock restauré à sept.
 
 Le dernier scénario exerce le chemin 401 sans attendre une expiration réelle.
 Les cookies, requêtes et serveur sont réels ; aucune réponse API n’est simulée.
 
 ## Portée et validation
 
-Cette suite ne couvre pas encore les parcours commerciaux complets,
-les téléchargements, l’impression ni une recette d’accessibilité exhaustive.
-Ne déclarer cet incrément validé qu’après l’exécution réelle de Chromium.
+Le cycle commercial vérifie le DOM et les appels réels jusqu’à la restauration
+du stock. La suite ne couvre pas encore approvisionnement, paiements, retours,
+exports, impression ni une recette d’accessibilité exhaustive. Ne déclarer ce
+nouvel incrément validé qu’après l’exécution réelle de Chromium.
 
 ```sh
 npm run test:browser -- --list

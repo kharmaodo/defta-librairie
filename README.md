@@ -1545,3 +1545,6 @@ pour les règles et la recette des sessions.
 
 Une première suite Chromium teste l’authentification avec un serveur et une base
 SQLite temporaires. Installation et exécution : [BROWSER_TESTS.md](docs/BROWSER_TESTS.md).
+
+La suite Chromium couvre aussi le cycle livre, stock, confirmation et annulation
+d’une vente, avec vérification de la restitution exacte du stock.

@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 11 septembre 2026 sur `develop`, commit `b80b896`
-(fusion du client HTTP/session, PR #41). Les douze priorités et leurs éléments
+État consolidé le 11 septembre 2026 sur `develop`, commit `4ce94d2`
+(fusion des tests navigateur d’authentification, PR #42). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -25,17 +25,18 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
 | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP commun validé et intégré pour cinq écrans. Erreurs des cinq modules métier validées et fusionnées (PR #33). Journal d’audit extrait et fusionné (PR #34). Sessions extraites et fusionnées (PR #35). Propriétaires extraits et fusionnés (PR #36). Livres extraits et fusionnés (PR #37). Stock extrait et fusionné (PR #38). Ventes extraites et fusionnées (PR #39). Tags extraits et fusionnés (PR #40). Client HTTP/session validé et fusionné (PR #41). Tests navigateur d’authentification en validation ; suite du découpage, migration HTTP du module principal et tests navigateur automatisés restent à finaliser. |
+| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP et erreurs métier fusionnés (PR #33 et #41). Audit, sessions, propriétaires, livres, stock, ventes et tags extraits (PR #34 à #40). Tests navigateur d’authentification validés et fusionnés (PR #42). Cycle commercial navigateur en validation ; autres parcours, exports/impression et accessibilité navigateur restent à finaliser. |
 
-## Incrément en validation : tests navigateur d’authentification (priorité 12)
+## Incrément en validation : cycle commercial navigateur (priorité 12)
 
-Le client HTTP/session est validé et fusionné (PR #41). Une première suite
-Playwright/Chromium couvre connexion refusée, root/déconnexion, propriétaire
-avec changement obligatoire de mot de passe et renouvellement partagé.
-Elle démarre une application avec une base temporaire et des comptes de test.
-L’exécution réelle de Chromium et la fusion restent à valider.
+La suite d’authentification Playwright/Chromium est validée et fusionnée
+(PR #42). Cet incrément ajoute un cycle commercial réel : création d’un
+livre, entrée de sept unités en stock, vente de deux unités, confirmation,
+annulation et contrôle du retour du stock à sept. Il utilise la base SQLite
+temporaire et les API réelles, sans simuler les réponses. L’exécution Chromium
+et la fusion de ce nouvel incrément restent à valider.
 
-Restent les parcours commerciaux navigateur, exports/impression et contrôles
+Restent les autres parcours commerciaux, exports/impression et contrôles
 d’accessibilité navigateur à compléter. La priorité 12 reste partielle ;
 les tests unitaires JavaScript ne remplacent pas cette recette réelle.
 
