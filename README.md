@@ -1555,3 +1555,6 @@ pondé par le coût et la marge d’une vente confirmée.
 Le parcours de paiement crée une caisse et règle une vente successivement en
 espèces, mobile money et carte. Il vérifie les montants payés, le reste à payer
 et les états non payé, partiellement payé et payé.
+
+Le parcours de retour client vérifie sur une vente encaissée la restitution du
+stock, un remboursement en espèces, un avoir et leurs traces d’audit.

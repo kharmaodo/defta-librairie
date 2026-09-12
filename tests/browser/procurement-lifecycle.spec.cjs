@@ -107,6 +107,7 @@ test('two receipts update stock and weighted average cost', async ({page, reques
   await saleLine.locator('[name=quantity]').fill('1');
   await saleForm.locator('button[type=submit]').click();
   await expect(saleForm).not.toBeVisible();
+  await page.waitForLoadState('networkidle');
 
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#sale-filters button[type=submit]').click();

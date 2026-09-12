@@ -177,6 +177,7 @@
       showError, errorBox, isRoot: () => state.isRoot, reloadInventory, reloadTags, renderTags});
     inventory = window.DeftaInventory.create({apiFetch, textCell, actionButton, formatDate,
       showError, errorBox, isRoot: () => state.isRoot, reloadAudit});
+    window.deftaReloadInventory = reloadInventory;
     sales = window.DeftaSales.create({apiFetch, textCell, actionButton, formatDate,
       showError, errorBox, isRoot: () => state.isRoot, reloadInventory, reloadAudit});
     tags = window.DeftaTags.create({apiFetch, showError, errorBox,
