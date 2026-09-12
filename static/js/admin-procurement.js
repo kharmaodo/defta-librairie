@@ -35,7 +35,11 @@
   async function init() {
     if (!document.querySelector("#suppliers-body")) return;
     try { const me=await api("/api/auth/me"); state.isRoot=me.role==="SUPER_ADMIN_ROOT"; if(state.isRoot){const owners=await api("/api/admin/owners?status=ACTIVE&libraryStatus=ACTIVE&limit=100");state.libraries=owners.results.map(o=>o.library);document.querySelectorAll(".procurement-root").forEach(x=>x.hidden=false);const libraryFilter=document.querySelector("#purchase-filter-library");fill(libraryFilter,[{id:"",name:"Toutes"},...state.libraries],l=>l.name);libraryFilter.closest("label").hidden=false;} await Promise.all([loadSuppliers(),loadBooks()]);const supplierFilter=document.querySelector("#purchase-filters [name=supplierId]");fill(supplierFilter,[{id:"",name:"Tous"},...state.suppliers],s=>s.name);await loadPurchases(); } catch (_) { return; }
-    document.querySelector("#add-supplier-button").onclick=()=>openSupplier(); document.querySelector("#add-purchase-button").onclick=()=>openPurchase();
+    document.querySelector("#add-supplier-button").onclick=()=>openSupplier();
+    document.querySelector("#add-purchase-button").onclick=async()=>{
+      try { await loadBooks(); openPurchase(); }
+      catch(x) { error("#dashboard-error",x); }
+    };
     document.querySelector("#add-purchase-line-button").onclick=()=>addPurchaseLine();
     document.querySelector("#purchase-filters").onsubmit=async(e)=>{e.preventDefault();state.purchaseOffset=0;await loadPurchases();};
     document.querySelector("#reset-purchase-filters").onclick=async()=>{document.querySelector("#purchase-filters").reset();state.purchaseOffset=0;await loadPurchases();};

@@ -1548,3 +1548,6 @@ SQLite temporaires. Installation et exécution : [BROWSER_TESTS.md](docs/BROWSER
 
 La suite Chromium couvre aussi le cycle livre, stock, confirmation et annulation
 d’une vente, avec vérification de la restitution exacte du stock.
+
+Le parcours d’approvisionnement couvre deux réceptions et vérifie le coût moyen
+pondé par le coût et la marge d’une vente confirmée.
