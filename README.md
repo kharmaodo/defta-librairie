@@ -1551,3 +1551,7 @@ d’une vente, avec vérification de la restitution exacte du stock.
 
 Le parcours d’approvisionnement couvre deux réceptions et vérifie le coût moyen
 pondé par le coût et la marge d’une vente confirmée.
+
+Le parcours de paiement crée une caisse et règle une vente successivement en
+espèces, mobile money et carte. Il vérifie les montants payés, le reste à payer
+et les états non payé, partiellement payé et payé.
