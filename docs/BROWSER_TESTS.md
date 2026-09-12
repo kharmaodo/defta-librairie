@@ -1,4 +1,4 @@
-# Tests navigateur — authentification
+# Tests navigateur — authentification et parcours métier
 
 Prérequis Linux/WSL : Go correspondant à `go.mod`, compilateur C pour SQLite,
 Node.js 20 ou plus et npm. La version de Playwright est fixée dans `package.json`
@@ -40,6 +40,9 @@ mots de passe et jetons. Les rapports locaux et dépendances sont ignorés par G
   à `4 × 1 000` et `6 × 2 000`, stock final de dix, puis vente à `3 000`.
   Les statistiques doivent exposer un coût connu de `1 600`, une marge de
   `1 400` et aucun coût inconnu, ce qui vérifie le coût moyen pondé.
+- Paiements root : caisse active, vente confirmée de `6 000`, puis règlements
+  de `1 000` en espèces, `2 000` en mobile money et `3 000` par carte. Le solde
+  passe de non payé à partiellement payé, puis payé avec un reste nul.
 
 Le dernier scénario exerce le chemin 401 sans attendre une expiration réelle.
 Les cookies, requêtes et serveur sont réels ; aucune réponse API n’est simulée.
@@ -48,7 +51,7 @@ Les cookies, requêtes et serveur sont réels ; aucune réponse API n’est simu
 
 Le cycle commercial vérifie le DOM et les appels réels jusqu’à la restauration
 du stock. L’approvisionnement vérifie ses réceptions et le CMP par l’effet
-observable sur la marge d’une vente réelle. La suite ne couvre pas encore paiements, retours,
+observable sur la marge d’une vente réelle. La suite ne couvre pas encore les retours,
 exports, impression ni une recette d’accessibilité exhaustive. Ne déclarer ce
 nouvel incrément validé qu’après l’exécution réelle de Chromium.
 
