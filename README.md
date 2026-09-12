@@ -1558,3 +1558,6 @@ et les états non payé, partiellement payé et payé.
 
 Le parcours de retour client vérifie sur une vente encaissée la restitution du
 stock, un remboursement en espèces, un avoir et leurs traces d’audit.
+
+Le parcours de retour fournisseur vérifie une expédition liée à un achat
+réceptionné, sa sortie de stock, sa justification et sa valorisation figée.

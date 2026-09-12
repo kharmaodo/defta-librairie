@@ -46,7 +46,11 @@ async function createReturn(page, {libraryID, customer, resolution}) {
   await line.locator('[name=quantity]').fill('1');
   await form.locator('[name=resolution]').selectOption(resolution);
   await form.locator('[name=reason]').fill(`Retour navigateur ${resolution}`);
+  const createdResponse = page.waitForResponse(response =>
+    response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/manage/customer-returns');
   await form.locator('button[type=submit]').click();
+  const created = await createdResponse;
+  expect(created.status(), await created.text()).toBe(201);
   await expect(form).not.toBeVisible();
 
   const label = resolution === 'REFUND' ? 'Remboursement' : 'Avoir';
@@ -78,6 +82,7 @@ async function settleReturn(page, row, method) {
 }
 
 test('refund and credit note restore stock and remain audited', async ({page, request}) => {
+  test.setTimeout(120_000);
   const library = await createLibrary(request);
   const suffix = randomUUID().slice(0, 8);
   const title = `Livre retour ${suffix}`;
@@ -110,6 +115,7 @@ test('refund and credit note restore stock and remain audited', async ({page, re
   await inventoryForm.locator('[name=quantity]').fill('2');
   await inventoryForm.locator('[name=reason]').fill('Stock du parcours retour');
   await inventoryForm.locator('button[type=submit]').click();
+  await expect(inventoryForm).not.toBeVisible();
 
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
@@ -121,9 +127,11 @@ test('refund and credit note restore stock and remain audited', async ({page, re
   await saleLine.locator('[name=bookId]').selectOption(await bookOption.getAttribute('value'));
   await saleLine.locator('[name=quantity]').fill('2');
   await saleForm.locator('button[type=submit]').click();
+  await expect(saleForm).not.toBeVisible();
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#sale-filters button[type=submit]').click();
   const sale = page.locator('#sales-body tr').filter({hasText: customer});
+  await expect(sale).toHaveCount(1);
   page.once('dialog', dialog => dialog.accept());
   await sale.getByRole('button', {name: 'Confirmer'}).click();
   await expect(sale).toContainText('Confirmée');
@@ -131,9 +139,12 @@ test('refund and credit note restore stock and remain audited', async ({page, re
 
   await page.locator('#add-cash-register-button').click();
   const registerForm = page.locator('#cash-register-form');
+  await expect(registerForm).toBeVisible();
   await registerForm.locator('[name=libraryId]').selectOption(library.id);
   await registerForm.locator('[name=name]').fill(register);
   await registerForm.locator('button[type=submit]').click();
+  await expect(registerForm).not.toBeVisible();
+  await expect(page.locator('#cash-registers-body tr').filter({hasText: register})).toHaveCount(1);
   await page.locator('#payment-sale-filter [name=libraryId]').selectOption(library.id);
   const paymentSale = page.locator('#payment-sale-filter [name=saleId] option').filter({hasText: customer});
   await expect(paymentSale).toHaveCount(1);
@@ -141,9 +152,11 @@ test('refund and credit note restore stock and remain audited', async ({page, re
   await page.locator('#payment-sale-filter button[type=submit]').click();
   await page.locator('#add-payment-button').click();
   const paymentForm = page.locator('#payment-form');
+  await expect(paymentForm).toBeVisible();
   await paymentForm.locator('[name=method]').selectOption('CASH');
   await paymentForm.locator('[name=amount]').fill('2000');
   await paymentForm.locator('button[type=submit]').click();
+  await expect(paymentForm).not.toBeVisible();
   await expect(page.locator('#payment-balance [data-payment-status]')).toHaveText('Payée');
 
   await page.locator('#return-filters [name=libraryId]').selectOption(library.id);

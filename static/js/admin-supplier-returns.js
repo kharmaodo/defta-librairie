@@ -121,7 +121,9 @@
           if (action==='edit' || action==='view') return open(item.id);
           if (!window.confirm(`${label} ${item.reference} ?${action==='ship' ? ' Les quantités seront retirées du stock.' : ''}`)) return;
           await api(`/api/manage/supplier-returns/${encodeURIComponent(item.id)}/${action}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:item.version})});
-          await list();
+          const refreshes = [list()];
+          if (action === 'ship' && typeof window.deftaReloadInventory === 'function') refreshes.push(window.deftaReloadInventory());
+          await Promise.all(refreshes);
         }); cell.append(b);
       }
     }
