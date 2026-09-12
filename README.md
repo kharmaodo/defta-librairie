@@ -1561,3 +1561,6 @@ stock, un remboursement en espèces, un avoir et leurs traces d’audit.
 
 Le parcours de retour fournisseur vérifie une expédition liée à un achat
 réceptionné, sa sortie de stock, sa justification et sa valorisation figée.
+
+Le parcours des exports télécharge les CSV des stocks, ventes, achats,
+fournisseurs et audits, puis vérifie l’impression des reçus de vente et d’achat.

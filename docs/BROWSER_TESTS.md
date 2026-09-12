@@ -49,6 +49,9 @@ mots de passe et jetons. Les rapports locaux et dépendances sont ignorés par G
 - Retour fournisseur root : deux exemplaires issus d’un achat réceptionné de
   cinq unités sont expédiés. Le stock passe de cinq à trois, avec motif,
   valorisation figée et audit d’expédition.
+- Exports et impressions root : téléchargement des cinq CSV avec contrôle de
+  leur nom et de données propres à la librairie temporaire, puis ouverture et
+  impression des reçus d’une vente et d’un achat.
 
 Le dernier scénario exerce le chemin 401 sans attendre une expiration réelle.
 Les cookies, requêtes et serveur sont réels ; aucune réponse API n’est simulée.
@@ -57,8 +60,9 @@ Les cookies, requêtes et serveur sont réels ; aucune réponse API n’est simu
 
 Le cycle commercial vérifie le DOM et les appels réels jusqu’à la restauration
 du stock. L’approvisionnement vérifie ses réceptions et le CMP par l’effet
-observable sur la marge d’une vente réelle. La suite ne couvre pas encore les
-exports, l’impression ni une recette d’accessibilité exhaustive. Ne déclarer ce
+observable sur la marge d’une vente réelle. Les exports utilisent de vrais
+téléchargements et l’impression vérifie les reçus préparés ainsi que l’appel du
+navigateur. La suite ne couvre pas encore une recette d’accessibilité exhaustive. Ne déclarer ce
 nouvel incrément validé qu’après l’exécution réelle de Chromium.
 
 ```sh
