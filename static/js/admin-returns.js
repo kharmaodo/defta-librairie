@@ -67,7 +67,9 @@
     const label = transition === "complete" ? "finaliser" : "annuler";
     if (!window.confirm(`Voulez-vous ${label} le retour ${item.reference} ?`)) return;
     await api(`/api/manage/customer-returns/${item.id}/${transition}`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({version: item.version})});
-    await loadReturns();
+    const refreshes = [loadReturns()];
+    if (transition === "complete" && typeof window.deftaReloadInventory === "function") refreshes.push(window.deftaReloadInventory());
+    await Promise.all(refreshes);
   }
 
   let settlementGeneration = 0;
@@ -134,7 +136,7 @@
     if (!document.querySelector("#returns-body")) return;
     try {
       const me = await api("/api/auth/me"); state.isRoot = me.role === "SUPER_ADMIN_ROOT";
-      if (state.isRoot) { const owners = await api("/api/admin/owners?status=ACTIVE&libraryStatus=ACTIVE&limit=100"); state.libraries = owners.results.map((owner) => owner.library); document.querySelector(".return-root").hidden = false; fill(document.querySelector("#return-filters [name=libraryId]"), [{id: "", name: "Toutes"}, ...state.libraries], (library) => library.name); }
+      if (state.isRoot) { const owners = await api("/api/admin/owners?status=ACTIVE&libraryStatus=ACTIVE&limit=100"); state.libraries = owners.results.map((owner) => owner.library); document.querySelectorAll(".return-root").forEach((element) => { element.hidden = false; }); fill(document.querySelector("#return-filters [name=libraryId]"), [{id: "", name: "Toutes"}, ...state.libraries], (library) => library.name); }
       await loadReturns();
     } catch (error) { showError("#return-error", error); return; }
     document.querySelector("#return-filters").onsubmit = async (event) => { event.preventDefault(); state.offset = 0; try { await loadReturns(); } catch (error) { showError("#return-error", error); } };

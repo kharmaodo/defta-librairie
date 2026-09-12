@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 12 septembre 2026 sur `develop`, commit `907505d`
-(fusion du cycle d’approvisionnement navigateur, PR #44). Les douze priorités et leurs éléments
+État consolidé le 12 septembre 2026 sur `develop`, commit `933d198`
+(fusion du cycle de paiement navigateur, PR #45). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -25,17 +25,17 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
 | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP et erreurs métier fusionnés (PR #33 et #41). Audit, sessions, propriétaires, livres, stock, ventes et tags extraits (PR #34 à #40). Tests navigateur d’authentification, cycle commercial, approvisionnement et CMP validés et fusionnés (PR #42 à #44). Paiements en validation ; retours, exports/impression et accessibilité navigateur restent à finaliser. |
+| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP et erreurs métier fusionnés (PR #33 et #41). Audit, sessions, propriétaires, livres, stock, ventes et tags extraits (PR #34 à #40). Tests navigateur d’authentification, cycle commercial, approvisionnement, CMP et paiements validés et fusionnés (PR #42 à #45). Retours en validation ; exports/impression et accessibilité navigateur restent à finaliser. |
 
-## Incrément en validation : paiements et caisse navigateur (priorité 12)
+## Incrément en validation : retours clients navigateur (priorité 12)
 
-Le cycle d’approvisionnement et son CMP sont validés et fusionnés (PR #44).
-Cet incrément crée une caisse et une vente confirmée de 6 000 F CFA, puis
-enregistre des règlements en espèces, mobile money et carte. Il contrôle les
-états non payé, partiellement payé et payé ainsi que le reste à payer après
-chaque opération. L’exécution Chromium et la fusion restent à valider.
+Le cycle de paiement est validé et fusionné (PR #45). Cet incrément retourne
+les deux exemplaires d’une vente encaissée : l’un donne lieu à un remboursement
+en espèces, l’autre à un avoir. Il vérifie la restauration progressive du stock,
+les soldes des retours et les audits de finalisation et de règlement.
+L’exécution Chromium et la fusion restent à valider.
 
-Restent retours, autres parcours, exports/impression et contrôles
+Restent les autres parcours, exports/impression et contrôles
 d’accessibilité navigateur à compléter. La priorité 12 reste partielle ;
 les tests unitaires JavaScript ne remplacent pas cette recette réelle.
 
