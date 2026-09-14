@@ -11,7 +11,11 @@ async function login(page) {
 }
 
 test('manual dashboard theme is accessible and persists after reload', async ({page}) => {
-  await page.addInitScript(() => localStorage.setItem('defta.adminTheme', 'dark'));
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('defta.adminTheme')) {
+      localStorage.setItem('defta.adminTheme', 'dark');
+    }
+  });
   await login(page);
 
   const toggle = page.locator('[data-theme-toggle]');
