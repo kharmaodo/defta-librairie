@@ -52,6 +52,10 @@ test('mandatory password change, owner scope and forbidden root API',async({page
   await login(page,{username:credentials.username,password});
   await expect(page.locator('#role-badge')).toHaveText('PROPRIÉTAIRE');
   await expect(dialog).not.toBeVisible();await expect(page.locator('#owners-section')).not.toBeVisible();
+  await page.locator('[data-dashboard-nav]').getByRole('button', {name:'Administration'}).click();
+  const ownerNavigationLink=page.locator('[data-dashboard-nav] [href="#owners-section"]');
+  await expect(ownerNavigationLink).toHaveCount(1);
+  await expect(ownerNavigationLink).not.toBeVisible();
   const status=await page.evaluate(async()=>{
     const response=await fetch('/api/admin/owners',{headers:{Authorization:`Bearer ${sessionStorage.getItem('defta.accessToken')}`}});
     return response.status;
