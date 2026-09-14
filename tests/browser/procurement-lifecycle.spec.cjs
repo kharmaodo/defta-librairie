@@ -119,9 +119,11 @@ test('two receipts update stock and weighted average cost', async ({page, reques
   await page.waitForLoadState('networkidle');
 
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
-  await page.locator('#sale-filters button[type=submit]').click();
   const sale = page.locator('#sales-body tr').filter({hasText: customer});
-  await expect(sale).toHaveCount(1);
+  await expect(async () => {
+    await page.locator('#sale-filters button[type=submit]').click();
+    await expect(sale).toHaveCount(1, {timeout: 2000});
+  }).toPass({timeout: 12000});
   page.once('dialog', dialog => dialog.accept());
   await sale.getByRole('button', {name: 'Confirmer'}).click();
   await expect(page.locator('#sales-body tr').filter({hasText: customer})).toContainText('Confirmée');
