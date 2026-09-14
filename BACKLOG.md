@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `8dc8d74`
-(fusion de la stabilisation de la recette navigateur, PR #50). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `773d0c7`
+(fusion de la préparation de `v1.0.0`, PR #51). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -36,7 +36,8 @@ la matrice de couverture et la checklist de déploiement sont centralisées dans
 
 La course d’affichage détectée par le contrôle de release dans les scénarios
 créant une vente est corrigée et fusionnée (PR #50). Le contrôle final est vert ;
-la préparation de la version `v1.0.0` peut être validée.
+la préparation de la version `v1.0.0` est fusionnée (PR #51). Le prochain commit
+documentaire fusionné sera le candidat définitif à contrôler et à taguer.
 
 La priorité 11 est réalisée dans le périmètre livré ; objectifs de reprise,
 sauvegardes hors machine et rétention des logs restent des décisions de déploiement.
