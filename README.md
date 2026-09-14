@@ -1568,3 +1568,7 @@ fournisseurs et audits, puis vérifie l’impression des reçus de vente et d’
 La recette d’accessibilité navigateur vérifie le lien d’évitement, le focus
 visible et confiné dans un dialogue, Échap, le retour au déclencheur et les
 erreurs annoncées.
+
+La procédure de validation et de mise en production est consolidée dans
+[DELIVERY.md](docs/DELIVERY.md). Le contrôle complet s’exécute avec
+`./scripts/check-delivery.sh` avant de taguer une release.

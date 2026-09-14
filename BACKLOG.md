@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 12 septembre 2026 sur `develop`, commit `45aa03d`
-(fusion des exports et impressions navigateur, PR #48). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `f7c9cae`
+(fusion de l’accessibilité clavier navigateur). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -25,26 +25,23 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
 | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité structurelle des 20 dialogues validée et fusionnée (PR #32). Client HTTP et erreurs métier fusionnés (PR #33 et #41). Audit, sessions, propriétaires, livres, stock, ventes et tags extraits (PR #34 à #40). Parcours navigateur métier validés et fusionnés, y compris exports et impression (PR #42 à #48). Accessibilité navigateur en validation. |
+| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Réalisé | Accessibilité structurelle des 20 dialogues, client HTTP, erreurs métier et modules frontend livrés. Les parcours navigateur couvrent authentification, cycles métier, exports, impressions et garanties clavier principales. Un audit manuel avec lecteur d’écran reste une vérification de production recommandée. |
 
-## Incrément en validation : accessibilité navigateur (priorité 12)
+## Périmètre fonctionnel consolidé
 
-Les exports et impressions sont validés et fusionnés (PR #48). Cet incrément
-vérifie au clavier le lien d’évitement, le focus visible, le nom et le confinement
-du dialogue, sa fermeture avec Échap, le retour du focus et l’annonce d’une erreur.
-L’exécution Chromium et la fusion restent à valider.
-
-Après cette validation, il restera la consolidation finale du delivery. La priorité 12
-reste partielle jusqu’à la fusion ; les contrôles structurels ne remplacent pas
-cette recette réelle.
+L’accessibilité clavier navigateur est validée et fusionnée au commit `f7c9cae`.
+Les douze priorités sont réalisées dans le périmètre convenu. La recette finale,
+la matrice de couverture et la checklist de déploiement sont centralisées dans
+`docs/DELIVERY.md` et automatisées par `scripts/check-delivery.sh`.
 
 La priorité 11 est réalisée dans le périmètre livré ; objectifs de reprise,
 sauvegardes hors machine et rétention des logs restent des décisions de déploiement.
 
-## Ordre de poursuite
+## Après le delivery
 
-Finaliser les incréments de la priorité 12. Les tests et la
-qualité des nouveaux écrans s’appliquent à chaque incrément, sans attendre la ligne 12.
+Exécuter le contrôle final sur le commit candidat, décider les paramètres
+d’exploitation, taguer la release puis ouvrir un nouveau backlog pour toute
+extension. Les tests et la qualité frontend restent obligatoires à chaque incrément.
 
 La règle livrée pour les alertes reste explicite : les achats DRAFT sont des
 achats en brouillon ; aucun état SENT ou ORDERED n’est présumé.
@@ -74,6 +71,7 @@ achats en brouillon ; aucun état SENT ou ORDERED n’est présumé.
 | Paramétrage livré | `internal/migrations/sql/023_create_library_settings.sql`, `internal/services/library_settings_service_test.go`, `static/js/admin-library-settings.js` |
 | Accessibilité frontend | `templates/admin.html`, `static/js/admin-supplier-returns.js`, `scripts/check-admin-accessibility.py`, `docs/FRONTEND_ACCESSIBILITY.md`, `tests/browser/accessibility.spec.cjs` |
 | Exploitation existante | `scripts/backup-db.sh`, `scripts/restore-db.py`, `scripts/test-restore-db.py`, `docs/SQLITE_RESTORE.md`, `internal/middleware/observability.go`, `cmd/main.go` |
+| Delivery final | `docs/DELIVERY.md`, `scripts/check-delivery.sh` |
 
 ## Mise à jour après chaque validation
 
