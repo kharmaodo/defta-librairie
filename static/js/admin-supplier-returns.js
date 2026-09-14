@@ -12,10 +12,10 @@
     </form>
     <p class="alert" role="alert" data-error hidden></p>
     <p class="scope-note">Expédier retire les quantités du stock. Un retour expédié reste conservé dans l’historique.</p>
-    <div class="table-wrap"><table><thead><tr><th>Référence</th><th>Motif</th><th>Total</th><th>État</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+    <div class="table-wrap"><table><thead><tr><th scope="col">Référence</th><th scope="col">Motif</th><th scope="col">Total</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead><tbody></tbody></table></div>
     <div class="pagination"><button class="button ghost" data-prev>Précédent</button><span data-page></span><button class="button ghost" data-next>Suivant</button></div>
-    <dialog class="modal sale-modal"><form class="entity-form" data-editor>
-      <h2 data-title>Nouveau retour fournisseur</h2>
+    <dialog class="modal sale-modal" aria-labelledby="supplier-return-form-title"><form class="entity-form" data-editor>
+      <h2 data-title id="supplier-return-form-title">Nouveau retour fournisseur</h2>
       <div class="form-grid">
         <label data-root hidden>Librairie<select name="libraryId"></select></label>
         <label class="full">Achat réceptionné<select name="purchaseId" required></select></label>
@@ -40,14 +40,7 @@
   let isRoot = false, offset = 0, editing = null, busy = false, purchaseGeneration = 0;
   const money = n => new Intl.NumberFormat('fr-FR', {maximumFractionDigits:2}).format(n);
   const states = {DRAFT:'Brouillon', SHIPPED:'Expédié', CANCELLED:'Annulé'};
-  async function api(path, options = {}) {
-    const headers = new Headers(options.headers);
-    headers.set('Authorization', `Bearer ${sessionStorage.getItem('defta.accessToken') || ''}`);
-    const response = await fetch(path, {...options, headers});
-    const data = (response.headers.get('content-type') || '').includes('json') ? await response.json() : null;
-    if (!response.ok) throw new Error(response.status === 401 ? 'Session expirée : reconnectez-vous.' : data?.message || `Erreur HTTP ${response.status}`);
-    return data;
-  }
+  const api = (path, options) => window.DeftaHTTP.json(path, options);
   function error(e) { const box = dialog.open ? $('[data-form-error]') : $('[data-error]'); box.textContent = e.message; box.hidden = false; }
   async function run(task) {
     if (busy) return;
@@ -128,7 +121,9 @@
           if (action==='edit' || action==='view') return open(item.id);
           if (!window.confirm(`${label} ${item.reference} ?${action==='ship' ? ' Les quantités seront retirées du stock.' : ''}`)) return;
           await api(`/api/manage/supplier-returns/${encodeURIComponent(item.id)}/${action}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({version:item.version})});
-          await list();
+          const refreshes = [list()];
+          if (action === 'ship' && typeof window.deftaReloadInventory === 'function') refreshes.push(window.deftaReloadInventory());
+          await Promise.all(refreshes);
         }); cell.append(b);
       }
     }

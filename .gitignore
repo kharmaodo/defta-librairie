@@ -11,3 +11,9 @@ data/backups/
 .DS_Store
 
 data/
+
+node_modules/
+playwright-report/
+test-results/
+scripts/__pycache__/
+dist/

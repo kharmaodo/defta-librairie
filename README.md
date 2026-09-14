@@ -2,6 +2,9 @@
 
 Le suivi des douze priorités du projet est centralisé dans [BACKLOG.md](BACKLOG.md). Ce fichier distingue les fonctions livrées des travaux restant à finaliser.
 
+La refonte progressive du dashboard d’administration prévue pour `v1.1.0` est
+décrite dans [docs/ADMIN_UI_V1_1.md](docs/ADMIN_UI_V1_1.md).
+
 Catalogue web RTL de livres en arabe, développé en Go avec SQLite et son moteur de recherche plein texte FTS5.
 
 L’application propose une recherche classée par pertinence sur les titres, auteurs, éditeurs, mots-clés et catégories. Elle expose une interface HTML responsive ainsi qu’une API JSON paginée.
@@ -111,7 +114,7 @@ Toutes les variables sont optionnelles :
 | `PORT` | `8080` | Port HTTP |
 | `DB_PATH` | `./data/defta.db` | Chemin de la base SQLite |
 | `PAGE_SIZE` | `30` | Nombre de résultats par page |
-| `VERSION` | `0.1.0-dev` | Version affichée dans le pied de page |
+| `VERSION` | `0.1.0-dev` | Version affichée ; fournir la version publiée en production |
 | `BUILD_DATE` | `unknown` | Date de construction affichée |
 | `JWT_SECRET` | aucune | Secret de signature, minimum 32 octets, obligatoire pour démarrer le serveur |
 | `JWT_ISSUER` | `defta-librairie` | Émetteur JWT attendu |
@@ -136,8 +139,8 @@ Contenu de référence de `.env.example` :
 PORT=8080
 DB_PATH=./data/defta.db
 PAGE_SIZE=30
-VERSION=0.2.0-dev
-BUILD_DATE=2026-09-01
+VERSION=1.1.0
+BUILD_DATE=2026-09-14
 JWT_SECRET=
 JWT_ISSUER=defta-librairie
 JWT_AUDIENCE=defta-librairie-web
@@ -149,6 +152,13 @@ AUTH_COOKIE_SECURE=false
 ```
 
 Ne jamais commiter `.env`, une sauvegarde de ce fichier, ni une valeur réelle de `JWT_SECRET`.
+
+La préparation, le tag et le retour arrière de la version stable sont décrits
+dans [RELEASE.md](docs/RELEASE.md). Les changements publiés figurent dans
+[CHANGELOG.md](CHANGELOG.md).
+
+Les archives Windows AMD64 et Raspberry Pi de `v1.1.0` sont décrites dans
+[RELEASE_ARTIFACTS.md](docs/RELEASE_ARTIFACTS.md).
 
 Sous Linux ou WSL, si `.env` a été modifié sous Windows, supprimer les retours chariot avant le lancement avec `sed -i 's/\r$//' .env`. Le chargeur neutralise également ces fins de ligne pour éviter qu'une valeur telle que `PORT=8080\r` soit transmise au serveur HTTP.
 
@@ -1349,7 +1359,7 @@ concurrence et application du seuil. Le changement de devise reste au backlog.
 ### Contrat OpenAPI et consultation locale
 
 Le contrat **OpenAPI 3.0.3** est `static/openapi.json`, servi à
-`http://localhost:8080/static/openapi.json`. Il couvre les 93 opérations
+`http://localhost:8080/static/openapi.json`. Il couvre les 96 opérations
 `/api/` enregistrées dans `cmd/main.go`, les schémas JSON, paramètres, droits,
 codes d’erreur par famille, cookies de renouvellement, exports CSV et XOF.
 Les pages HTML et ressources statiques ne sont pas des opérations de ce contrat.
@@ -1382,4 +1392,193 @@ route API est ajoutée, retirée ou renommée sans mise à jour du contrat.
 Recette : démarrer l’application, ouvrir la page, filtrer `payments`, développer
 une opération et un schéma, puis télécharger le JSON. Aucune migration ajoutée.
 La priorité 9 est clôturée après validation de XOF comme devise unique ; la
-priorité 10 reste en validation jusqu’à la recette et la fusion.
+priorité 10 est validée et fusionnée (PR #27).
+
+
+### Contrôles de santé
+
+Les sondes publiques ne nécessitent pas de JWT :
+
+| Route | Succès | Indisponibilité |
+|---|---|---|
+| `GET /api/health/live` | 200, `{"status":"alive"}` | Dépend uniquement de la capacité du serveur à répondre. |
+| `GET /api/health/ready` | 200, `{"status":"ready"}` | 503, `{"status":"not_ready","reason":"database_unavailable"}` ou motif `shutting_down`. |
+
+La sonde ready lit `libraries` et `schema_migrations`, avec un contexte de
+2 secondes au plus. Elle exige au moins une migration enregistrée ; le démarrage
+applique toutes les migrations avant d’ouvrir le serveur HTTP. Elle ne renvoie
+ni chemin SQLite, ni détail d’erreur. Les réponses portent `Cache-Control: no-store`.
+
+Lors d’un SIGINT/SIGTERM, ready passe non prêt avant `Shutdown`. Le serveur
+ferme ensuite l’écoute et termine les requêtes en cours : une nouvelle sonde
+peut donc rencontrer un refus de connexion plutôt qu’un JSON 503. Live reste
+indépendant de SQLite tant que la requête peut être traitée.
+
+```bash
+curl --fail-with-body -sS http://localhost:8080/api/health/live
+curl --fail-with-body -sS http://localhost:8080/api/health/ready
+python3 scripts/check-openapi.py
+go test -tags fts5 ./internal/handlers -run TestHealthChecks -count=1 -v
+go test -tags fts5 ./...
+```
+
+Utiliser live pour observer le processus, ready pour décider de lui envoyer du
+trafic. La lecture ne teste pas les écritures, l’espace disque, l’intégrité
+complète ou les restaurations. Ne pas déplacer la base active pour simuler une
+panne : les tests utilisent une base temporaire, fermeture de connexion et
+saturation du pool avec expiration du contexte. Aucune nouvelle migration.
+
+
+### Métriques HTTP et logs structurés
+
+`GET /api/admin/metrics` est réservé à SUPER_ADMIN_ROOT, avec session active et
+mot de passe changé. Il retourne `startedAt`, `uptimeSeconds`, `inFlight`,
+`completed` et `routes`. Chaque groupe contient le pattern de route, le statut,
+le nombre de requêtes, les octets écrits et les durées cumulée/maximale en secondes.
+La requête de métriques elle-même est encore en cours lors de son instantané.
+
+Les compteurs sont en mémoire et repartent de zéro à chaque démarrage. Les
+routes non reconnues partagent `unmatched` ; après 1 024 groupes distincts,
+les nouveaux groupes sont cumulés sous `overflow` (statut 0), soit 1 025 groupes
+maximum. Les métriques ne fournissent pas de percentiles et ne constituent pas
+un journal d’audit. Elles couvrent aussi catalogue, fichiers statiques et sondes.
+
+Au démarrage, slog configure la sortie standard en JSON. Les messages existants
+émis par le logger standard sont également encodés en JSON. Chaque requête
+terminée produit un événement `http_request` avec `request_id`, `route`, `status`,
+`bytes`, `duration_ms` et `aborted`. Le pattern déclaré contient les emplacements
+comme `{id}`, pas leur valeur. Aucun header d’authentification, corps JSON,
+paramètre URL, adresse IP ou agent utilisateur n’est ajouté à ces événements.
+Les erreurs 5xx et interruptions sont de niveau ERROR, les autres de niveau INFO.
+
+Une panique continue de se propager vers le serveur HTTP ; l’observation libère
+le compteur en cours et indique `aborted=true`. Un statut déjà envoyé reste
+conservé ; sinon l’événement comptabilise 500, sans garantir qu’une réponse 500
+a été reçue par le client. Les diagnostics de panique du serveur Go restent
+sous sa responsabilité. `ResponseController` peut accéder au writer original.
+
+```bash
+curl --fail-with-body -sS http://localhost:8080/api/admin/metrics \
+  -H "Authorization: Bearer $TOKEN"
+python3 scripts/check-openapi.py
+go test -tags fts5 ./internal/middleware -run 'TestHTTPObservability|TestMetricsRootGuard' -count=1 -v
+go test -race -tags fts5 ./internal/middleware
+go test -tags fts5 ./...
+```
+
+Recette : générer une requête catalogue, consulter les compteurs avec root,
+vérifier le refus avec un propriétaire, puis comparer X-Request-ID de la réponse
+et request_id du log. Redémarrer pour constater la remise à zéro. Aucune nouvelle
+migration. La collecte externe, la rotation/rétention des fichiers de logs et
+la restauration testée restent à organiser pour l’exploitation.
+
+
+### Restauration SQLite vers un nouveau fichier
+
+La procédure complète est dans [docs/SQLITE_RESTORE.md](docs/SQLITE_RESTORE.md).
+Elle couvre préparation, maintenance, bascule par DB_PATH, recette et retour
+arrière. Le script restaure une sauvegarde vers un nom neuf, vérifie intégrité,
+clés étrangères et schéma, puis affiche l’empreinte du fichier restauré. Il
+n’arrête pas le serveur et ne remplace jamais la base active.
+
+```bash
+python3 scripts/test-restore-db.py
+# Préparation d’une restauration ; adapter les chemins, destination inexistante.
+python3 scripts/restore-db.py ./data/backups/SAUVEGARDE.db \
+  --output ./data/restores/NOUVEAU_FICHIER.db
+```
+
+Créer le répertoire parent au préalable. Python 3.10+ avec SQLite/FTS5 est requis
+sur Linux/WSL. La recette automatisée utilise uniquement des bases temporaires.
+Aucune migration ni route HTTP n’est ajoutée. Ne modifier DB_PATH qu’en suivant
+la procédure de maintenance et conserver l’ancienne base pour le retour arrière.
+
+
+### Accessibilité des dialogues de l’administration
+
+Les 20 dialogues de `/admin`, y compris le retour fournisseur créé en JavaScript,
+ont un titre accessible. Les boutons × portent le nom « Fermer », les messages
+d’erreur utilisent `role="alert"` et les en-têtes de tableaux indiquent leur
+portée de colonne. Le lien « Aller au contenu principal » apparaît au clavier
+et les contrôles disposent d’un indicateur de focus visible.
+
+```bash
+python3 scripts/check-admin-accessibility.py
+node --check static/js/admin-supplier-returns.js
+```
+
+La [recette clavier](docs/FRONTEND_ACCESSIBILITY.md) couvre ouverture, fermeture,
+retour de focus, erreurs et impressions. Le contrôle Python est structurel ;
+il ne remplace pas les tests navigateur/lecteur d’écran. Les erreurs globales
+et les tests navigateur automatisés restent à finaliser dans la priorité 12.
+Aucune migration ni modification de l’API.
+
+Les statistiques, alertes, historiques clients, exports et paramètres utilisent
+le client HTTP commun décrit dans [FRONTEND_HTTP.md](docs/FRONTEND_HTTP.md).
+Ses tests sans dépendance s’exécutent avec `node --test scripts/test-admin-http.cjs`.
+
+Le client HTTP commun couvre également les clients, l’approvisionnement,
+les paiements/caisses et les retours clients/fournisseurs, avec des messages
+français pour les refus métier. La recette est détaillée dans
+[FRONTEND_HTTP.md](docs/FRONTEND_HTTP.md).
+
+Le découpage du tableau de bord commence par le journal d’audit dans
+`admin-audit.js`. Le fonctionnement et la recette sont décrits dans
+[FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+La gestion des sessions est extraite dans `admin-sessions.js` : liste, filtres,
+pagination et révocations. Sa recette complète figure dans
+[FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+La gestion des propriétaires est extraite dans `admin-owners.js` (liste,
+formulaires et actions administratives). Les sélecteurs de librairie restent
+coordonnés par le tableau de bord. Voir [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+La gestion des livres est extraite dans `admin-books.js` : recherche, pagination,
+formulaires, historique et suppression. Les interactions avec le stock et les
+tags sont décrites dans [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+La gestion du stock est extraite dans `admin-inventory.js`. La recette des
+mouvements, seuils et historiques est décrite dans
+[FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+La gestion des ventes est extraite dans `admin-sales.js`, avec ses catalogues
+livres/clients, formulaires, transitions et impression. Voir la recette dans
+[FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+Les tags sont extraits dans `admin-tags.js`, avec leurs suggestions pour les
+livres. La recette est décrite dans [FRONTEND_MODULES.md](docs/FRONTEND_MODULES.md).
+
+L’authentification utilise désormais le client HTTP commun, avec renouvellement
+partagé et reprise limitée après 401. Voir [FRONTEND_HTTP.md](docs/FRONTEND_HTTP.md)
+pour les règles et la recette des sessions.
+
+Une première suite Chromium teste l’authentification avec un serveur et une base
+SQLite temporaires. Installation et exécution : [BROWSER_TESTS.md](docs/BROWSER_TESTS.md).
+
+La suite Chromium couvre aussi le cycle livre, stock, confirmation et annulation
+d’une vente, avec vérification de la restitution exacte du stock.
+
+Le parcours d’approvisionnement couvre deux réceptions et vérifie le coût moyen
+pondé par le coût et la marge d’une vente confirmée.
+
+Le parcours de paiement crée une caisse et règle une vente successivement en
+espèces, mobile money et carte. Il vérifie les montants payés, le reste à payer
+et les états non payé, partiellement payé et payé.
+
+Le parcours de retour client vérifie sur une vente encaissée la restitution du
+stock, un remboursement en espèces, un avoir et leurs traces d’audit.
+
+Le parcours de retour fournisseur vérifie une expédition liée à un achat
+réceptionné, sa sortie de stock, sa justification et sa valorisation figée.
+
+Le parcours des exports télécharge les CSV des stocks, ventes, achats,
+fournisseurs et audits, puis vérifie l’impression des reçus de vente et d’achat.
+
+La recette d’accessibilité navigateur vérifie le lien d’évitement, le focus
+visible et confiné dans un dialogue, Échap, le retour au déclencheur et les
+erreurs annoncées.
+
+La procédure de validation et de mise en production est consolidée dans
+[DELIVERY.md](docs/DELIVERY.md). Le contrôle complet s’exécute avec
+`./scripts/check-delivery.sh` avant de taguer une release.

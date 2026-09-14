@@ -12,12 +12,7 @@
     panel.querySelectorAll('[data-audit]').forEach(e=>{e.hidden=!audit;});
     panel.querySelector('[data-hint]').textContent=audit ? (root?'Audit global. ':'Vos propres événements uniquement. ')+'Dates des événements UTC ; recherche sur identifiant de ressource. Les instantanés JSON et adresses IP ne sont pas exportés.' : `Dates UTC de ${kind==='stocks'?'dernière modification du stock':'création'} ; recherche sur ${kind==='stocks'?'titre':kind==='suppliers'?'nom':'référence'}. Les montants des ventes et achats sont bruts, avant retours. Un coût inconnu reste vide.`;
   }
-  async function request(url){
-    const token=sessionStorage.getItem('defta.accessToken');if(!token)throw new Error('Connectez-vous pour exporter.');
-    const response=await fetch(url,{cache:'no-store',headers:{Authorization:`Bearer ${token}`}});
-    if(!response.ok)throw new Error(response.status===422?'Plus de 10 000 lignes : affinez les filtres.':response.status===401?'Session expirée : reconnectez-vous.':`Export indisponible (HTTP ${response.status}).`);
-    return response;
-  }
+  const request = (url, options) => window.DeftaHTTP.request(url, options);
   form.elements.kind.onchange=()=>{update();notice.textContent='';error.hidden=true;};
   form.onsubmit=async e=>{
     e.preventDefault();if(busy||!ready)return;busy=true;error.hidden=true;notice.textContent='Préparation du fichier…';panel.setAttribute('aria-busy','true');
@@ -39,8 +34,8 @@
   async function init(){
     form.querySelector('button').disabled=true;update();
     try{
-      const me=await(await request('/api/auth/me')).json();root=me.role==='SUPER_ADMIN_ROOT';if(!root&&me.role!=='OWNER_LIBRARY')throw new Error('Profil non autorisé.');
-      if(root){const options=[];let offset=0;while(true){const page=await(await request(`/api/admin/owners?offset=${offset}&limit=100`)).json();for(const o of page.results)if(o.library)options.push(new Option(o.library.name,o.library.id));offset+=page.results.length;if(!page.results.length||offset>=page.total)break;}form.elements.libraryId.append(...options);}
+      const me=await window.DeftaHTTP.json('/api/auth/me');root=me.role==='SUPER_ADMIN_ROOT';if(!root&&me.role!=='OWNER_LIBRARY')throw new Error('Profil non autorisé.');
+      if(root){const options=[];let offset=0;while(true){const page=await window.DeftaHTTP.json(`/api/admin/owners?offset=${offset}&limit=100`);for(const o of page.results)if(o.library)options.push(new Option(o.library.name,o.library.id));offset+=page.results.length;if(!page.results.length||offset>=page.total)break;}form.elements.libraryId.append(...options);}
       ready=true;update();form.querySelector('button').disabled=false;
     }catch(e){error.textContent=e.message;error.hidden=false;}
   }

@@ -1245,3 +1245,27 @@ curl --fail-with-body -sS -X POST "${BASE_URL}/api/manage/return-settlements/${R
 }
 JSON
 ```
+
+### GET /api/health/live
+
+Sonde publique, sans JWT. Cache-Control: no-store. Répond 200 tant que le serveur peut traiter cette requête ; ne consulte pas SQLite.
+
+```bash
+curl --fail-with-body -sS "${BASE_URL}/api/health/live"
+```
+
+### GET /api/health/ready
+
+Sonde publique, sans JWT. Cache-Control: no-store. Lit libraries et schema_migrations avec un contexte de deux secondes maximum (ou le délai client si plus court). 503 si lecture impossible, aucune migration enregistrée, ou arrêt gracieux en cours. Ne vérifie ni intégrité complète, ni espace disque, ni capacité d’écriture. Le démarrage applique déjà les migrations avant d’écouter.
+
+```bash
+curl --fail-with-body -sS "${BASE_URL}/api/health/ready"
+```
+
+### GET /api/admin/metrics
+
+SUPER_ADMIN_ROOT uniquement, session active et mot de passe changé. Compteurs en mémoire remis à zéro au redémarrage. La requête de métriques courante est incluse dans inFlight, pas encore dans completed. Aucun identifiant métier, corps ou paramètre URL. Durées cumulées et maximales en secondes. Pas de percentiles ni de persistance.
+
+```bash
+curl --fail-with-body -sS "${BASE_URL}/api/admin/metrics" -H "Authorization: Bearer ${TOKEN}"
+```

@@ -1,15 +1,8 @@
 (() => {
   "use strict";
-  const token = () => sessionStorage.getItem("defta.accessToken") || "";
   const state = {suppliers: [], purchases: [], books: [], libraries: [], isRoot: false, purchaseOffset: 0, purchaseLimit: 10, purchaseTotal: 0};
   const money = (value) => new Intl.NumberFormat("fr-FR", {style: "currency", currency: "XOF", maximumFractionDigits: 0}).format(value || 0);
-  async function api(path, options = {}) {
-    const headers = new Headers(options.headers || {}); headers.set("Authorization", `Bearer ${token()}`);
-    const response = await fetch(path, {...options, headers});
-    const type = response.headers.get("content-type") || ""; const payload = type.includes("json") ? await response.json() : null;
-    if (!response.ok) throw new Error(payload?.message || `Requête refusée (${response.status})`);
-    return payload;
-  }
+  const api = (path, options) => window.DeftaHTTP.json(path, options);
   function cell(row, value, className = "") { const td = row.insertCell(); td.textContent = value || "—"; td.className = className; return td; }
   function button(label, action, id, danger = false) { const b = document.createElement("button"); b.type = "button"; b.className = `row-button${danger ? " danger" : ""}`; b.dataset.action = action; b.dataset.id = id; b.textContent = label; return b; }
   function error(id, reason) { const box = document.querySelector(id); box.textContent = reason.message; box.hidden = false; }
@@ -42,7 +35,11 @@
   async function init() {
     if (!document.querySelector("#suppliers-body")) return;
     try { const me=await api("/api/auth/me"); state.isRoot=me.role==="SUPER_ADMIN_ROOT"; if(state.isRoot){const owners=await api("/api/admin/owners?status=ACTIVE&libraryStatus=ACTIVE&limit=100");state.libraries=owners.results.map(o=>o.library);document.querySelectorAll(".procurement-root").forEach(x=>x.hidden=false);const libraryFilter=document.querySelector("#purchase-filter-library");fill(libraryFilter,[{id:"",name:"Toutes"},...state.libraries],l=>l.name);libraryFilter.closest("label").hidden=false;} await Promise.all([loadSuppliers(),loadBooks()]);const supplierFilter=document.querySelector("#purchase-filters [name=supplierId]");fill(supplierFilter,[{id:"",name:"Tous"},...state.suppliers],s=>s.name);await loadPurchases(); } catch (_) { return; }
-    document.querySelector("#add-supplier-button").onclick=()=>openSupplier(); document.querySelector("#add-purchase-button").onclick=()=>openPurchase();
+    document.querySelector("#add-supplier-button").onclick=()=>openSupplier();
+    document.querySelector("#add-purchase-button").onclick=async()=>{
+      try { await loadBooks(); openPurchase(); }
+      catch(x) { error("#dashboard-error",x); }
+    };
     document.querySelector("#add-purchase-line-button").onclick=()=>addPurchaseLine();
     document.querySelector("#purchase-filters").onsubmit=async(e)=>{e.preventDefault();state.purchaseOffset=0;await loadPurchases();};
     document.querySelector("#reset-purchase-filters").onclick=async()=>{document.querySelector("#purchase-filters").reset();state.purchaseOffset=0;await loadPurchases();};

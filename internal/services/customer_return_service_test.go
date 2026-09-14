@@ -146,6 +146,18 @@ func testCustomerReturnValuation(t *testing.T, stockCost, saleCost, expectedCost
 	if err = db.QueryRow("SELECT unit_cost_snapshot FROM sale_lines WHERE id='line-1'").Scan(&frozen); err != nil || frozen != saleCost {
 		t.Fatalf("sale cost changed=%+v err=%v", frozen, err)
 	}
+	root := &auth.Claims{Role: models.RoleSuperAdminRoot}
+	root.Subject = "root-1"
+	rootDraft := input
+	rootDraft.Lines = []models.CustomerReturnLineInput{{SaleLineID: "line-1", Quantity: 1}}
+	rootReturn, err := service.Create(context.Background(), ownerOne, rootDraft)
+	if err != nil {
+		t.Fatalf("create root completion draft: %v", err)
+	}
+	rootReturn, err = service.Complete(context.Background(), root, rootReturn.ID, rootReturn.Version)
+	if err != nil || rootReturn.Status != models.CustomerReturnStatusCompleted || rootReturn.LibraryID != "library-1" {
+		t.Fatalf("root completion=%+v err=%v", rootReturn, err)
+	}
 	excess := input
 	excess.Lines = []models.CustomerReturnLineInput{{SaleLineID: "line-1", Quantity: 4}}
 	second, err := service.Create(context.Background(), ownerOne, excess)

@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 9 septembre 2026 sur `develop`, commit `d24d82f`
-(fusion du paramétrage de librairie, PR #26). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `df453e8`
+(publication de `v1.1.0` documentée par la PR #59). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -23,30 +23,59 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 7 | Alertes métier | Stock faible, rupture, commandes en attente, fournisseurs désactivés | Réalisé | Tableau commun validé et fusionné. Les achats DRAFT sont explicitement désignés comme achats en brouillon. |
 | 8 | Exports | CSV des stocks, ventes, achats, fournisseurs et audit | Réalisé | Cinq exports validés et fusionnés. Audit limité aux événements propres du propriétaire, global pour root. |
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
-| 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Partiel | Contrat OpenAPI 3.0.3 des 93 opérations API, consultation locale et exemples curl implémentés. Contrôles structurels validés ; tests Go et recette navigateur à valider avant fusion. |
-| 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Partiel | Sauvegardes SQLite contrôlées et arrêt gracieux existants. Ajouter les contrôles de santé, métriques, logs structurés et procédure de restauration testée. |
-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Modules JavaScript métier déjà séparés. Harmoniser les erreurs, revoir l’accessibilité et intégrer les tests navigateur. Les recettes Go/HTTP ne couvrent pas le rendu visuel. |
+| 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
+| 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
+| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Réalisé | Accessibilité structurelle des 20 dialogues, client HTTP, erreurs métier et modules frontend livrés. Les parcours navigateur couvrent authentification, cycles métier, exports, impressions et garanties clavier principales. Un audit manuel avec lecteur d’écran reste une vérification de production recommandée. |
 
-## Incrément en validation : documentation API (priorité 10)
+## Périmètre fonctionnel consolidé
 
-Le paramétrage est validé et fusionné au commit `d24d82f`. Le propriétaire du
-projet valide XOF comme devise unique du périmètre actuel. La priorité 9 est
-donc réalisée : aucun changement de devise ni conversion des montants
-historiques n’est prévu dans cette version. Une éventuelle prise en charge de
-plusieurs devises nécessitera un périmètre distinct et une nouvelle décision.
+L’accessibilité clavier navigateur est validée et fusionnée au commit `f7c9cae`.
+Les douze priorités sont réalisées dans le périmètre convenu. La recette finale,
+la matrice de couverture et la checklist de déploiement sont centralisées dans
+`docs/DELIVERY.md` et automatisées par `scripts/check-delivery.sh`.
 
-Le contrat `static/openapi.json` documente les 93 opérations enregistrées dans
-`cmd/main.go`. La page locale, les exemples curl et les contrôles de dérive
-routes/schémas sont ajoutés. Les contrôles Python et JavaScript passent ; les
-tests Go et la recette navigateur restent à valider avant fusion.
+La course d’affichage détectée par le contrôle de release dans les scénarios
+créant une vente est corrigée et fusionnée (PR #50). Le contrôle final est vert,
+la préparation est fusionnée (PR #51) et le tag `v1.0.0` est publié sur le commit
+`773d0c7`.
 
-## Ordre de poursuite
+La priorité 11 est réalisée dans le périmètre livré ; objectifs de reprise,
+sauvegardes hors machine et rétention des logs restent des décisions de déploiement.
 
-Poursuivre les priorités 10, 11 et 12 dans cet ordre. Les tests et la
-qualité des nouveaux écrans s’appliquent à chaque incrément, sans attendre la ligne 12.
+## Après le delivery
+
+Exécuter le contrôle final sur le commit candidat, décider les paramètres
+d’exploitation, taguer la release puis ouvrir un nouveau backlog pour toute
+extension. Les tests et la qualité frontend restent obligatoires à chaque incrément.
 
 La règle livrée pour les alertes reste explicite : les achats DRAFT sont des
 achats en brouillon ; aucun état SENT ou ORDERED n’est présumé.
+
+## Backlog v1.1.0 — refonte du dashboard d’administration
+
+La prochaine version mineure modernise uniquement l’interface d’administration.
+Elle ne modifie ni les règles métier, ni les routes HTTP, ni les formats de données.
+Le contrat détaillé de la refonte est défini dans `docs/ADMIN_UI_V1_1.md`.
+
+| Ordre | Incrément | Livrable vérifiable | État |
+|---|---|---|---|
+| 1 | Fondation et contrat de non-régression | Audit du DOM, architecture de navigation, sélecteurs protégés et critères d’acceptation | Réalisé |
+| 2 | Structure du dashboard | Header modernisé, navigation thématique, sous-menus accessibles et ancres de sections | Réalisé |
+| 3 | Système visuel | `admin.css` non minifié, commenté, responsive et organisé par composants | Réalisé |
+| 4 | Navigation responsive | Comportement desktop/mobile, focus, fermeture et état actif | Réalisé |
+| 5 | Couverture navigateur | Tests Playwright des menus, du clavier, des ancres et de l’accessibilité sans réduire les parcours existants | Réalisé |
+| 6 | Stabilisation et release | Suite Go/FTS5, contrôles statiques et suite Playwright complète sans test ignoré | Réalisé |
+
+Après chaque fusion vérifiée dans `origin/develop`, mettre à jour ici le commit
+de référence, l’état de l’incrément fusionné et le prochain incrément actif.
+
+Les six incréments de `v1.1.0` sont réalisés. Le contrôle final comprend neuf
+étapes et treize parcours Chromium sans test ignoré. Le tag annoté `v1.1.0` est
+publié sur le commit `eaf5d8a`.
+
+La publication des exécutables Windows AMD64, Raspberry Pi OS ARM64 et Raspberry
+Pi OS ARMv7 est l’incrément post-release actif. Les archives incluent les
+ressources d’exécution et sont accompagnées de sommes SHA-256.
 
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 
@@ -71,7 +100,9 @@ achats en brouillon ; aucun état SENT ou ORDERED n’est présumé.
 | Stock et alertes existantes | `internal/repositories/business_alert_repository.go`, `internal/services/business_alert_service_test.go`, `internal/handlers/business_alerts_test.go`, `static/js/admin-business-alerts.js` |
 | Documentation API | `static/openapi.json`, `static/api-docs.html`, `docs/API_EXAMPLES.md`, `cmd/openapi_contract_test.go`, `scripts/check-openapi.py` |
 | Paramétrage livré | `internal/migrations/sql/023_create_library_settings.sql`, `internal/services/library_settings_service_test.go`, `static/js/admin-library-settings.js` |
-| Exploitation existante | `scripts/backup-db.sh`, `cmd/main.go` |
+| Accessibilité frontend | `templates/admin.html`, `static/js/admin-supplier-returns.js`, `scripts/check-admin-accessibility.py`, `docs/FRONTEND_ACCESSIBILITY.md`, `tests/browser/accessibility.spec.cjs` |
+| Exploitation existante | `scripts/backup-db.sh`, `scripts/restore-db.py`, `scripts/test-restore-db.py`, `docs/SQLITE_RESTORE.md`, `internal/middleware/observability.go`, `cmd/main.go` |
+| Delivery final | `docs/DELIVERY.md`, `scripts/check-delivery.sh`, `docs/RELEASE.md`, `CHANGELOG.md` |
 
 ## Mise à jour après chaque validation
 
