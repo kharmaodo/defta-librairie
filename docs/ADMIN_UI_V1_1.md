@@ -92,6 +92,8 @@ dimensions, ombres, rayons et transitions.
 - Le menu mobile s’ouvre, se ferme et restitue le focus au bouton déclencheur.
 - Header, contenu principal et footer gardent leurs repères accessibles ; le
   contenu textuel du footer reste inchangé.
+- Le contrat global vérifie les cinq groupes, les dix-neuf liens et l’existence
+  de chaque ancre cible. Le lien Propriétaires suit la visibilité du rôle root.
 - La suite complète est exécutée avec `npm run test:browser`, en plus des contrôles
   statiques et de `go test -tags fts5 ./...`.
 

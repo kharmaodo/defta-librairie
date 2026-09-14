@@ -130,9 +130,17 @@ test('refund and credit note restore stock and remain audited', async ({page, re
   await saleLine.locator('[name=quantity]').fill('2');
   const createdResponse = page.waitForResponse(response =>
     response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/manage/sales');
+  const refreshedResponse = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return response.request().method() === 'GET'
+      && url.pathname === '/api/manage/sales'
+      && url.searchParams.get('libraryId') === library.id;
+  });
   await saleForm.locator('button[type=submit]').click();
   const created = await createdResponse;
   expect(created.status(), await created.text()).toBe(201);
+  const refreshed = await refreshedResponse;
+  expect(refreshed.status(), await refreshed.text()).toBe(200);
   await expect(saleForm).not.toBeVisible();
   await expect(page.locator('#sales-body tr').filter({hasText: customer})).toHaveCount(1);
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
