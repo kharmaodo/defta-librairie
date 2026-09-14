@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `fee3d8d`
-(contrat navigateur du dashboard fusionné par la PR #57). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `eaf5d8a`
+(candidat final `v1.1.0` fusionné par la PR #58). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -64,10 +64,14 @@ Le contrat détaillé de la refonte est défini dans `docs/ADMIN_UI_V1_1.md`.
 | 3 | Système visuel | `admin.css` non minifié, commenté, responsive et organisé par composants | Réalisé |
 | 4 | Navigation responsive | Comportement desktop/mobile, focus, fermeture et état actif | Réalisé |
 | 5 | Couverture navigateur | Tests Playwright des menus, du clavier, des ancres et de l’accessibilité sans réduire les parcours existants | Réalisé |
-| 6 | Stabilisation et release | Suite Go/FTS5, contrôles statiques et suite Playwright complète sans test ignoré | En cours |
+| 6 | Stabilisation et release | Suite Go/FTS5, contrôles statiques et suite Playwright complète sans test ignoré | Réalisé |
 
 Après chaque fusion vérifiée dans `origin/develop`, mettre à jour ici le commit
 de référence, l’état de l’incrément fusionné et le prochain incrément actif.
+
+Les six incréments de `v1.1.0` sont réalisés. Le contrôle final comprend neuf
+étapes et treize parcours Chromium sans test ignoré. Le tag annoté `v1.1.0` est
+publié sur le commit `eaf5d8a`.
 
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 
