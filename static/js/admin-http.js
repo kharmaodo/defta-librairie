@@ -150,7 +150,7 @@
   }
   const pendingJSONReads = new Map();
   function json(path, options) {
-    if (options !== undefined) return decode(request(path, options));
+    if (options !== undefined) return request(path, options).then(decode);
     const key = String(path);
     if (pendingJSONReads.has(key)) return pendingJSONReads.get(key);
     const pending = decode(request(path))
