@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `f7c9cae`
-(fusion de l’accessibilité clavier navigateur). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `a1ee6c3`
+(fusion de la consolidation finale, PR #49). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -33,6 +33,11 @@ L’accessibilité clavier navigateur est validée et fusionnée au commit `f7c9
 Les douze priorités sont réalisées dans le périmètre convenu. La recette finale,
 la matrice de couverture et la checklist de déploiement sont centralisées dans
 `docs/DELIVERY.md` et automatisées par `scripts/check-delivery.sh`.
+
+Le contrôle de release a révélé une course d’affichage commune aux scénarios
+navigateur créant une vente : un filtre pouvait être rendu avant la fin du
+rafraîchissement initial. Leur stabilisation est en validation et bloque le tag,
+sans modifier le comportement métier livré.
 
 La priorité 11 est réalisée dans le périmètre livré ; objectifs de reprise,
 sauvegardes hors machine et rétention des logs restent des décisions de déploiement.

@@ -83,8 +83,13 @@ test('book, stock and confirmed/cancelled sale restore inventory', async ({page,
   await saleLine.locator('[name=bookId]').selectOption(await bookOption.getAttribute('value'));
   await saleLine.locator('[name=quantity]').fill('2');
   await saleForm.locator('[name=customerName]').fill('Client navigateur');
+  const createdResponse = page.waitForResponse(response =>
+    response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/manage/sales');
   await saleForm.locator('button[type=submit]').click();
+  const created = await createdResponse;
+  expect(created.status(), await created.text()).toBe(201);
   await expect(saleForm).not.toBeVisible();
+  await expect(page.locator('#sales-body tr').filter({hasText: 'Client navigateur'})).toHaveCount(1);
 
   await filterSales(page, library.id);
   let saleRow = page.locator('#sales-body tr').filter({hasText: 'Client navigateur'});
