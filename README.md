@@ -4,6 +4,8 @@ Le suivi des douze priorités du projet est centralisé dans [BACKLOG.md](BACKLO
 
 La refonte progressive du dashboard d’administration prévue pour `v1.1.0` est
 décrite dans [docs/ADMIN_UI_V1_1.md](docs/ADMIN_UI_V1_1.md).
+La feuille de route de l’expérience dashboard `v1.2.0` est définie dans
+[docs/ROADMAP_V1_2.md](docs/ROADMAP_V1_2.md).
 
 Catalogue web RTL de livres en arabe, développé en Go avec SQLite et son moteur de recherche plein texte FTS5.
 
