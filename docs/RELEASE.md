@@ -43,6 +43,10 @@ git push origin v1.1.0
 Créer la release GitHub `v1.1.0` avec les notes de `CHANGELOG.md`, le binaire
 et son fichier SHA-256. Le tag publié ne doit jamais être déplacé.
 
+Les exécutables Windows AMD64 et Raspberry Pi sont construits à partir du tag
+par `.github/workflows/release-binaries.yml`. La procédure et le contenu des
+archives sont détaillés dans `RELEASE_ARTIFACTS.md`.
+
 ## 4. Déployer et vérifier
 
 Sauvegarder puis tester la base avec `SQLITE_RESTORE.md`. Après démarrage,

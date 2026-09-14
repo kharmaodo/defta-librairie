@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `eaf5d8a`
-(candidat final `v1.1.0` fusionné par la PR #58). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `df453e8`
+(publication de `v1.1.0` documentée par la PR #59). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -72,6 +72,10 @@ de référence, l’état de l’incrément fusionné et le prochain incrément 
 Les six incréments de `v1.1.0` sont réalisés. Le contrôle final comprend neuf
 étapes et treize parcours Chromium sans test ignoré. Le tag annoté `v1.1.0` est
 publié sur le commit `eaf5d8a`.
+
+La publication des exécutables Windows AMD64, Raspberry Pi OS ARM64 et Raspberry
+Pi OS ARMv7 est l’incrément post-release actif. Les archives incluent les
+ressources d’exécution et sont accompagnées de sommes SHA-256.
 
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 

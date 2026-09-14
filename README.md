@@ -157,6 +157,9 @@ La préparation, le tag et le retour arrière de la version stable sont décrits
 dans [RELEASE.md](docs/RELEASE.md). Les changements publiés figurent dans
 [CHANGELOG.md](CHANGELOG.md).
 
+Les archives Windows AMD64 et Raspberry Pi de `v1.1.0` sont décrites dans
+[RELEASE_ARTIFACTS.md](docs/RELEASE_ARTIFACTS.md).
+
 Sous Linux ou WSL, si `.env` a été modifié sous Windows, supprimer les retours chariot avant le lancement avec `sed -i 's/\r$//' .env`. Le chargeur neutralise également ces fins de ligne pour éviter qu'une valeur telle que `PORT=8080\r` soit transmise au serveur HTTP.
 
 ### Durcissement HTTP
