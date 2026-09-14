@@ -15,8 +15,9 @@ npx playwright install --with-deps chromium
 ```
 
 La commande vérifie successivement le patch, le contrat OpenAPI,
-l’accessibilité structurelle, la restauration SQLite, les tests Go normaux et
-avec détecteur de courses, les tests frontend et les onze parcours Chromium.
+l’accessibilité structurelle, le contrat du dashboard, la restauration SQLite,
+les tests Go normaux et avec détecteur de courses, les tests frontend et les
+treize parcours Chromium.
 Elle s’arrête dès le premier échec et ne touche pas à la base applicative.
 
 ## Matrice de couverture livrée
@@ -33,6 +34,7 @@ Elle s’arrête dès le premier échec et ne touche pas à la base applicative.
 | Statistiques et alertes | Tests repositories/services/handlers et modules frontend |
 | Exports et impressions | Tests Go et `exports-printing.spec.cjs` |
 | Accessibilité | Contrôle structurel et `accessibility.spec.cjs` |
+| Dashboard v1.1 | `check-admin-dashboard.py` et `admin-dashboard.spec.cjs` |
 | API et exploitation | Contrat OpenAPI, sondes, métriques et test de restauration |
 
 ## Checklist de déploiement

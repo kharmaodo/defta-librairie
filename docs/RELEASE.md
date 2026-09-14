@@ -1,4 +1,4 @@
-# Publication de la version 1.0.0
+# Publication de la version 1.1.0
 
 Cette procédure crée une release traçable à partir de `develop`, après réussite
 du contrôle final sur le commit exact à taguer.
@@ -20,12 +20,12 @@ Le statut doit être vide. Conserver le SHA affiché.
 ```sh
 mkdir -p dist
 CGO_ENABLED=1 go build -trimpath -tags fts5 \
-  -o dist/defta-librairie-v1.0.0-linux-amd64 ./cmd
-sha256sum dist/defta-librairie-v1.0.0-linux-amd64 \
-  > dist/defta-librairie-v1.0.0-linux-amd64.sha256
+  -o dist/defta-librairie-v1.1.0-linux-amd64 ./cmd
+sha256sum dist/defta-librairie-v1.1.0-linux-amd64 \
+  > dist/defta-librairie-v1.1.0-linux-amd64.sha256
 ```
 
-Au lancement, fournir au minimum `VERSION=1.0.0`,
+Au lancement, fournir au minimum `VERSION=1.1.0`,
 `BUILD_DATE=2026-09-14`, un `JWT_SECRET` issu du gestionnaire de secrets et
 `AUTH_COOKIE_SECURE=true`. Ne jamais incorporer `.env`, la base SQLite ou une
 sauvegarde dans l’artefact.
@@ -35,12 +35,12 @@ sauvegarde dans l’artefact.
 Vérifier que `HEAD` est toujours le SHA validé, puis :
 
 ```sh
-git tag -a v1.0.0 -m "Defta Librairie 1.0.0"
-git show --no-patch --decorate v1.0.0
-git push origin v1.0.0
+git tag -a v1.1.0 -m "Defta Librairie 1.1.0"
+git show --no-patch --decorate v1.1.0
+git push origin v1.1.0
 ```
 
-Créer la release GitHub `v1.0.0` avec les notes de `CHANGELOG.md`, le binaire
+Créer la release GitHub `v1.1.0` avec les notes de `CHANGELOG.md`, le binaire
 et son fichier SHA-256. Le tag publié ne doit jamais être déplacé.
 
 ## 4. Déployer et vérifier

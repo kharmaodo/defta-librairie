@@ -139,7 +139,7 @@ Contenu de référence de `.env.example` :
 PORT=8080
 DB_PATH=./data/defta.db
 PAGE_SIZE=30
-VERSION=1.0.0
+VERSION=1.1.0
 BUILD_DATE=2026-09-14
 JWT_SECRET=
 JWT_ISSUER=defta-librairie

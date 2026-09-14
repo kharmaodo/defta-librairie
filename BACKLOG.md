@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `81c4d47`
-(navigation responsive stabilisée par la PR #56). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `fee3d8d`
+(contrat navigateur du dashboard fusionné par la PR #57). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -63,8 +63,8 @@ Le contrat détaillé de la refonte est défini dans `docs/ADMIN_UI_V1_1.md`.
 | 2 | Structure du dashboard | Header modernisé, navigation thématique, sous-menus accessibles et ancres de sections | Réalisé |
 | 3 | Système visuel | `admin.css` non minifié, commenté, responsive et organisé par composants | Réalisé |
 | 4 | Navigation responsive | Comportement desktop/mobile, focus, fermeture et état actif | Réalisé |
-| 5 | Couverture navigateur | Tests Playwright des menus, du clavier, des ancres et de l’accessibilité sans réduire les parcours existants | En cours |
-| 6 | Stabilisation et release | Suite Go/FTS5, contrôles statiques et suite Playwright complète sans test ignoré | À développer |
+| 5 | Couverture navigateur | Tests Playwright des menus, du clavier, des ancres et de l’accessibilité sans réduire les parcours existants | Réalisé |
+| 6 | Stabilisation et release | Suite Go/FTS5, contrôles statiques et suite Playwright complète sans test ignoré | En cours |
 
 Après chaque fusion vérifiée dans `origin/develop`, mettre à jour ici le commit
 de référence, l’état de l’incrément fusionné et le prochain incrément actif.

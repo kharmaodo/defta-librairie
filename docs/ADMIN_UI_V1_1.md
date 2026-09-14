@@ -105,3 +105,9 @@ dimensions, ombres, rayons et transitions.
 4. Compléter Playwright pour les interactions nouvelles et rejouer tous les parcours.
 5. Documenter les éventuels changements de sélecteurs, vérifier la release et
    mettre à jour `BACKLOG.md` après chaque fusion.
+
+## Preuves de livraison
+
+La livraison est protégée par `scripts/check-admin-dashboard.py`, les scénarios
+`accessibility.spec.cjs` et `admin-dashboard.spec.cjs`, ainsi que les parcours
+métier historiques. La suite attend treize tests Chromium sans test ignoré.
