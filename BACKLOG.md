@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `773d0c7`
-(fusion de la préparation de `v1.0.0`, PR #51). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `b45865b`
+(publication de `v1.0.0` documentée par la PR #52). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -50,6 +50,24 @@ extension. Les tests et la qualité frontend restent obligatoires à chaque incr
 
 La règle livrée pour les alertes reste explicite : les achats DRAFT sont des
 achats en brouillon ; aucun état SENT ou ORDERED n’est présumé.
+
+## Backlog v1.1.0 — refonte du dashboard d’administration
+
+La prochaine version mineure modernise uniquement l’interface d’administration.
+Elle ne modifie ni les règles métier, ni les routes HTTP, ni les formats de données.
+Le contrat détaillé de la refonte est défini dans `docs/ADMIN_UI_V1_1.md`.
+
+| Ordre | Incrément | Livrable vérifiable | État |
+|---|---|---|---|
+| 1 | Fondation et contrat de non-régression | Audit du DOM, architecture de navigation, sélecteurs protégés et critères d’acceptation | En cours |
+| 2 | Structure du dashboard | Header modernisé, navigation thématique, sous-menus accessibles et ancres de sections | À développer |
+| 3 | Système visuel | `admin.css` non minifié, commenté, responsive et organisé par composants | À développer |
+| 4 | Navigation responsive | Comportement desktop/mobile, focus, fermeture et état actif | À développer |
+| 5 | Couverture navigateur | Tests Playwright des menus, du clavier, des ancres et de l’accessibilité sans réduire les parcours existants | À développer |
+| 6 | Stabilisation et release | Suite Go/FTS5, contrôles statiques et suite Playwright complète sans test ignoré | À développer |
+
+Après chaque fusion vérifiée dans `origin/develop`, mettre à jour ici le commit
+de référence, l’état de l’incrément fusionné et le prochain incrément actif.
 
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 
