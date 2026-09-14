@@ -118,7 +118,9 @@ test('CSV exports download scoped data and sale/purchase receipts print', async 
   const created = await createdResponse;
   expect(created.status(), await created.text()).toBe(201);
   await expect(saleForm).not.toBeVisible();
-  await expect(page.locator('#sales-body tr').filter({hasText: customer})).toHaveCount(1);
+  // Wait for the automatic unscoped reload without assuming that its first
+  // root page contains the newly created sale.
+  await page.waitForLoadState('networkidle');
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#sale-filters button[type=submit]').click();
   const saleRow = page.locator('#sales-body tr').filter({hasText: customer});

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/css/admin.css">
+  <script src="/static/js/admin-theme.js"></script>\n  <link rel="stylesheet" href="/static/css/admin.css">
 </head>
 <body class="dashboard-page" data-page="dashboard">
   <a class="skip-link" href="#dashboard-main">Aller au contenu principal</a>
@@ -24,6 +24,9 @@
       <span><strong>Defta</strong><small>Administration</small></span>
     </a>
     <div class="account">
+      <button class="button ghost theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="Activer le thème sombre">
+        <span aria-hidden="true">◐</span><span data-theme-label>Sombre</span>
+      </button>
       <span id="role-badge" class="badge">Chargement…</span>
       <button id="change-password-button" class="button ghost" type="button">Mot de passe</button>
       <button id="logout-button" class="button ghost" type="button">Se déconnecter</button>

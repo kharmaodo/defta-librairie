@@ -20,6 +20,24 @@
   --transition-fast: 160ms ease;
 }
 
+:root[data-theme="dark"] {
+  --ink: #e7f1ed;
+  --muted: #a9bbb4;
+  --green: #79c7aa;
+  --green-dark: #b7ead7;
+  --gold: #e2bd69;
+  --paper: #0b1512;
+  --white: #13231e;
+  --surface-soft: #172a24;
+  --success-soft: #18382e;
+  --input-border: #476159;
+  --row-line: #294039;
+  --line: #314a42;
+  --danger: #ff9999;
+  --shadow: 0 18px 50px rgba(0,0,0,.32);
+  --shadow-soft: 0 8px 28px rgba(0,0,0,.24);
+}
+
 /* ==========================================================================
    Reset, global elements and accessibility helpers
    ========================================================================== */
@@ -186,7 +204,7 @@ a {
 .button.ghost {
   border: 1px solid var(--line);
   color: var(--ink);
-  background: #fff;
+  background: var(--white);
 }
 .button:disabled {
   cursor: wait;
@@ -211,7 +229,7 @@ a {
   border-left: 3px solid var(--green);
   border-radius: 8px;
   color: var(--green-dark);
-  background: #e8f2ed;
+  background: var(--success-soft);
   font-size: .85rem;
 }
 /* ==========================================================================
@@ -494,7 +512,7 @@ a {
   border: 1px solid var(--line);
   border-radius: 14px;
   text-decoration: none;
-  background: linear-gradient(145deg,#fff,#f6faf8);
+  background: linear-gradient(145deg,var(--white),var(--surface-soft));
   transition: transform var(--transition-fast),box-shadow var(--transition-fast);
 }
 .summary-card:hover {
@@ -540,12 +558,12 @@ table {
 }
 th,td {
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #edf0ee;
+  border-bottom: 1px solid var(--row-line);
   font-size: .82rem;
 }
 th {
   color: var(--muted);
-  background: #fbfcfb;
+  background: var(--surface-soft);
   font-size: .68rem;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -562,7 +580,7 @@ tbody tr:last-child td {
   padding: .3rem .55rem;
   border-radius: 999px;
   color: var(--green-dark);
-  background: #e8f2ed;
+  background: var(--success-soft);
   font-size: .68rem;
   font-weight: 700;
 }
@@ -591,7 +609,7 @@ tbody tr:last-child td {
   border: 1px solid var(--line);
   border-radius: 7px;
   color: var(--green-dark);
-  background: #fff;
+  background: var(--white);
   font: 600 .7rem Manrope,sans-serif;
   cursor: pointer;
 }
@@ -619,7 +637,7 @@ tbody tr:last-child td {
   border: 0;
   border-radius: 20px;
   color: var(--ink);
-  background: #fff;
+  background: var(--white);
   box-shadow: var(--shadow);
 }
 .modal::backdrop {
@@ -667,10 +685,10 @@ tbody tr:last-child td {
 .form-grid input,.form-grid select,.form-grid textarea {
   width: 100%;
   padding: .72rem .8rem;
-  border: 1px solid #bec9c4;
+  border: 1px solid var(--input-border);
   border-radius: 9px;
   color: var(--ink);
-  background: #fff;
+  background: var(--white);
   font: inherit;
   outline: none;
 }
@@ -723,7 +741,7 @@ tbody tr:last-child td {
   padding: .45rem .7rem;
   border: 1px solid var(--line);
   border-radius: 999px;
-  background: #fbfcfb;
+  background: var(--surface-soft);
   font-size: .75rem;
 }
 .tag-chip button {
@@ -752,7 +770,7 @@ tbody tr:last-child td {
   padding: .65rem .75rem;
   border: 1px solid var(--line);
   border-radius: 9px;
-  background: #fff;
+  background: var(--white);
   font: inherit;
   text-transform: none;
 }
@@ -761,7 +779,7 @@ tbody tr:last-child td {
   padding: .75rem 1.5rem;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
-  background: #fbfcfb;
+  background: var(--surface-soft);
   font-size: .75rem;
 }
 .audit-heading {
@@ -789,7 +807,7 @@ tbody tr:last-child td {
 }
 .pill.stock-ok {
   color: var(--green-dark);
-  background: #e8f2ed;
+  background: var(--success-soft);
 }
 .sales-heading {
   align-items: flex-start;
@@ -804,7 +822,7 @@ tbody tr:last-child td {
 }
 .pill.sale-confirmed {
   color: var(--green-dark);
-  background: #e8f2ed;
+  background: var(--success-soft);
 }
 .pill.sale-cancelled {
   color: #7b2727;
@@ -869,7 +887,7 @@ tbody tr:last-child td {
 }
 .pill.payment-recorded {
   color: var(--green-dark);
-  background: #e8f2ed;
+  background: var(--success-soft);
 }
 .pill.payment-voided {
   color: #7b2727;
@@ -893,7 +911,7 @@ tbody tr:last-child td {
 }
 .pill.return-completed {
   color: var(--green-dark);
-  background: #e8f2ed;
+  background: var(--success-soft);
 }
 .pill.return-cancelled {
   color: #7b2727;
@@ -913,7 +931,7 @@ tbody tr:last-child td {
   padding: .8rem;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fbfcfb;
+  background: var(--surface-soft);
 }
 .return-line label {
   display: grid;
@@ -925,9 +943,9 @@ tbody tr:last-child td {
   width: 100%;
   min-height: 2.5rem;
   padding: .55rem .65rem;
-  border: 1px solid #bec9c4;
+  border: 1px solid var(--input-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--white);
   font: inherit;
 }
 .modal.sale-modal {
@@ -954,7 +972,7 @@ tbody tr:last-child td {
   padding: .8rem;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #fbfcfb;
+  background: var(--surface-soft);
 }
 .sale-line label {
   display: grid;
@@ -966,9 +984,9 @@ tbody tr:last-child td {
   width: 100%;
   min-height: 2.5rem;
   padding: .55rem .65rem;
-  border: 1px solid #bec9c4;
+  border: 1px solid var(--input-border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--white);
   font: inherit;
 }
 .sale-line-price {
@@ -981,7 +999,7 @@ tbody tr:last-child td {
   padding: 1rem;
   border-radius: 12px;
   color: var(--green-dark);
-  background: #e8f2ed;
+  background: var(--success-soft);
 }
 .sale-summary strong {
   font-size: 1.2rem;
@@ -1027,7 +1045,7 @@ tbody tr:last-child td {
   padding: 1rem 1.25rem;
   border-radius: 12px;
   color: var(--green-dark);
-  background: #e8f2ed;
+  background: var(--success-soft);
 }
 .receipt-total strong {
   font-size: 1.35rem;
@@ -1062,6 +1080,23 @@ tbody tr:last-child td {
   gap: 1rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--line);
+}
+/* Theme-specific component adjustments ----------------------------------- */
+:root[data-theme="dark"] .topbar,
+:root[data-theme="dark"] .dashboard-navigation {
+  background: rgba(19,35,30,.97);
+}
+:root[data-theme="dark"] input,
+:root[data-theme="dark"] select,
+:root[data-theme="dark"] textarea,
+:root[data-theme="dark"] button {
+  color: var(--ink);
+}
+:root[data-theme="dark"] .dashboard-navigation-backdrop:not([hidden]) {
+  background: rgba(0,0,0,.68);
+}
+.theme-toggle {
+  gap: .4rem;
 }
 /* ==========================================================================
    Responsive dashboard and mobile navigation
@@ -1281,7 +1316,7 @@ tbody tr:last-child td {
 
 @media print {
   body.printing-sale {
-    background: #fff;
+    background: var(--white);
   }
   body.printing-sale>:not(#sale-detail-dialog) {
     display: none!important;
@@ -1310,7 +1345,7 @@ tbody tr:last-child td {
   }
   body.printing-sale .receipt-total {
     border: 1px solid #ccd5d0;
-    background: #fff;
+    background: var(--white);
   }
   body.printing-sale table {
     page-break-inside: auto;
@@ -1321,7 +1356,7 @@ tbody tr:last-child td {
 }
 @media print {
   body.printing-purchase {
-    background: #fff;
+    background: var(--white);
   }
   body.printing-purchase>:not(#purchase-detail-dialog) {
     display: none!important;
@@ -1350,7 +1385,7 @@ tbody tr:last-child td {
   }
   body.printing-purchase .receipt-total {
     border: 1px solid #ccd5d0;
-    background: #fff;
+    background: var(--white);
   }
   body.printing-purchase tr {
     page-break-inside: avoid;
@@ -1370,7 +1405,7 @@ tbody tr:last-child td {
   left: 1rem;
   transform: translateY(-150%);
   padding: .75rem 1rem;
-  background: #fff;
+  background: var(--white);
   color: #125ea5;
   border: 2px solid currentColor;
   z-index: 1000;

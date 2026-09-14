@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `bd7ddc3`
-(synthèse métier de `v1.2.0` fusionnée par la PR #65). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `9e461f3`
+(responsive de `v1.2.0` fusionné par la PR #66). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -88,16 +88,16 @@ les critères de décision sont définis dans `docs/ROADMAP_V1_2.md`.
 |---|---|---|---|
 | 1 | Cadrage et mesures de référence | Inventaire UX, budget de performance, breakpoints et contrat de non-régression | Réalisé |
 | 2 | Synthèse du tableau de bord | Indicateurs métier prioritaires, états vide/chargement/erreur et accès aux rubriques | Réalisé |
-| 3 | Responsive et ergonomie | Navigation et panneaux affinés pour mobile, tablette et bureau | À valider |
-| 4 | Système visuel | Composants harmonisés et thème sombre accessible, sans duplication des règles CSS | À réaliser |
+| 3 | Responsive et ergonomie | Navigation et panneaux affinés pour mobile, tablette et bureau | Réalisé |
+| 4 | Système visuel | Composants harmonisés et thème sombre accessible, sans duplication des règles CSS | À valider |
 | 5 | Performance frontend | Chargement mesuré, initialisation différée sûre et réduction du travail initial | À réaliser |
 | 6 | Couverture navigateur | Tests Playwright desktop/mobile, thème, clavier et non-régression métier | À réaliser |
 | 7 | Stabilisation et release | Recette complète, documentation, changelog, archives et sommes SHA-256 | À réaliser |
 
-La synthèse métier est fusionnée. Le responsive est renforcé aux largeurs 390,
-768, 1 024 et 1 440 px ; formulaires, actions, tableaux, navigation et cartes
-conservent un comportement utilisable sans débordement global. Après validation
-et fusion, le prochain incrément actif sera le système visuel et le thème sombre.
+Le responsive est fusionné. Le système visuel propose les thèmes clair et sombre,
+suit le système par défaut et conserve le choix manuel avec un contrôle accessible.
+Après validation et fusion, le prochain incrément actif sera la performance
+frontend mesurée.
 
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 
