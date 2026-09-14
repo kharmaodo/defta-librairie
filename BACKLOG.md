@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `df453e8`
-(publication de `v1.1.0` documentée par la PR #59). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `57b72b6`
+(publication multiplateforme de `v1.1.0` fusionnée par la PR #60). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -74,8 +74,29 @@ Les six incréments de `v1.1.0` sont réalisés. Le contrôle final comprend neu
 publié sur le commit `eaf5d8a`.
 
 La publication des exécutables Windows AMD64, Raspberry Pi OS ARM64 et Raspberry
-Pi OS ARMv7 est l’incrément post-release actif. Les archives incluent les
-ressources d’exécution et sont accompagnées de sommes SHA-256.
+Pi OS ARMv7 est réalisée. Les archives incluent les ressources d’exécution et
+sont accompagnées de sommes SHA-256. La release `v1.1.0` est clôturée.
+
+## Backlog v1.2.0 — expérience du dashboard
+
+La prochaine version améliore progressivement l’expérience d’utilisation du
+dashboard livré en `v1.1.0`. Elle conserve les contrats HTTP, les règles métier,
+les identifiants DOM protégés et le contenu du footer. Le périmètre détaillé et
+les critères de décision sont définis dans `docs/ROADMAP_V1_2.md`.
+
+| Ordre | Incrément | Livrable vérifiable | État |
+|---|---|---|---|
+| 1 | Cadrage et mesures de référence | Inventaire UX, budget de performance, breakpoints et contrat de non-régression | À réaliser |
+| 2 | Synthèse du tableau de bord | Indicateurs métier prioritaires, états vide/chargement/erreur et accès aux rubriques | À réaliser |
+| 3 | Responsive et ergonomie | Navigation et panneaux affinés pour mobile, tablette et bureau | À réaliser |
+| 4 | Système visuel | Composants harmonisés et thème sombre accessible, sans duplication des règles CSS | À réaliser |
+| 5 | Performance frontend | Chargement mesuré, initialisation différée sûre et réduction du travail initial | À réaliser |
+| 6 | Couverture navigateur | Tests Playwright desktop/mobile, thème, clavier et non-régression métier | À réaliser |
+| 7 | Stabilisation et release | Recette complète, documentation, changelog, archives et sommes SHA-256 | À réaliser |
+
+Le prochain incrément actif est le cadrage et les mesures de référence. Aucun
+changement visuel ne sera engagé avant la fixation des sélecteurs protégés, des
+seuils mesurables et des scénarios Playwright concernés.
 
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 
