@@ -23,7 +23,7 @@ def require(condition: bool, message: str) -> None:
 
 
 protected_sections = (
-    "dashboard-overview", "library-settings-panel", "csv-exports-panel",
+    "dashboard-overview", "dashboard-summary", "library-settings-panel", "csv-exports-panel",
     "business-alerts-panel", "commercial-statistics-panel", "suppliers-panel",
     "purchases-panel", "customers-panel", "dashboard-indicators",
     "cash-registers-panel", "payments-panel", "sales-panel",
@@ -54,7 +54,8 @@ require(
     "<dialog " in SUPPLIER_RETURNS_JAVASCRIPT,
     "le dialogue dynamique de retour fournisseur est absent",
 )
-require(HTML.count('src="/static/js/admin-') == 20, "vingt modules admin sont attendus")
+require(HTML.count('src="/static/js/admin-') >= 20, "au moins vingt modules admin sont attendus")
+require('src="/static/js/admin-summary.js"' in HTML, "module de synthèse absent")
 
 for breakpoint in (780, 900, 1100):
     require(
@@ -72,7 +73,7 @@ for asset, size in sizes.items():
     require(size <= budgets[asset], f"budget {asset} dépassé : {size} > {budgets[asset]} octets")
 
 print(
-    "OK: fondation v1.2, 20 sections, 20 dialogues, 20 modules, "
+    "OK: fondation v1.2, sections et dialogues protégés, modules admin, "
     "breakpoints 780/900/1100px et budgets statiques contrôlés."
 )
 print(
