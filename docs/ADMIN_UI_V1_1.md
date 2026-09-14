@@ -111,3 +111,7 @@ dimensions, ombres, rayons et transitions.
 La livraison est protégée par `scripts/check-admin-dashboard.py`, les scénarios
 `accessibility.spec.cjs` et `admin-dashboard.spec.cjs`, ainsi que les parcours
 métier historiques. La suite attend treize tests Chromium sans test ignoré.
+
+La refonte est clôturée sur `develop` au commit `eaf5d8a` après la fusion de la
+PR #58. Les six incréments du backlog `v1.1.0` sont réalisés et le tag annoté
+`v1.1.0` est publié sur ce commit.
