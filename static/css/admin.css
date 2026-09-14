@@ -524,7 +524,14 @@ a {
   font-size: .75rem;
 }
 .table-wrap {
+  max-width: 100%;
   overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+  -webkit-overflow-scrolling: touch;
+}
+.dashboard,.panel,.dashboard-summary,.panel-heading,.heading-actions,.filters {
+  min-width: 0;
 }
 table {
   width: 100%;
@@ -1061,6 +1068,14 @@ tbody tr:last-child td {
    ========================================================================== */
 
 @media(max-width:1100px) {
+  .heading-actions,.filters {
+    flex-wrap: wrap;
+  }
+  .table-wrap {
+    scrollbar-color: var(--green) var(--line);
+    scrollbar-width: thin;
+  }
+
   .dashboard-summary-grid {
     grid-template-columns: repeat(2,minmax(0,1fr));
   }
@@ -1118,6 +1133,39 @@ tbody tr:last-child td {
 }
 
 @media(max-width:780px) {
+  .dashboard {
+    width: 100%;
+    padding: 1rem;
+  }
+  .dashboard-summary,.panel-heading {
+    padding-inline: 1rem;
+  }
+  .heading-actions,.filters,.inline-search {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .heading-actions > .button,.filters > .button,.filters > button,
+  .inline-search > input,.inline-search > button {
+    width: 100%;
+    max-width: none;
+  }
+  .filters label,.filters input,.filters select,.filters textarea {
+    width: 100%;
+    max-width: 100%;
+  }
+  .table-wrap {
+    padding-inline: 1rem;
+  }
+  .pagination {
+    justify-content: space-between;
+    gap: .5rem;
+    padding-inline: 1rem;
+  }
+  .pagination button {
+    min-width: 0;
+  }
+
   .dashboard-summary-grid {
     grid-template-columns: 1fr;
   }
