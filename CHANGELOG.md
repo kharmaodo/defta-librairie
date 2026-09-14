@@ -1,5 +1,25 @@
 # Journal des versions
 
+## [1.1.0] — 2026-09-14
+
+Refonte visuelle ciblée du tableau de bord d’administration, sans modification
+des règles métier ni des contrats HTTP.
+
+### Interface d’administration
+
+- Header modernisé et hiérarchie visuelle adaptée à un dashboard.
+- Navigation latérale organisée en sept thématiques et dix-neuf rubriques.
+- Sous-menus accessibles au clavier avec état actif synchronisé au défilement.
+- Navigation mobile hors-canvas avec fond obscurci et restitution du focus.
+- Feuille `admin.css` non minifiée, commentée et structurée par composants.
+- Footer conservé sans modification de contenu.
+
+### Qualité
+
+- Sélecteurs métier historiques conservés et nouvelles ancres documentées.
+- Treize parcours Chromium, dont le contrat complet du dashboard desktop/mobile.
+- Contrôle statique des groupes, liens, ancres, footer et sections CSS ajouté au delivery.
+
 ## [1.0.0] — 2026-09-14
 
 Première version fonctionnelle complète du périmètre défini dans `BACKLOG.md`.

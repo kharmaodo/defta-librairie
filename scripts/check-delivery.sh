@@ -12,29 +12,32 @@ for command_name in go node npm python3; do
   }
 done
 
-echo "[1/8] Contrôle du patch"
+echo "[1/9] Contrôle du patch"
 git diff --check
 
-echo "[2/8] Contrat OpenAPI"
+echo "[2/9] Contrat OpenAPI"
 python3 scripts/check-openapi.py
 
-echo "[3/8] Accessibilité structurelle"
+echo "[3/9] Accessibilité structurelle"
 python3 scripts/check-admin-accessibility.py
 
-echo "[4/8] Restauration SQLite"
+echo "[4/9] Contrat du dashboard admin"
+python3 scripts/check-admin-dashboard.py
+
+echo "[5/9] Restauration SQLite"
 python3 scripts/test-restore-db.py
 
-echo "[5/8] Tests Go"
+echo "[6/9] Tests Go"
 go test -tags fts5 ./...
 
-echo "[6/8] Détection de courses Go"
+echo "[7/9] Détection de courses Go"
 go test -race -tags fts5 ./...
 
-echo "[7/8] Tests frontend"
+echo "[8/9] Tests frontend"
 npm ci
 npm run test:frontend
 
-echo "[8/8] Parcours Chromium"
+echo "[9/9] Parcours Chromium"
 npm run test:browser
 
 echo "OK : contrôle final du delivery terminé."
