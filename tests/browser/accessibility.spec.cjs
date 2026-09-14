@@ -87,11 +87,19 @@ test('thematic navigation exposes accessible submenus and section anchors', asyn
   await expect(page).toHaveURL(/#books-panel$/);
   await expect(page.locator('#books-panel')).toBeFocused();
 
+  const desktopNavigationBox = await navigation.boundingBox();
+  const desktopMainBox = await page.locator('#dashboard-main').boundingBox();
+  expect(desktopNavigationBox.x).toBeLessThan(desktopMainBox.x);
+
+  await page.setViewportSize({width: 760, height: 900});
   const menuToggle = page.locator('[data-dashboard-menu-toggle]');
+  await expect(menuToggle).toBeVisible();
+  await expect(navigation).not.toBeInViewport();
   await menuToggle.focus();
   await page.keyboard.press('Enter');
   await expect(menuToggle).toHaveAttribute('aria-expanded', 'true');
   await expect(navigation).toHaveAttribute('data-open', '');
+  await expect(navigation).toBeInViewport();
 
   await page.keyboard.press('Escape');
   await expect(menuToggle).toHaveAttribute('aria-expanded', 'false');
