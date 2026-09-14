@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `a1ee6c3`
-(fusion de la consolidation finale, PR #49). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `8dc8d74`
+(fusion de la stabilisation de la recette navigateur, PR #50). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -34,10 +34,9 @@ Les douze priorités sont réalisées dans le périmètre convenu. La recette fi
 la matrice de couverture et la checklist de déploiement sont centralisées dans
 `docs/DELIVERY.md` et automatisées par `scripts/check-delivery.sh`.
 
-Le contrôle de release a révélé une course d’affichage commune aux scénarios
-navigateur créant une vente : un filtre pouvait être rendu avant la fin du
-rafraîchissement initial. Leur stabilisation est en validation et bloque le tag,
-sans modifier le comportement métier livré.
+La course d’affichage détectée par le contrôle de release dans les scénarios
+créant une vente est corrigée et fusionnée (PR #50). Le contrôle final est vert ;
+la préparation de la version `v1.0.0` peut être validée.
 
 La priorité 11 est réalisée dans le périmètre livré ; objectifs de reprise,
 sauvegardes hors machine et rétention des logs restent des décisions de déploiement.
@@ -76,7 +75,7 @@ achats en brouillon ; aucun état SENT ou ORDERED n’est présumé.
 | Paramétrage livré | `internal/migrations/sql/023_create_library_settings.sql`, `internal/services/library_settings_service_test.go`, `static/js/admin-library-settings.js` |
 | Accessibilité frontend | `templates/admin.html`, `static/js/admin-supplier-returns.js`, `scripts/check-admin-accessibility.py`, `docs/FRONTEND_ACCESSIBILITY.md`, `tests/browser/accessibility.spec.cjs` |
 | Exploitation existante | `scripts/backup-db.sh`, `scripts/restore-db.py`, `scripts/test-restore-db.py`, `docs/SQLITE_RESTORE.md`, `internal/middleware/observability.go`, `cmd/main.go` |
-| Delivery final | `docs/DELIVERY.md`, `scripts/check-delivery.sh` |
+| Delivery final | `docs/DELIVERY.md`, `scripts/check-delivery.sh`, `docs/RELEASE.md`, `CHANGELOG.md` |
 
 ## Mise à jour après chaque validation
 

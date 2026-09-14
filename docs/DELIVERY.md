@@ -51,6 +51,8 @@ Elle s’arrête dès le premier échec et ne touche pas à la base applicative.
 
 Une release est candidate lorsque `check-delivery.sh` est entièrement vert sur
 le commit à taguer et qu’une restauration récente a été réellement testée.
+La construction, le tag annoté et le retour arrière sont détaillés dans
+`docs/RELEASE.md`.
 Les objectifs de reprise, la fréquence/rétention des sauvegardes, la rétention
 des logs et les seuils d’alerting doivent être décidés par l’exploitant.
 
