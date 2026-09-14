@@ -105,9 +105,13 @@ test('two receipts update stock and weighted average cost', async ({page, reques
   await expect(bookOption).toHaveCount(1);
   await saleLine.locator('[name=bookId]').selectOption(await bookOption.getAttribute('value'));
   await saleLine.locator('[name=quantity]').fill('1');
+  const createdResponse = page.waitForResponse(response =>
+    response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/manage/sales');
   await saleForm.locator('button[type=submit]').click();
+  const created = await createdResponse;
+  expect(created.status(), await created.text()).toBe(201);
   await expect(saleForm).not.toBeVisible();
-  await page.waitForLoadState('networkidle');
+  await expect(page.locator('#sales-body tr').filter({hasText: customer})).toHaveCount(1);
 
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#sale-filters button[type=submit]').click();
