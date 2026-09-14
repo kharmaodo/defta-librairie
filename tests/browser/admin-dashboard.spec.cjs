@@ -48,6 +48,12 @@ test('admin dashboard keeps its thematic structure and stable section targets', 
   }
 
   await expect(page.locator('#owners-section')).toBeVisible();
+  const summary = page.locator('#dashboard-summary');
+  await expect(summary).toBeVisible();
+  await expect(summary.locator('.summary-card')).toHaveCount(4);
+  await expect(summary.locator('[data-summary-status]'))
+    .toContainText('Choisissez une librairie');
+  await expect(summary.locator('[data-summary-results]')).toBeHidden();
   await navigation.getByRole('button', {name: 'Administration'}).click();
   await expect(navigation.getByRole('link', {name: 'Propriétaires'})).toBeVisible();
   await expect(page.locator('footer.admin-footer'))
