@@ -96,6 +96,9 @@ test('two receipts update stock and weighted average cost', async ({page, reques
   await expect(inventory.locator('td').nth(1)).toHaveText('10');
 
   const customer = `Client CMP ${suffix}`;
+  // Scope the sale list before creation so its automatic refresh cannot be
+  // replaced by an unrelated root page.
+  await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
