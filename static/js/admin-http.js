@@ -153,7 +153,7 @@
     if (options !== undefined) return request(path, options).then(decode);
     const key = String(path);
     if (pendingJSONReads.has(key)) return pendingJSONReads.get(key);
-    const pending = decode(request(path))
+    const pending = request(path).then(decode)
       .finally(() => pendingJSONReads.delete(key));
     pendingJSONReads.set(key, pending);
     return pending;
