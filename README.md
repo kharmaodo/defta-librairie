@@ -111,7 +111,7 @@ Toutes les variables sont optionnelles :
 | `PORT` | `8080` | Port HTTP |
 | `DB_PATH` | `./data/defta.db` | Chemin de la base SQLite |
 | `PAGE_SIZE` | `30` | Nombre de résultats par page |
-| `VERSION` | `0.1.0-dev` | Version affichée dans le pied de page |
+| `VERSION` | `0.1.0-dev` | Version affichée ; fournir la version publiée en production |
 | `BUILD_DATE` | `unknown` | Date de construction affichée |
 | `JWT_SECRET` | aucune | Secret de signature, minimum 32 octets, obligatoire pour démarrer le serveur |
 | `JWT_ISSUER` | `defta-librairie` | Émetteur JWT attendu |
@@ -136,8 +136,8 @@ Contenu de référence de `.env.example` :
 PORT=8080
 DB_PATH=./data/defta.db
 PAGE_SIZE=30
-VERSION=0.2.0-dev
-BUILD_DATE=2026-09-01
+VERSION=1.0.0
+BUILD_DATE=2026-09-14
 JWT_SECRET=
 JWT_ISSUER=defta-librairie
 JWT_AUDIENCE=defta-librairie-web
@@ -149,6 +149,10 @@ AUTH_COOKIE_SECURE=false
 ```
 
 Ne jamais commiter `.env`, une sauvegarde de ce fichier, ni une valeur réelle de `JWT_SECRET`.
+
+La préparation, le tag et le retour arrière de la version stable sont décrits
+dans [RELEASE.md](docs/RELEASE.md). Les changements publiés figurent dans
+[CHANGELOG.md](CHANGELOG.md).
 
 Sous Linux ou WSL, si `.env` a été modifié sous Windows, supprimer les retours chariot avant le lancement avec `sed -i 's/\r$//' .env`. Le chargeur neutralise également ces fins de ligne pour éviter qu'une valeur telle que `PORT=8080\r` soit transmise au serveur HTTP.
 
