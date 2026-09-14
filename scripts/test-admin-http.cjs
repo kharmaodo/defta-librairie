@@ -96,3 +96,28 @@ test('unknown and prototype property codes have safe fallbacks', async () => {
     await assert.rejects(setup(async () => response(409, JSON.stringify({error:code, message:'PRIVATE'}))).json('/api/test'), /rechargez/);
   }
 });
+
+test('concurrent default JSON reads are coalesced without persistent caching', async () => {
+  let calls = 0;
+  const api = setup(async () => {
+    calls++;
+    await Promise.resolve();
+    return response(200, '{"value":1}');
+  });
+  const [first, second] = await Promise.all([
+    api.json('/api/auth/me'),
+    api.json('/api/auth/me')
+  ]);
+  assert.deepEqual(first, {value:1});
+  assert.deepEqual(second, {value:1});
+  assert.equal(calls, 1);
+
+  await api.json('/api/auth/me');
+  assert.equal(calls, 2);
+
+  await Promise.all([
+    api.json('/api/auth/me', {}),
+    api.json('/api/auth/me', {})
+  ]);
+  assert.equal(calls, 4);
+});
