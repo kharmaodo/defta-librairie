@@ -78,6 +78,9 @@ test('cash, mobile money and card payments update the remaining balance', async 
   await inventoryForm.locator('button[type=submit]').click();
   await expect(inventoryForm).not.toBeVisible();
 
+  // Scope the sale list before creation so the automatic post-create reload
+  // is deterministic even when the root catalogue contains several libraries.
+  await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
