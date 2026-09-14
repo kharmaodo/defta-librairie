@@ -2,6 +2,9 @@
 
 Le suivi des douze priorités du projet est centralisé dans [BACKLOG.md](BACKLOG.md). Ce fichier distingue les fonctions livrées des travaux restant à finaliser.
 
+La refonte progressive du dashboard d’administration prévue pour `v1.1.0` est
+décrite dans [docs/ADMIN_UI_V1_1.md](docs/ADMIN_UI_V1_1.md).
+
 Catalogue web RTL de livres en arabe, développé en Go avec SQLite et son moteur de recherche plein texte FTS5.
 
 L’application propose une recherche classée par pertinence sur les titres, auteurs, éditeurs, mots-clés et catégories. Elle expose une interface HTML responsive ainsi qu’une API JSON paginée.
