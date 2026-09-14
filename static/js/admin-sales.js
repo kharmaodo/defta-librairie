@@ -6,6 +6,7 @@
     errorBox, isRoot, reloadInventory, reloadAudit}) {
     const state = {sales: [], saleBooks: [], saleCustomers: [], saleOffset: 0, saleLimit: 10};
     let initialized = false;
+    let salesReloadGeneration = 0;
     function renderSales(payload) {
       state.sales = payload.results;
       document.querySelector("#sale-total").textContent = payload.total;
@@ -209,6 +210,7 @@
     }
 
     async function reloadSales() {
+      const generation = ++salesReloadGeneration;
       const form = document.querySelector("#sale-filters");
       const query = new URLSearchParams({offset: String(state.saleOffset), limit: String(state.saleLimit)});
       const status = form.elements.status.value;
@@ -220,6 +222,7 @@
         if (value) query.set(name, new Date(value).toISOString());
       });
       const payload = await apiFetch(`/api/manage/sales?${query}`);
+      if (generation !== salesReloadGeneration) return;
       if (!payload.results.length && state.saleOffset > 0) {
         state.saleOffset = Math.max(0, state.saleOffset - state.saleLimit);
         return reloadSales();

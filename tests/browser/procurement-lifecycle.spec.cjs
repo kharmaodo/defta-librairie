@@ -28,6 +28,7 @@ async function loginRoot(page) {
   await page.locator('#login-form button[type=submit]').click();
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.locator('#role-badge')).toHaveText('SUPER ADMIN ROOT');
+  await page.waitForLoadState('networkidle');
 }
 
 async function createPurchase(page, {libraryID, supplierName, title, quantity, unitCost}) {
@@ -96,6 +97,9 @@ test('two receipts update stock and weighted average cost', async ({page, reques
   await expect(inventory.locator('td').nth(1)).toHaveText('10');
 
   const customer = `Client CMP ${suffix}`;
+  // Scope the sale list before creation so its automatic refresh cannot be
+  // replaced by an unrelated root page.
+  await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
@@ -116,9 +120,11 @@ test('two receipts update stock and weighted average cost', async ({page, reques
   await page.waitForLoadState('networkidle');
 
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
-  await page.locator('#sale-filters button[type=submit]').click();
   const sale = page.locator('#sales-body tr').filter({hasText: customer});
-  await expect(sale).toHaveCount(1);
+  await expect(async () => {
+    await page.locator('#sale-filters button[type=submit]').click();
+    await expect(sale).toHaveCount(1, {timeout: 2000});
+  }).toPass({timeout: 12000});
   page.once('dialog', dialog => dialog.accept());
   await sale.getByRole('button', {name: 'Confirmer'}).click();
   await expect(page.locator('#sales-body tr').filter({hasText: customer})).toContainText('Confirmée');

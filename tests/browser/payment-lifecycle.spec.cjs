@@ -28,6 +28,7 @@ async function loginRoot(page) {
   await page.locator('#login-form button[type=submit]').click();
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.locator('#role-badge')).toHaveText('SUPER ADMIN ROOT');
+  await page.waitForLoadState('networkidle');
 }
 
 async function displayedAmount(locator) {
@@ -78,6 +79,9 @@ test('cash, mobile money and card payments update the remaining balance', async 
   await inventoryForm.locator('button[type=submit]').click();
   await expect(inventoryForm).not.toBeVisible();
 
+  // Scope the sale list before creation so the automatic post-create reload
+  // is deterministic even when the root catalogue contains several libraries.
+  await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
@@ -100,9 +104,11 @@ test('cash, mobile money and card payments update the remaining balance', async 
   await page.waitForLoadState('networkidle');
 
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
-  await page.locator('#sale-filters button[type=submit]').click();
   const sale = page.locator('#sales-body tr').filter({hasText: customer});
-  await expect(sale).toHaveCount(1);
+  await expect(async () => {
+    await page.locator('#sale-filters button[type=submit]').click();
+    await expect(sale).toHaveCount(1, {timeout: 2000});
+  }).toPass({timeout: 12000});
   page.once('dialog', dialog => dialog.accept());
   await sale.getByRole('button', {name: 'Confirmer'}).click();
   await expect(sale).toContainText('Confirmée');

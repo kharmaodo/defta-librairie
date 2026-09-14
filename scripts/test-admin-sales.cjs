@@ -3,6 +3,8 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const read=name=>fs.readFileSync(path.join(__dirname,'..',name),'utf8');
 const source=read('static/js/admin-sales.js');
+assert.match(source,/let salesReloadGeneration = 0/);
+assert.match(source,/generation !== salesReloadGeneration/);
 const book={id:'sale',reference:'V1',version:3,status:'DRAFT',lines:[{bookId:12,quantity:2}],totalAmount:2000};
 const page=(offset=0,results=[book],total=11)=>({offset,results,total,limit:10});
 function setup(api) {

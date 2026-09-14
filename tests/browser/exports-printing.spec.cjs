@@ -29,6 +29,7 @@ async function loginRoot(page) {
   await page.locator('#login-form button[type=submit]').click();
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.locator('#role-badge')).toHaveText('SUPER ADMIN ROOT');
+  await page.waitForLoadState('networkidle');
 }
 
 async function downloadExport(page, libraryID, kind, needle) {
@@ -103,6 +104,9 @@ test('CSV exports download scoped data and sale/purchase receipts print', async 
   await expect(purchaseRow).toHaveCount(1);
   const purchaseReference = (await purchaseRow.locator('td').first().textContent()).trim();
 
+  // Scope the sale list before creation so its automatic refresh cannot be
+  // replaced by an unrelated root page.
+  await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
@@ -122,9 +126,11 @@ test('CSV exports download scoped data and sale/purchase receipts print', async 
   // root page contains the newly created sale.
   await page.waitForLoadState('networkidle');
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
-  await page.locator('#sale-filters button[type=submit]').click();
   const saleRow = page.locator('#sales-body tr').filter({hasText: customer});
-  await expect(saleRow).toHaveCount(1);
+  await expect(async () => {
+    await page.locator('#sale-filters button[type=submit]').click();
+    await expect(saleRow).toHaveCount(1, {timeout: 2000});
+  }).toPass({timeout: 12000});
   const saleReference = (await saleRow.locator('td').first().textContent()).trim();
 
   const exportButton = page.locator('#csv-exports-panel button[type=submit]');
