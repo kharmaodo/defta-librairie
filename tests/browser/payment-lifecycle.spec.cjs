@@ -95,8 +95,9 @@ test('cash, mobile money and card payments update the remaining balance', async 
   await expect(saleForm).not.toBeVisible();
 
   // The dialog closes before its asynchronous table refresh completes. Wait for
-  // that refresh so it cannot overwrite the scoped result requested below.
-  await expect(page.locator('#sales-body tr').filter({hasText: customer})).toHaveCount(1);
+  // the background reload without assuming that a paginated root list contains
+  // the newly created sale, then request the deterministic library scope below.
+  await page.waitForLoadState('networkidle');
 
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#sale-filters button[type=submit]').click();
