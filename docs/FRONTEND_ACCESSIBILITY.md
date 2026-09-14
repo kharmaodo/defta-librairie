@@ -39,6 +39,9 @@ HTML dynamiques sans adaptation du contrôle.
    l’aperçu d’impression, où le lien d’évitement ne doit pas apparaître.
 
 Répéter les parcours utiles avec propriétaire/root et à 200 % de zoom. Noter
-navigateur, lecteur d’écran éventuel et anomalies. Les tests navigateur
-automatisés, les erreurs globales et la poursuite du découpage JavaScript
-restent au backlog de la priorité 12.
+navigateur, lecteur d’écran éventuel et anomalies. La recette automatisée
+correspondante se trouve dans `tests/browser/accessibility.spec.cjs`. Elle couvre
+le lien d’évitement, le focus visible et confiné, Échap, le retour du focus et
+une erreur annoncée. Un audit manuel avec lecteur d’écran et à 200 % de zoom
+reste recommandé avant mise en production ; il ne constitue pas un développement
+fonctionnel restant.

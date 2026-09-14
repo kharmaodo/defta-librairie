@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 12 septembre 2026 sur `develop`, commit `cf66624`
-(fusion du cycle de retours fournisseurs navigateur, PR #47). Les douze priorités et leurs éléments
+État consolidé le 12 septembre 2026 sur `develop`, commit `45aa03d`
+(fusion des exports et impressions navigateur, PR #48). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -25,17 +25,18 @@ n’exécute pas une nouvelle recette ni un audit de production.
 | 9 | Paramétrage de librairie | Devise, coordonnées, logo, seuil par défaut, informations d’impression | Réalisé | Coordonnées, logo, seuil des nouveaux livres et impressions validés et fusionnés (PR #26). XOF validé comme devise unique de cette version ; aucun changement ni conversion des montants historiques. |
 | 10 | Documentation API | Contrat OpenAPI/Swagger et exemples complets `curl` | Réalisé | Contrat, consultation locale, exemples et contrôles validés et fusionnés (PR #27). Le contrat est actualisé avec chaque nouvelle route. |
 | 11 | Exploitation | Health checks enrichis, métriques, logs structurés et stratégie de restauration | Réalisé | Sondes (PR #29), métriques/logs (PR #30) et restauration testée (PR #31) validés et fusionnés. Les décisions de déploiement sont conservées ci-dessous. |
-| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité des 20 dialogues validée et fusionnée (PR #32). Client HTTP et erreurs métier fusionnés (PR #33 et #41). Audit, sessions, propriétaires, livres, stock, ventes et tags extraits (PR #34 à #40). Tests navigateur d’authentification, cycle commercial, approvisionnement, CMP, paiements et retours clients/fournisseurs validés et fusionnés (PR #42 à #47). Exports et impression en validation ; accessibilité navigateur reste à finaliser. |
+| 12 | Qualité frontend | Découpage du JavaScript, messages d’erreur globaux, accessibilité et tests navigateur | Partiel | Accessibilité structurelle des 20 dialogues validée et fusionnée (PR #32). Client HTTP et erreurs métier fusionnés (PR #33 et #41). Audit, sessions, propriétaires, livres, stock, ventes et tags extraits (PR #34 à #40). Parcours navigateur métier validés et fusionnés, y compris exports et impression (PR #42 à #48). Accessibilité navigateur en validation. |
 
-## Incrément en validation : exports et impression navigateur (priorité 12)
+## Incrément en validation : accessibilité navigateur (priorité 12)
 
-Le cycle de retours fournisseurs est validé et fusionné (PR #47). Cet incrément
-télécharge les cinq exports CSV avec leurs données cloisonnées, puis ouvre et
-imprime les reçus d’une vente et d’un achat. L’exécution Chromium et la fusion
-restent à valider.
+Les exports et impressions sont validés et fusionnés (PR #48). Cet incrément
+vérifie au clavier le lien d’évitement, le focus visible, le nom et le confinement
+du dialogue, sa fermeture avec Échap, le retour du focus et l’annonce d’une erreur.
+L’exécution Chromium et la fusion restent à valider.
 
-Restent les contrôles d’accessibilité navigateur à compléter. La priorité 12 reste partielle ;
-les tests unitaires JavaScript ne remplacent pas cette recette réelle.
+Après cette validation, il restera la consolidation finale du delivery. La priorité 12
+reste partielle jusqu’à la fusion ; les contrôles structurels ne remplacent pas
+cette recette réelle.
 
 La priorité 11 est réalisée dans le périmètre livré ; objectifs de reprise,
 sauvegardes hors machine et rétention des logs restent des décisions de déploiement.
@@ -71,7 +72,7 @@ achats en brouillon ; aucun état SENT ou ORDERED n’est présumé.
 | Stock et alertes existantes | `internal/repositories/business_alert_repository.go`, `internal/services/business_alert_service_test.go`, `internal/handlers/business_alerts_test.go`, `static/js/admin-business-alerts.js` |
 | Documentation API | `static/openapi.json`, `static/api-docs.html`, `docs/API_EXAMPLES.md`, `cmd/openapi_contract_test.go`, `scripts/check-openapi.py` |
 | Paramétrage livré | `internal/migrations/sql/023_create_library_settings.sql`, `internal/services/library_settings_service_test.go`, `static/js/admin-library-settings.js` |
-| Accessibilité frontend | `templates/admin.html`, `static/js/admin-supplier-returns.js`, `scripts/check-admin-accessibility.py`, `docs/FRONTEND_ACCESSIBILITY.md` |
+| Accessibilité frontend | `templates/admin.html`, `static/js/admin-supplier-returns.js`, `scripts/check-admin-accessibility.py`, `docs/FRONTEND_ACCESSIBILITY.md`, `tests/browser/accessibility.spec.cjs` |
 | Exploitation existante | `scripts/backup-db.sh`, `scripts/restore-db.py`, `scripts/test-restore-db.py`, `docs/SQLITE_RESTORE.md`, `internal/middleware/observability.go`, `cmd/main.go` |
 
 ## Mise à jour après chaque validation

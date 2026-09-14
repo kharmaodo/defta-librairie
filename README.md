@@ -1564,3 +1564,7 @@ réceptionné, sa sortie de stock, sa justification et sa valorisation figée.
 
 Le parcours des exports télécharge les CSV des stocks, ventes, achats,
 fournisseurs et audits, puis vérifie l’impression des reçus de vente et d’achat.
+
+La recette d’accessibilité navigateur vérifie le lien d’évitement, le focus
+visible et confiné dans un dialogue, Échap, le retour au déclencheur et les
+erreurs annoncées.
