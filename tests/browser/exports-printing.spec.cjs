@@ -103,6 +103,9 @@ test('CSV exports download scoped data and sale/purchase receipts print', async 
   await expect(purchaseRow).toHaveCount(1);
   const purchaseReference = (await purchaseRow.locator('td').first().textContent()).trim();
 
+  // Scope the sale list before creation so its automatic refresh cannot be
+  // replaced by an unrelated root page.
+  await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
