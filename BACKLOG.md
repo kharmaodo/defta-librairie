@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `04c6c3a`
-(système visuel de `v1.2.0` fusionné par la PR #67). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `995943c`
+(performance frontend de `v1.2.0` fusionnée par la PR #68). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -94,10 +94,10 @@ les critères de décision sont définis dans `docs/ROADMAP_V1_2.md`.
 | 6 | Couverture navigateur | Tests Playwright desktop/mobile, thème, clavier et non-régression métier | À réaliser |
 | 7 | Stabilisation et release | Recette complète, documentation, changelog, archives et sommes SHA-256 | À réaliser |
 
-Le système visuel et le thème accessible sont fusionnés. Les lectures JSON
-initiales identiques sont mutualisées uniquement pendant leur exécution ; les
-budgets statiques et réseau sont documentés et testés. Après validation et fusion,
-le prochain incrément actif sera la couverture navigateur consolidée.
+La mutualisation transitoire et les budgets de performance sont fusionnés par la
+PR #68. Les corrections de stabilité validées après cette fusion restent à
+intégrer dans `develop`. L’incrément performance demeure « À valider » jusqu’à
+cette fusion corrective ; la couverture navigateur consolidée viendra ensuite.
 
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 
