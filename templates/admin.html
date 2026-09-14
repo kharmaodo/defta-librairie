@@ -99,6 +99,27 @@
       <p id="scope-text" class="muted">Vérification de vos droits…</p>
     </section>
 
+    <section class="dashboard-summary" id="dashboard-summary" tabindex="-1" aria-labelledby="dashboard-summary-title" aria-busy="true">
+      <div class="dashboard-summary-heading">
+        <div><p class="eyebrow">Situation synthétique</p><h2 id="dashboard-summary-title">Les indicateurs à surveiller</h2></div>
+        <form class="dashboard-summary-filters" data-summary-filters>
+          <label>Du<input name="from" type="date" required></label>
+          <label>Au, inclus<input name="to" type="date" required></label>
+          <label data-summary-library hidden>Librairie<select name="libraryId"><option value="">Choisir une librairie</option></select></label>
+          <button class="button primary" type="submit">Actualiser</button>
+        </form>
+      </div>
+      <p class="scope-note">Les montants couvrent la période sélectionnée ; les alertes décrivent la situation actuelle.</p>
+      <p data-summary-status role="status" aria-live="polite">Chargement de la synthèse…</p>
+      <p data-summary-error class="alert" role="alert" hidden></p>
+      <div class="dashboard-summary-grid" data-summary-results hidden>
+        <a class="summary-card" href="#commercial-statistics-panel"><span>Ventes nettes</span><strong data-summary-value="netSales">—</strong><small>Période sélectionnée</small></a>
+        <a class="summary-card" href="#commercial-statistics-panel"><span>Marge commerciale</span><strong data-summary-value="netMargin">—</strong><small data-summary-margin-note>Période sélectionnée</small></a>
+        <a class="summary-card" href="#business-alerts-panel"><span>Ruptures et stocks faibles</span><strong data-summary-value="stockAlerts">—</strong><small>Situation actuelle</small></a>
+        <a class="summary-card" href="#business-alerts-panel"><span>Achats en brouillon</span><strong data-summary-value="draftPurchases">—</strong><small>Situation actuelle</small></a>
+      </div>
+    </section>
+
 
     <section class="panel" id="library-settings-panel" tabindex="-1" aria-labelledby="library-settings-title">
       <h2 id="library-settings-title">Paramétrage de la librairie</h2>
@@ -682,6 +703,7 @@
   <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
   <script src="/static/js/admin-navigation.js" defer></script>
   <script src="/static/js/admin-http.js" defer></script>
+  <script src="/static/js/admin-summary.js" defer></script>
 <script src="/static/js/admin-audit.js" defer></script>
 <script src="/static/js/admin-sessions.js" defer></script>
 <script src="/static/js/admin-owners.js" defer></script>
