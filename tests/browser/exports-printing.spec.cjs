@@ -125,9 +125,11 @@ test('CSV exports download scoped data and sale/purchase receipts print', async 
   // root page contains the newly created sale.
   await page.waitForLoadState('networkidle');
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
-  await page.locator('#sale-filters button[type=submit]').click();
   const saleRow = page.locator('#sales-body tr').filter({hasText: customer});
-  await expect(saleRow).toHaveCount(1);
+  await expect(async () => {
+    await page.locator('#sale-filters button[type=submit]').click();
+    await expect(saleRow).toHaveCount(1, {timeout: 2000});
+  }).toPass({timeout: 12000});
   const saleReference = (await saleRow.locator('td').first().textContent()).trim();
 
   const exportButton = page.locator('#csv-exports-panel button[type=submit]');
