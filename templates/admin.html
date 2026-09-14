@@ -13,6 +13,12 @@
 <body class="dashboard-page" data-page="dashboard">
   <a class="skip-link" href="#dashboard-main">Aller au contenu principal</a>
   <header class="topbar">
+    <button class="button ghost dashboard-menu-toggle" type="button"
+      data-dashboard-menu-toggle aria-controls="dashboard-navigation"
+      aria-expanded="false">
+      <span aria-hidden="true">☰</span>
+      <span>Menu</span>
+    </button>
     <a class="brand compact" href="/">
       <span class="brand-mark" aria-hidden="true">د</span>
       <span><strong>Defta</strong><small>Administration</small></span>
@@ -24,14 +30,76 @@
     </div>
   </header>
 
+  <nav id="dashboard-navigation" class="dashboard-navigation"
+    data-dashboard-nav aria-label="Navigation de l’administration">
+    <div class="dashboard-navigation-heading">
+      <p class="eyebrow">Navigation</p>
+      <strong>Gestion de la librairie</strong>
+    </div>
+
+    <div class="dashboard-navigation-group" data-dashboard-nav-group>
+      <button type="button" aria-expanded="true" aria-controls="nav-overview">
+        Vue d’ensemble
+      </button>
+      <ul id="nav-overview">
+        <li><a href="#dashboard-overview" data-dashboard-nav-link>Accueil</a></li>
+        <li><a href="#commercial-statistics-panel" data-dashboard-nav-link>Statistiques</a></li>
+        <li><a href="#business-alerts-panel" data-dashboard-nav-link>Alertes</a></li>
+        <li><a href="#csv-exports-panel" data-dashboard-nav-link>Exports</a></li>
+      </ul>
+    </div>
+
+    <div class="dashboard-navigation-group" data-dashboard-nav-group>
+      <button type="button" aria-expanded="false" aria-controls="nav-catalogue">Catalogue</button>
+      <ul id="nav-catalogue" hidden>
+        <li><a href="#books-panel" data-dashboard-nav-link>Livres</a></li>
+        <li><a href="#tags-panel" data-dashboard-nav-link>Tags</a></li>
+        <li><a href="#inventory-panel" data-dashboard-nav-link>Stocks</a></li>
+      </ul>
+    </div>
+
+    <div class="dashboard-navigation-group" data-dashboard-nav-group>
+      <button type="button" aria-expanded="false" aria-controls="nav-commerce">Commerce</button>
+      <ul id="nav-commerce" hidden>
+        <li><a href="#customers-panel" data-dashboard-nav-link>Clients</a></li>
+        <li><a href="#sales-panel" data-dashboard-nav-link>Ventes</a></li>
+        <li><a href="#cash-registers-panel" data-dashboard-nav-link>Caisses</a></li>
+        <li><a href="#payments-panel" data-dashboard-nav-link>Encaissements</a></li>
+      </ul>
+    </div>
+
+    <div class="dashboard-navigation-group" data-dashboard-nav-group>
+      <button type="button" aria-expanded="false" aria-controls="nav-procurement">Approvisionnement</button>
+      <ul id="nav-procurement" hidden>
+        <li><a href="#suppliers-panel" data-dashboard-nav-link>Fournisseurs</a></li>
+        <li><a href="#purchases-panel" data-dashboard-nav-link>Bons d’achat</a></li>
+        <li><a href="#supplier-returns-panel" data-dashboard-nav-link>Retours fournisseurs</a></li>
+      </ul>
+    </div>
+
+    <a class="dashboard-navigation-direct" href="#customer-returns-panel"
+      data-dashboard-nav-link>Service après-vente</a>
+    <a class="dashboard-navigation-direct" href="#library-settings-panel"
+      data-dashboard-nav-link>Configuration</a>
+
+    <div class="dashboard-navigation-group" data-dashboard-nav-group>
+      <button type="button" aria-expanded="false" aria-controls="nav-administration">Administration</button>
+      <ul id="nav-administration" hidden>
+        <li class="root-only" hidden><a href="#owners-section" data-dashboard-nav-link>Propriétaires</a></li>
+        <li><a href="#sessions-panel" data-dashboard-nav-link>Sessions</a></li>
+        <li><a href="#audit-panel" data-dashboard-nav-link>Journal d’audit</a></li>
+      </ul>
+    </div>
+  </nav>
+
   <main class="dashboard" id="dashboard-main" tabindex="-1">
-    <section class="welcome">
+    <section class="welcome" id="dashboard-overview" tabindex="-1">
       <div><p class="eyebrow">Tableau de bord</p><h1>Bonjour, <span id="user-name">utilisateur</span></h1></div>
       <p id="scope-text" class="muted">Vérification de vos droits…</p>
     </section>
 
 
-    <section class="panel" id="library-settings-panel" aria-labelledby="library-settings-title">
+    <section class="panel" id="library-settings-panel" tabindex="-1" aria-labelledby="library-settings-title">
       <h2 id="library-settings-title">Paramétrage de la librairie</h2>
       <form data-select class="filters"><label data-library hidden>Librairie<select name="libraryId"><option value="">Choisir une librairie</option></select></label><button type="submit">Charger les paramètres</button></form>
       <p data-notice role="status" aria-live="polite"></p><p data-error role="alert" hidden></p>
@@ -49,7 +117,7 @@
       </form>
     </section>
 
-    <section class="panel" id="csv-exports-panel" aria-labelledby="csv-exports-title">
+    <section class="panel" id="csv-exports-panel" tabindex="-1" aria-labelledby="csv-exports-title">
       <h2 id="csv-exports-title">Exports CSV</h2>
       <p>UTF-8, séparateur point-virgule. Maximum 10 000 lignes : affinez les filtres au-delà.</p>
       <form class="filters">
@@ -65,7 +133,7 @@
       <p data-hint></p><p data-notice role="status" aria-live="polite"></p><p data-error role="alert" hidden></p>
     </section>
 
-    <section class="panel" id="business-alerts-panel" aria-labelledby="business-alerts-title">
+    <section class="panel" id="business-alerts-panel" tabindex="-1" aria-labelledby="business-alerts-title">
       <h2 id="business-alerts-title">Alertes métier</h2>
       <p>Situation actuelle. Les achats en brouillon ne sont pas des commandes envoyées. Actualisez après une opération.</p>
       <form class="filters">
@@ -78,7 +146,7 @@
       <div class="pagination"><button type="button" data-prev>Précédent</button><span data-page></span><button type="button" data-next>Suivant</button></div></div>
     </section>
 
-    <section class="panel" id="commercial-statistics-panel" aria-labelledby="commercial-statistics-title">
+    <section class="panel" id="commercial-statistics-panel" tabindex="-1" aria-labelledby="commercial-statistics-title">
       <div class="panel-heading"><h2 id="commercial-statistics-title">Statistiques commerciales</h2></div>
       <form class="filters entity-form">
         <label>Du<input name="from" type="date" required></label>
@@ -116,13 +184,13 @@
 
     <p id="dashboard-error" class="alert" role="alert" hidden></p>
 
-    <section class="panel">
+    <section class="panel" id="suppliers-panel" tabindex="-1">
       <div class="panel-heading"><div><p class="eyebrow">Approvisionnement</p><h2>Fournisseurs</h2></div><button id="add-supplier-button" class="button primary" type="button">Nouveau fournisseur</button></div>
       <div class="table-wrap"><table><thead><tr><th scope="col">Nom</th><th scope="col">Contact</th><th scope="col">Téléphone</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead>
         <tbody id="suppliers-body"><tr><td colspan="5" class="empty">Chargement…</td></tr></tbody></table></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="purchases-panel" tabindex="-1">
       <div class="panel-heading purchase-heading"><div><p class="eyebrow">Approvisionnement</p><h2>Bons d'achat</h2></div><div class="heading-actions"><form id="purchase-filters" class="filters">
         <label>État<select name="status"><option value="">Tous</option><option value="DRAFT">Brouillon</option><option value="RECEIVED">Réceptionné</option><option value="CANCELLED">Annulé</option></select></label>
         <label>Fournisseur<select name="supplierId"><option value="">Tous</option></select></label>
@@ -136,7 +204,7 @@
       <div class="pagination"><button id="purchases-previous" class="button ghost" type="button">Précédent</button><span id="purchases-page-label" class="hint">Page 1</span><button id="purchases-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="customers-panel" tabindex="-1">
       <div class="panel-heading customer-heading">
         <div><p class="eyebrow">Relation client</p><h2>Clients</h2></div>
         <div class="heading-actions"><form id="customer-filters" class="filters">
@@ -153,7 +221,7 @@
       <div class="pagination"><button id="customers-previous" class="button ghost" type="button">Précédent</button><span id="customers-page-label" class="hint">Page 1</span><button id="customers-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
-    <section class="metrics" aria-label="Indicateurs">
+    <section class="metrics" id="dashboard-indicators" tabindex="-1" aria-label="Indicateurs">
       <article class="metric"><span>Livres visibles</span><strong id="book-total">—</strong></article>
       <article class="metric"><span>Ventes visibles</span><strong id="sale-total">—</strong></article>
       <article class="metric root-only" hidden><span>Propriétaires</span><strong id="owner-total">—</strong></article>
@@ -162,7 +230,7 @@
       <article class="metric"><span>État de session</span><strong class="status-good">Active</strong></article>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="cash-registers-panel" tabindex="-1">
       <div class="panel-heading payment-heading">
         <div><p class="eyebrow">Trésorerie</p><h2>Caisses</h2></div>
         <div class="heading-actions"><form id="cash-register-filters" class="filters">
@@ -178,7 +246,7 @@
       <div class="pagination"><button id="cash-registers-previous" class="button ghost" type="button">Précédent</button><span id="cash-registers-page-label" class="hint">Page 1</span><button id="cash-registers-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="payments-panel" tabindex="-1">
       <div class="panel-heading payment-heading">
         <div><p class="eyebrow">Trésorerie</p><h2>Encaissement des ventes</h2></div>
         <form id="payment-sale-filter" class="filters">
@@ -199,7 +267,7 @@
         <tbody id="payments-body"><tr><td colspan="6" class="empty">Sélectionnez une vente confirmée.</td></tr></tbody></table></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="sales-panel" tabindex="-1">
       <div class="panel-heading sales-heading">
         <div><p class="eyebrow">Activité commerciale</p><h2>Ventes</h2></div>
         <div class="heading-actions"><form id="sale-filters" class="filters">
@@ -219,7 +287,7 @@
       <div class="pagination"><button id="sales-previous" class="button ghost" type="button">Précédent</button><span id="sales-page-label" class="hint">Page 1</span><button id="sales-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="customer-returns-panel" tabindex="-1">
       <div class="panel-heading return-heading">
         <div><p class="eyebrow">Service après-vente</p><h2>Retours clients</h2></div>
         <div class="heading-actions"><form id="return-filters" class="filters">
@@ -237,7 +305,7 @@
       <div class="pagination"><button id="returns-previous" class="button ghost" type="button">Précédent</button><span id="returns-page-label" class="hint">Page 1</span><button id="returns-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="inventory-panel" tabindex="-1">
       <div class="panel-heading inventory-heading">
         <div><p class="eyebrow">Gestion opérationnelle</p><h2>Stocks</h2></div>
         <form id="inventory-filters" class="filters">
@@ -255,7 +323,7 @@
       <div class="pagination"><button id="inventory-previous" class="button ghost" type="button">Précédent</button><span id="inventory-page-label" class="hint">Page 1</span><button id="inventory-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
-    <section id="owners-section" class="panel root-only" hidden>
+    <section id="owners-section" class="panel root-only" tabindex="-1" hidden>
       <div class="panel-heading owner-heading"><div><p class="eyebrow">Administration globale</p><h2>Propriétaires et librairies</h2></div><div class="heading-actions"><form id="owner-filters" class="filters"><label>Recherche<input name="q" maxlength="200" placeholder="Compte ou librairie"></label><label>Compte<select name="status"><option value="">Tous</option><option value="ACTIVE">Actif</option><option value="LOCKED">Verrouillé</option><option value="DISABLED">Désactivé</option></select></label><label>Librairie<select name="libraryStatus"><option value="">Toutes</option><option value="ACTIVE">Active</option><option value="DISABLED">Désactivée</option></select></label><button class="button ghost" type="submit">Filtrer</button></form><button id="add-owner-button" class="button primary" type="button">Nouveau propriétaire</button></div></div>
       <div class="table-wrap">
         <table><thead><tr><th scope="col">Propriétaire</th><th scope="col">Librairie</th><th scope="col">Compte</th><th scope="col">Librairie</th><th scope="col">Actions</th></tr></thead>
@@ -265,13 +333,13 @@
       <div class="pagination"><button id="owners-previous" class="button ghost" type="button">Précédent</button><span id="owners-page-label" class="hint">Page 1</span><button id="owners-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="tags-panel" tabindex="-1">
       <div class="panel-heading tag-heading"><div><p class="eyebrow">Référentiel</p><h2>Tags de la librairie</h2></div><form id="tag-form" class="filters"><label class="root-only-field" hidden>Librairie<select name="libraryId" id="tag-library"></select></label><label>Nouveau tag<input name="name" minlength="2" maxlength="50" placeholder="ex. fiqh" required></label><button class="button primary" type="submit">Ajouter</button></form></div>
       <p class="scope-note">Les tags sont uniques sans distinction de majuscules dans chaque librairie.</p>
       <div id="tags-list" class="tag-list"><span class="hint">Chargement…</span></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="books-panel" tabindex="-1">
       <div class="panel-heading book-heading"><div><p class="eyebrow">Catalogue privé</p><h2>Livres</h2></div><div class="heading-actions"><form id="book-search-form" class="inline-search"><input name="q" maxlength="200" placeholder="Titre, auteur, tag…" aria-label="Rechercher dans les livres"><button class="button ghost" type="submit">Rechercher</button></form><button id="add-book-button" class="button primary" type="button">Nouveau livre</button></div></div>
       <div class="table-wrap">
         <table><thead><tr><th scope="col">Titre</th><th scope="col">Auteur</th><th scope="col">Prix</th><th scope="col">Tags</th><th scope="col">Statut</th><th scope="col">Actions</th></tr></thead>
@@ -281,7 +349,7 @@
       <div class="pagination"><button id="books-previous" class="button ghost" type="button">Précédent</button><span id="books-page-label" class="hint">Page 1</span><button id="books-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="audit-panel" tabindex="-1">
       <div class="panel-heading audit-heading">
         <div><p class="eyebrow">Traçabilité</p><h2>Journal d’audit</h2></div>
         <form id="audit-filters" class="filters">
@@ -304,7 +372,7 @@
       <div class="pagination"><button id="audit-previous" class="button ghost" type="button">Précédent</button><span id="audit-page-label" class="hint">Page 1</span><button id="audit-next" class="button ghost" type="button">Suivant</button></div>
     </section>
 
-    <section class="panel">
+    <section class="panel" id="sessions-panel" tabindex="-1">
       <div class="panel-heading session-heading"><div><p class="eyebrow">Sécurité</p><h2>Sessions actives</h2></div><div class="heading-actions"><form id="session-filters" class="filters"><label class="root-only-field" hidden>Utilisateur<input name="username" maxlength="64" placeholder="Nom d’utilisateur"></label><label class="root-only-field" hidden>Rôle<select name="role"><option value="">Tous</option><option value="SUPER_ADMIN_ROOT">Root</option><option value="OWNER_LIBRARY">Propriétaire</option></select></label><label>Adresse IP<input name="ipAddress" maxlength="64" placeholder="Adresse partielle"></label><label>Appareil<input name="userAgent" maxlength="200" placeholder="Navigateur ou client"></label><button class="button ghost" type="submit">Filtrer</button></form><button id="revoke-other-sessions-button" class="button danger" type="button">Déconnecter les autres appareils</button><button id="refresh-sessions-button" class="button ghost" type="button">Actualiser</button></div></div>
       <p id="session-scope-note" class="scope-note">Chargement du périmètre des sessions…</p>
       <div class="table-wrap">
@@ -314,7 +382,7 @@
       </div>
       <div class="pagination"><button id="sessions-previous" class="button ghost" type="button">Précédent</button><span id="sessions-page-label" class="hint">Page 1</span><button id="sessions-next" class="button ghost" type="button">Suivant</button></div>
     </section>
-    <section class="panel" id="supplier-returns-panel" aria-label="Retours fournisseurs"></section>
+    <section class="panel" id="supplier-returns-panel" tabindex="-1" aria-label="Retours fournisseurs"></section>
   </main>
 
   <dialog id="owner-dialog" class="modal" aria-labelledby="owner-form-title">
@@ -611,6 +679,7 @@
   </dialog>
 
   <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
+  <script src="/static/js/admin-navigation.js" defer></script>
   <script src="/static/js/admin-http.js" defer></script>
 <script src="/static/js/admin-audit.js" defer></script>
 <script src="/static/js/admin-sessions.js" defer></script>

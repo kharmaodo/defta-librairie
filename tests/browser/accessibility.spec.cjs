@@ -60,3 +60,41 @@ test('keyboard navigation keeps dialog focus and announces errors', async ({page
   await expect(error).toHaveAttribute('role', 'alert');
   await expect(error).toHaveText('Choisissez une librairie.');
 });
+
+test('thematic navigation exposes accessible submenus and section anchors', async ({page}) => {
+  await loginRoot(page);
+
+  const navigation = page.locator('[data-dashboard-nav]');
+  await expect(navigation).toHaveAccessibleName('Navigation de l’administration');
+
+  const catalogue = navigation.getByRole('button', {name: 'Catalogue'});
+  const catalogueMenu = page.locator('#nav-catalogue');
+  await expect(catalogue).toHaveAttribute('aria-expanded', 'false');
+  await expect(catalogueMenu).toBeHidden();
+
+  await catalogue.focus();
+  await page.keyboard.press('Enter');
+  await expect(catalogue).toHaveAttribute('aria-expanded', 'true');
+  await expect(catalogueMenu).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(catalogue).toHaveAttribute('aria-expanded', 'false');
+  await expect(catalogue).toBeFocused();
+
+  await page.keyboard.press('Space');
+  const booksLink = catalogueMenu.getByRole('link', {name: 'Livres'});
+  await booksLink.click();
+  await expect(page).toHaveURL(/#books-panel$/);
+  await expect(page.locator('#books-panel')).toBeFocused();
+
+  const menuToggle = page.locator('[data-dashboard-menu-toggle]');
+  await menuToggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(menuToggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(navigation).toHaveAttribute('data-open', '');
+
+  await page.keyboard.press('Escape');
+  await expect(menuToggle).toHaveAttribute('aria-expanded', 'false');
+  await expect(navigation).not.toHaveAttribute('data-open', '');
+  await expect(menuToggle).toBeFocused();
+});
