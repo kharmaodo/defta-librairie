@@ -148,8 +148,15 @@
     }
     return checked(response);
   }
-  async function json(path, options) {
-    return decode(await request(path, options));
+  const pendingJSONReads = new Map();
+  function json(path, options) {
+    if (options !== undefined) return decode(request(path, options));
+    const key = String(path);
+    if (pendingJSONReads.has(key)) return pendingJSONReads.get(key);
+    const pending = decode(request(path))
+      .finally(() => pendingJSONReads.delete(key));
+    pendingJSONReads.set(key, pending);
+    return pending;
   }
   async function decode(response) {
     if (response.status === 204) return null;
