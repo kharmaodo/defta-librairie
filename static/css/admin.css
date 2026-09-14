@@ -441,6 +441,77 @@ a {
   color: var(--green);
   font-size: 1.15rem;
 }
+
+/* Dashboard summary ------------------------------------------------------- */
+.dashboard-summary {
+  padding: clamp(1.25rem,2vw,2rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-large);
+  background: var(--white);
+  box-shadow: var(--shadow-soft);
+}
+.dashboard-summary-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.dashboard-summary-heading h2 {
+  margin: 0;
+}
+.dashboard-summary-filters {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: .65rem;
+}
+.dashboard-summary-filters label {
+  display: grid;
+  gap: .3rem;
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+}
+.dashboard-summary-filters input,.dashboard-summary-filters select {
+  min-height: 2.65rem;
+  padding: .55rem .7rem;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--white);
+  font: inherit;
+}
+.dashboard-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.summary-card {
+  display: grid;
+  gap: .45rem;
+  min-height: 9rem;
+  padding: 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  text-decoration: none;
+  background: linear-gradient(145deg,#fff,#f6faf8);
+  transition: transform var(--transition-fast),box-shadow var(--transition-fast);
+}
+.summary-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-soft);
+}
+.summary-card span,.summary-card small {
+  color: var(--muted);
+}
+.summary-card strong {
+  align-self: center;
+  color: var(--green-dark);
+  font-size: clamp(1.4rem,2.4vw,2rem);
+}
+.summary-card small {
+  align-self: end;
+}
 .panel {
   overflow: hidden;
 }
@@ -990,6 +1061,14 @@ tbody tr:last-child td {
    ========================================================================== */
 
 @media(max-width:1100px) {
+  .dashboard-summary-grid {
+    grid-template-columns: repeat(2,minmax(0,1fr));
+  }
+  .dashboard-summary-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .dashboard-page {
     display: block;
   }
@@ -1039,6 +1118,13 @@ tbody tr:last-child td {
 }
 
 @media(max-width:780px) {
+  .dashboard-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-summary-filters,.dashboard-summary-filters label {
+    width: 100%;
+  }
+
   .auth-layout {
     grid-template-columns: 1fr;
   }
