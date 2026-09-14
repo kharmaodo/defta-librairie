@@ -363,7 +363,9 @@ a {
 }
 
 .dashboard-navigation-group a:hover,
-.dashboard-navigation-group a:focus-visible {
+.dashboard-navigation-group a:focus-visible,
+.dashboard-navigation-group a.is-active,
+.dashboard-navigation-group a[aria-current="location"] {
   border-left-color: var(--gold);
   color: #fff;
   background: rgba(255,255,255,.07);
@@ -371,6 +373,17 @@ a {
 
 .dashboard-navigation-direct {
   margin-top: .55rem;
+}
+
+.dashboard-navigation-direct.is-active,
+.dashboard-navigation-direct[aria-current="location"] {
+  color: #fff;
+  background: rgba(255,255,255,.12);
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+
+.dashboard-navigation-backdrop {
+  display: none;
 }
 
 /* ==========================================================================
@@ -1004,6 +1017,20 @@ tbody tr:last-child td {
 
   .dashboard-navigation[data-open] {
     transform: translateX(0);
+  }
+
+  .dashboard-navigation-backdrop:not([hidden]) {
+    display: block;
+    position: fixed;
+    inset: var(--topbar-height) 0 0;
+    border: 0;
+    background: rgba(5,27,21,.52);
+    backdrop-filter: blur(2px);
+    z-index: 35;
+  }
+
+  body[data-navigation-open] {
+    overflow: hidden;
   }
 
   .admin-footer {

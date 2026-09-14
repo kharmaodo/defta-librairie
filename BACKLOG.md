@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `7ce55e6`
-(structure accessible du dashboard fusionnée par la PR #54). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `a7cc8ea`
+(système visuel du dashboard fusionné par la PR #55). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -61,8 +61,8 @@ Le contrat détaillé de la refonte est défini dans `docs/ADMIN_UI_V1_1.md`.
 |---|---|---|---|
 | 1 | Fondation et contrat de non-régression | Audit du DOM, architecture de navigation, sélecteurs protégés et critères d’acceptation | Réalisé |
 | 2 | Structure du dashboard | Header modernisé, navigation thématique, sous-menus accessibles et ancres de sections | Réalisé |
-| 3 | Système visuel | `admin.css` non minifié, commenté, responsive et organisé par composants | En cours |
-| 4 | Navigation responsive | Comportement desktop/mobile, focus, fermeture et état actif | À développer |
+| 3 | Système visuel | `admin.css` non minifié, commenté, responsive et organisé par composants | Réalisé |
+| 4 | Navigation responsive | Comportement desktop/mobile, focus, fermeture et état actif | En cours |
 | 5 | Couverture navigateur | Tests Playwright des menus, du clavier, des ancres et de l’accessibilité sans réduire les parcours existants | À développer |
 | 6 | Stabilisation et release | Suite Go/FTS5, contrôles statiques et suite Playwright complète sans test ignoré | À développer |
 

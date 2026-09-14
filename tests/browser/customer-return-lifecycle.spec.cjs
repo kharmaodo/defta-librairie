@@ -117,6 +117,8 @@ test('refund and credit note restore stock and remain audited', async ({page, re
   await inventoryForm.locator('button[type=submit]').click();
   await expect(inventoryForm).not.toBeVisible();
 
+  await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
+  await page.locator('#sale-filters button[type=submit]').click();
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
