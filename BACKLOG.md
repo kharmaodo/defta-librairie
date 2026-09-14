@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `9e461f3`
-(responsive de `v1.2.0` fusionné par la PR #66). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `04c6c3a`
+(système visuel de `v1.2.0` fusionné par la PR #67). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -89,15 +89,15 @@ les critères de décision sont définis dans `docs/ROADMAP_V1_2.md`.
 | 1 | Cadrage et mesures de référence | Inventaire UX, budget de performance, breakpoints et contrat de non-régression | Réalisé |
 | 2 | Synthèse du tableau de bord | Indicateurs métier prioritaires, états vide/chargement/erreur et accès aux rubriques | Réalisé |
 | 3 | Responsive et ergonomie | Navigation et panneaux affinés pour mobile, tablette et bureau | Réalisé |
-| 4 | Système visuel | Composants harmonisés et thème sombre accessible, sans duplication des règles CSS | À valider |
-| 5 | Performance frontend | Chargement mesuré, initialisation différée sûre et réduction du travail initial | À réaliser |
+| 4 | Système visuel | Composants harmonisés et thème sombre accessible, sans duplication des règles CSS | Réalisé |
+| 5 | Performance frontend | Chargement mesuré, initialisation différée sûre et réduction du travail initial | À valider |
 | 6 | Couverture navigateur | Tests Playwright desktop/mobile, thème, clavier et non-régression métier | À réaliser |
 | 7 | Stabilisation et release | Recette complète, documentation, changelog, archives et sommes SHA-256 | À réaliser |
 
-Le responsive est fusionné. Le système visuel propose les thèmes clair et sombre,
-suit le système par défaut et conserve le choix manuel avec un contrôle accessible.
-Après validation et fusion, le prochain incrément actif sera la performance
-frontend mesurée.
+Le système visuel et le thème accessible sont fusionnés. Les lectures JSON
+initiales identiques sont mutualisées uniquement pendant leur exécution ; les
+budgets statiques et réseau sont documentés et testés. Après validation et fusion,
+le prochain incrément actif sera la couverture navigateur consolidée.
 
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 
