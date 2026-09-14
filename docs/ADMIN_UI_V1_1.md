@@ -57,6 +57,7 @@ sélecteurs métier existants.
 | Bouton du menu mobile | Absent | `[data-dashboard-menu-toggle]` | Nouvelle couverture |
 | Groupes de navigation | Absents | `[data-dashboard-nav-group]` | Nouvelle couverture |
 | Liens de rubrique | Absents | `[data-dashboard-nav-link]` | Nouvelle couverture |
+| Fond du menu mobile | Absent | `[data-dashboard-nav-backdrop]` | Nouvelle couverture |
 | Ancres des panneaux sans identifiant | Absentes | `#suppliers-panel`, `#purchases-panel`, `#customers-panel`, `#cash-registers-panel`, `#payments-panel`, `#sales-panel`, `#customer-returns-panel`, `#inventory-panel`, `#tags-panel`, `#books-panel`, `#audit-panel`, `#sessions-panel` | Ajout sans remplacement des sélecteurs métier |
 
 Ce tableau doit être mis à jour dans le même commit si un sélecteur existant doit

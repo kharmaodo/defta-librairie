@@ -86,6 +86,7 @@ test('thematic navigation exposes accessible submenus and section anchors', asyn
   await booksLink.click();
   await expect(page).toHaveURL(/#books-panel$/);
   await expect(page.locator('#books-panel')).toBeFocused();
+  await expect(booksLink).toHaveAttribute('aria-current', 'location');
 
   const desktopNavigationBox = await navigation.boundingBox();
   const desktopMainBox = await page.locator('#dashboard-main').boundingBox();
@@ -99,6 +100,15 @@ test('thematic navigation exposes accessible submenus and section anchors', asyn
   await page.keyboard.press('Enter');
   await expect(menuToggle).toHaveAttribute('aria-expanded', 'true');
   await expect(navigation).toHaveAttribute('data-open', '');
+  await expect(navigation).toBeInViewport();
+
+  const backdrop = page.locator('[data-dashboard-nav-backdrop]');
+  await expect(backdrop).toBeVisible();
+  await backdrop.click({position: {x: 740, y: 100}});
+  await expect(navigation).not.toBeInViewport();
+  await expect(menuToggle).toBeFocused();
+
+  await page.keyboard.press('Enter');
   await expect(navigation).toBeInViewport();
 
   await page.keyboard.press('Escape');
