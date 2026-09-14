@@ -19,6 +19,8 @@ des règles métier ni des contrats HTTP.
 - Sélecteurs métier historiques conservés et nouvelles ancres documentées.
 - Treize parcours Chromium, dont le contrat complet du dashboard desktop/mobile.
 - Contrôle statique des groupes, liens, ancres, footer et sections CSS ajouté au delivery.
+- Archives exécutables Windows AMD64, Raspberry Pi OS ARM64 et ARMv7 publiées
+  avec leurs ressources d’exécution et sommes SHA-256.
 
 ## [1.0.0] — 2026-09-14
 
