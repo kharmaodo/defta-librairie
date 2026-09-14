@@ -28,6 +28,7 @@ async function loginRoot(page) {
   await page.locator('#login-form button[type=submit]').click();
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.locator('#role-badge')).toHaveText('SUPER ADMIN ROOT');
+  await page.waitForLoadState('networkidle');
 }
 
 async function displayedAmount(locator) {
