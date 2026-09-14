@@ -74,6 +74,11 @@ transitions partagent des variables CSS afin de limiter les valeurs isolées.
 Les états `hover`, `focus-visible`, actif, désactivé, erreur et succès doivent
 rester perceptibles. Les animations respectent `prefers-reduced-motion`.
 
+L’incrément visuel conserve les règles historiques en les développant sur une
+ligne par déclaration. Il ajoute une grille desktop à sidebar fixe, un panneau
+mobile hors-canvas, un header persistant et des variables partagées pour les
+dimensions, ombres, rayons et transitions.
+
 ## Critères d’acceptation Playwright
 
 - La suite existante passe intégralement, sans `skip`, sans suppression
