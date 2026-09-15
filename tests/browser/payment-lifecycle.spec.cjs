@@ -105,10 +105,16 @@ test('cash, mobile money and card payments update the remaining balance', async 
 
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   const sale = page.locator('#sales-body tr').filter({hasText: customer});
-  await expect(async () => {
-    await page.locator('#sale-filters button[type=submit]').click();
-    await expect(sale).toHaveCount(1, {timeout: 2000});
-  }).toPass({timeout: 12000});
+  const filteredSalesResponse = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return response.request().method() === 'GET'
+      && url.pathname === '/api/manage/sales'
+      && url.searchParams.get('libraryId') === library.id;
+  });
+  await page.locator('#sale-filters button[type=submit]').click();
+  const filteredSales = await filteredSalesResponse;
+  expect(filteredSales.status(), await filteredSales.text()).toBe(200);
+  await expect(sale).toHaveCount(1);
   page.once('dialog', dialog => dialog.accept());
   await sale.getByRole('button', {name: 'Confirmer'}).click();
   await expect(sale).toContainText('Confirmée');
