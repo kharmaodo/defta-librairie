@@ -111,8 +111,8 @@ func TestCoverUploadOutboxJetStreamIntegration(t *testing.T) {
 	if err = db.QueryRowContext(ctx, `
 		SELECT event_id, source_object_key
 		FROM cover_processing_outbox
-		JOIN book_covers USING (cover_id)
-		WHERE cover_id = ?
+		JOIN book_covers ON book_covers.id = cover_processing_outbox.cover_id
+		WHERE cover_processing_outbox.cover_id = ?
 	`, pending.ID).Scan(&eventID, &sourceKey); err != nil {
 		t.Fatalf("read pending outbox: %v", err)
 	}
