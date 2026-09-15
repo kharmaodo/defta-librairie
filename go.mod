@@ -5,6 +5,7 @@ go 1.25.0
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/minio/minio-go/v7 v7.3.0
+	github.com/nats-io/nats.go v1.39.1
 )
 
 require github.com/golang-jwt/jwt/v5 v5.3.1
