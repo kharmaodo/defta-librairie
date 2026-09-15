@@ -3,6 +3,7 @@
 
   let active = null;
   let initialized = false;
+  let controlledClose = false;
 
   function nodes() {
     const dialog = document.querySelector('#delete-confirmation-dialog');
@@ -40,7 +41,10 @@
     const current = active;
     active = null;
     reset(view);
-    if (view.dialog.open) view.dialog.close();
+    if (view.dialog.open) {
+      controlledClose = true;
+      view.dialog.close();
+    }
     current?.resolve(confirmed);
     current?.trigger?.focus?.();
   }
@@ -65,6 +69,10 @@
       cancel(view);
     });
     view.dialog.addEventListener('close', () => {
+      if (controlledClose) {
+        controlledClose = false;
+        return;
+      }
       if (active && !active.busy) finish(view, false);
     });
     view.form.addEventListener('submit', async event => {
