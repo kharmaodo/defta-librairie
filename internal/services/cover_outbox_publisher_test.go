@@ -134,7 +134,7 @@ func TestCoverOutboxPublisherStopsCleanlyWhenEmptyOrCancelled(t *testing.T) {
 func TestCoverOutboxPublisherDoesNotAcknowledgeWhenTransportFails(t *testing.T) {
 	now := time.Date(2026, 9, 15, 18, 0, 0, 0, time.UTC)
 	store := &coverOutboxStoreStub{
-		events: []repositories.CoverOutboxEvent{{EventID: "event-4", Payload: "{}"}},
+		events:  []repositories.CoverOutboxEvent{{EventID: "event-4", Payload: "{}"}},
 		markErr: repositories.ErrCoverOutboxLeaseLost,
 	}
 	messages := &coverMessagePublisherStub{err: errors.New("offline")}

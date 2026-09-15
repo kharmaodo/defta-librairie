@@ -24,7 +24,7 @@ type CoverOutboxEvent struct {
 	Attempts      int
 }
 
-type CoverOutboxRepository struct { db *sql.DB }
+type CoverOutboxRepository struct{ db *sql.DB }
 
 func NewCoverOutboxRepository(db *sql.DB) *CoverOutboxRepository {
 	return &CoverOutboxRepository{db: db}
