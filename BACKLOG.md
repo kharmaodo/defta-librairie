@@ -162,7 +162,7 @@ Linux ARMv7 demeure obligatoire.
 | Ordre | Incrément | Livrable vérifiable | État |
 |---|---|---|---|
 | 1 | Fondation asynchrone | Contrat de menace, états, outbox SQLite, topologie API/JetStream/worker/MinIO et infrastructure Docker | Réalisé |
-| 2 | Upload et stockage source | Client MinIO testable, bucket privé, JPEG/PNG réels, limites et source temporaire | À valider |
+| 2 | Upload et stockage source | Client MinIO testable, bucket privé, JPEG/PNG réels, limites et source temporaire | Réalisé |
 | 3 | Messagerie et worker | Publisher outbox, stream JetStream, consommateur durable, reprises et idempotence | À réaliser |
 | 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels et images OCI multiarchitectures | À réaliser |
 | 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | À réaliser |
@@ -170,11 +170,11 @@ Linux ARMv7 demeure obligatoire.
 | 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | À réaliser |
 
 La fondation asynchrone est validée et fusionnée par la PR #83 au commit
-`892a6fa`. L’incrément 2 est prêt à valider sur la branche
-`feature/book-covers-v1.4-upload` : validation JPEG/PNG réelle, limites,
-stockage MinIO privé, transaction couverture/outbox/audit, compensation et
-route multipart documentée. Il ne passera à `Réalisé` qu’après fusion dans
-`develop`.
+`892a6fa`. L’upload sécurisé et le stockage temporaire sont validés et fusionnés
+par la PR #84 au commit `c25f054`. Ils couvrent la validation JPEG/PNG réelle,
+les limites, le stockage MinIO privé, la transaction couverture/outbox/audit,
+la compensation et la route multipart documentée. L’incrément actif est la
+messagerie : publisher outbox, JetStream et worker Go idempotent.
 
 Le traitement asynchrone par worker Go est retenu pour `v1.4.0`. NATS
 JetStream assure la livraison persistante et une transactional outbox SQLite
