@@ -1,5 +1,34 @@
 # Journal des versions
 
+## [1.3.0] — 2026-09-15
+
+Amélioration de la lisibilité des formulaires et sécurisation des suppressions
+définitives dans le dashboard d’administration, sans modification des contrats
+HTTP ni des règles métier.
+
+### Interface d’administration
+
+- Bordures des champs visibles dans les thèmes clair et sombre grâce à des
+  variables CSS partagées.
+- États de survol, focus, désactivation et invalidité harmonisés dans les
+  dialogues, filtres, recherches et formulaires.
+- Dialogue de suppression commun, accessible et cohérent avec le dashboard.
+- Confirmation par saisie exacte du titre du livre, du nom du tag ou de la
+  référence du brouillon de vente.
+- Comparaison sensible à la casse et aux espaces, remise à zéro après fermeture
+  et restitution du focus au déclencheur.
+
+### Sécurité et qualité
+
+- Double soumission bloquée et erreurs serveur annoncées dans le dialogue.
+- Désactivations, révocations et transitions métier conservées hors du flux de
+  suppression définitive.
+- Inventaire des actions destructrices et contrat de sélecteurs documentés.
+- Tests unitaires JavaScript, contrôles statiques et parcours Playwright dédiés.
+- Vingt-deux parcours Chromium sans retry, `skip` ni `fixme`.
+- Archives Windows AMD64, Raspberry Pi OS ARM64 et ARMv7 préparées avec sommes
+  SHA-256.
+
 ## [1.2.0] — 2026-09-15
 
 Amélioration progressive de l’expérience du dashboard d’administration, sans
