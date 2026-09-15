@@ -20,8 +20,8 @@ require(
     (
         "image/jpeg",
         "image/png",
-        "ErrImageTooLarge",
-        "ErrUnsupportedImage",
+        "ErrTooLarge",
+        "ErrUnsupportedFormat",
         "ErrContentTypeMismatch",
         "ErrTooManyPixels",
     ),
@@ -48,6 +48,12 @@ require(
     (
         "CreatePending",
         "Discard",
+    ),
+)
+require(
+    "internal/repositories/cover_repository.go",
+    (
+        "CreatePending",
         "UPLOAD_BOOK_COVER",
     ),
 )
@@ -86,7 +92,7 @@ require(
         "TestBookCover",
         "cover_processing_outbox",
         "UPLOAD_BOOK_COVER",
-        "deleteCalls",
+        "store.deletes",
     ),
 )
 require(
