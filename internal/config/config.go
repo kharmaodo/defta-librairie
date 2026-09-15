@@ -11,19 +11,27 @@ import (
 )
 
 type Config struct {
-	Port             string
-	DBPath           string
-	Version          string
-	BuildDate        string
-	PageSize         int
-	JWTSecret        string
-	JWTIssuer        string
-	JWTAudience      string
-	JWTAccessTTL     time.Duration
-	JWTRefreshTTL    time.Duration
-	AuthRateLimit    int
-	AuthRateWindow   time.Duration
-	AuthCookieSecure bool
+	Port              string
+	DBPath            string
+	Version           string
+	BuildDate         string
+	PageSize          int
+	JWTSecret         string
+	JWTIssuer         string
+	JWTAudience       string
+	JWTAccessTTL      time.Duration
+	JWTRefreshTTL     time.Duration
+	AuthRateLimit     int
+	AuthRateWindow    time.Duration
+	AuthCookieSecure  bool
+	CoversEnabled     bool
+	MinIOEndpoint     string
+	MinIOAccessKey    string
+	MinIOSecretKey    string
+	MinIOUseSSL       bool
+	MinIOBucketCovers string
+	CoverMaxBytes     int64
+	CoverMaxPixels    uint64
 }
 
 func Load() (*Config, error) {
@@ -31,19 +39,27 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		Port:             getEnv("PORT", "8080"),
-		DBPath:           getEnv("DB_PATH", "./data/defta.db"),
-		Version:          getEnv("VERSION", "0.1.0-dev"),
-		BuildDate:        getEnv("BUILD_DATE", "unknown"),
-		PageSize:         getEnvInt("PAGE_SIZE", 30),
-		JWTSecret:        getEnv("JWT_SECRET", ""),
-		JWTIssuer:        getEnv("JWT_ISSUER", "defta-librairie"),
-		JWTAudience:      getEnv("JWT_AUDIENCE", "defta-librairie-web"),
-		JWTAccessTTL:     time.Duration(getEnvInt("JWT_ACCESS_TTL_SECONDS", 900)) * time.Second,
-		JWTRefreshTTL:    time.Duration(getEnvInt("JWT_REFRESH_TTL_SECONDS", 604800)) * time.Second,
-		AuthRateLimit:    getEnvInt("AUTH_RATE_LIMIT_REQUESTS", 10),
-		AuthRateWindow:   time.Duration(getEnvInt("AUTH_RATE_LIMIT_WINDOW_SECONDS", 60)) * time.Second,
-		AuthCookieSecure: getEnvBool("AUTH_COOKIE_SECURE", false),
+		Port:              getEnv("PORT", "8080"),
+		DBPath:            getEnv("DB_PATH", "./data/defta.db"),
+		Version:           getEnv("VERSION", "0.1.0-dev"),
+		BuildDate:         getEnv("BUILD_DATE", "unknown"),
+		PageSize:          getEnvInt("PAGE_SIZE", 30),
+		JWTSecret:         getEnv("JWT_SECRET", ""),
+		JWTIssuer:         getEnv("JWT_ISSUER", "defta-librairie"),
+		JWTAudience:       getEnv("JWT_AUDIENCE", "defta-librairie-web"),
+		JWTAccessTTL:      time.Duration(getEnvInt("JWT_ACCESS_TTL_SECONDS", 900)) * time.Second,
+		JWTRefreshTTL:     time.Duration(getEnvInt("JWT_REFRESH_TTL_SECONDS", 604800)) * time.Second,
+		AuthRateLimit:     getEnvInt("AUTH_RATE_LIMIT_REQUESTS", 10),
+		AuthRateWindow:    time.Duration(getEnvInt("AUTH_RATE_LIMIT_WINDOW_SECONDS", 60)) * time.Second,
+		AuthCookieSecure:  getEnvBool("AUTH_COOKIE_SECURE", false),
+		CoversEnabled:     getEnvBool("COVERS_ENABLED", false),
+		MinIOEndpoint:     getEnv("MINIO_ENDPOINT", "localhost:9000"),
+		MinIOAccessKey:    getEnv("MINIO_ACCESS_KEY", ""),
+		MinIOSecretKey:    getEnv("MINIO_SECRET_KEY", ""),
+		MinIOUseSSL:       getEnvBool("MINIO_USE_SSL", false),
+		MinIOBucketCovers: getEnv("MINIO_BUCKET_COVERS", "book-covers"),
+		CoverMaxBytes:     getEnvPositiveInt64("COVER_MAX_BYTES", 5*1024*1024),
+		CoverMaxPixels:    uint64(getEnvPositiveInt64("COVER_MAX_PIXELS", 24_000_000)),
 	}
 
 	return cfg, nil
@@ -82,4 +98,17 @@ func getEnvInt(key string, fallback int) int {
 		return fallback
 	}
 	return n
+}
+
+func getEnvPositiveInt64(key string, fallback int64) int64 {
+	value := getEnv(key, "")
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || parsed < 1 {
+		log.Printf("Valeur invalide pour %s → utilisation de %d", key, fallback)
+		return fallback
+	}
+	return parsed
 }

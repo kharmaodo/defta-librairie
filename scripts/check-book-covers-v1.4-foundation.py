@@ -87,8 +87,15 @@ for token in required_env:
     if token not in env_example:
         errors.append(f"variable de configuration absente : {token}")
 
-if "| 1 | Fondation asynchrone" not in backlog or "| À valider |" not in backlog:
-    errors.append("incrément de fondation v1.4 absent du backlog")
+foundation_row = (
+    "| 1 | Fondation asynchrone | Contrat de menace, états, outbox SQLite, "
+    "topologie API/JetStream/worker/MinIO et infrastructure Docker | Réalisé |"
+)
+upload_row = "| 2 | Upload et stockage source |"
+if foundation_row not in backlog:
+    errors.append("fondation v1.4 non marquée Réalisé dans le backlog")
+if upload_row not in backlog:
+    errors.append("incrément d’upload v1.4 absent du backlog")
 
 if "worker Go asynchrone" not in roadmap:
     errors.append("roadmap non alignée sur le worker asynchrone")

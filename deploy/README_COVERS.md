@@ -44,6 +44,23 @@ Les liaisons sont limitées à la boucle locale par défaut. Un déploiement de
 production doit utiliser un réseau privé, TLS, un gestionnaire de secrets et ne
 pas publier les consoles d’administration.
 
+## Test d’intégration du stockage
+
+Après le démarrage de MinIO et la réussite de `minio-init` :
+
+```sh
+set -a
+. ./.env
+set +a
+
+MINIO_INTEGRATION=1 \
+MINIO_ENDPOINT=127.0.0.1:9000 \
+go test -tags fts5 ./internal/covers -run TestMinIOStoreIntegration -v
+```
+
+Le test crée un objet isolé puis le supprime, y compris lors du nettoyage du
+scénario.
+
 ## Arrêter
 
 ```sh
