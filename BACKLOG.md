@@ -101,6 +101,39 @@ parcours Chromium sans test ignoré. L’incrément final de stabilisation et re
 `v1.2.0` pointe sur `fdab7db` ; la release publique contient les archives Windows
 AMD64, Raspberry Pi OS ARM64 et ARMv7, `BUILD-INFO.txt` et `SHA256SUMS`.
 
+## Backlog v1.3.0 — lisibilité et suppressions sûres
+
+Le contrat détaillé des versions `v1.3.0` et `v1.4.0` est défini dans
+`docs/ROADMAP_V1_3_V1_4.md`. La confirmation renforcée concerne uniquement les
+suppressions définitives et exige la saisie exacte du nom ou de la référence.
+
+| Ordre | Incrément | Livrable vérifiable | État |
+|---|---|---|---|
+| 1 | Contrat et inventaire | Classement des suppressions définitives, suppressions logiques et transitions métier ; identifiants attendus documentés | À réaliser |
+| 2 | Lisibilité des formulaires | Variable `--input-border-color`, états clair/sombre, focus, survol, désactivation et invalidité couverts | À réaliser |
+| 3 | Confirmation renforcée | Dialogue commun accessible, égalité stricte, réinitialisation, focus et prévention de double soumission | À réaliser |
+| 4 | Stabilisation et release | Tests JS, Go/FTS5 et Playwright complets ; sélecteurs documentés ; publication `v1.3.0` | À réaliser |
+
+## Backlog v1.4.0 — couvertures de livre
+
+Le bucket MinIO sera privé, la base conservera une clé d’objet et l’application
+servira les images. Le traitement retenu est un recadrage centré 2:3 en
+800 × 1200 pixels. La compatibilité des builds Windows AMD64, Linux ARM64 et
+Linux ARMv7 demeure obligatoire.
+
+| Ordre | Incrément | Livrable vérifiable | État |
+|---|---|---|---|
+| 1 | Contrat, menace et migration | Modèle de clé, transition de `coverUrl`, contrôle d’accès et stratégie de nettoyage définis | À réaliser |
+| 2 | Configuration MinIO | Client testable, bucket `MINIO_BUCKET_COVERS`, secrets protégés et diagnostic d’exploitation | À réaliser |
+| 3 | Validation et traitement | JPEG/PNG réels, magic bytes, limite 5 Mio, plafond de pixels, recadrage et compression | À réaliser |
+| 4 | Cycle de vie de la couverture | Upload, lecture, remplacement compensé, suppression et absence d’objets orphelins testés | À réaliser |
+| 5 | Interface et fallback | Upload admin, affichage catalogue/admin et image par défaut centralisée | À réaliser |
+| 6 | Stabilisation et release | Sécurité, Go/FTS5, Playwright, restauration et archives multiplateformes `v1.4.0` | À réaliser |
+
+L’extraction du traitement d’image dans un microservice séparé est différée à
+`v1.5.0` et ne sera entreprise que si les mesures de charge ou la réutilisation
+la justifient.
+
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 
 - Solde net après retour : conserver la distinction entre vente brute, retours,
