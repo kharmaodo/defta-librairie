@@ -14,12 +14,20 @@ async function colors(control) {
   return control.evaluate(element => {
     const style = getComputedStyle(element);
     const rootStyle = getComputedStyle(document.documentElement);
+    const resolveColor = name => {
+      const probe = document.createElement('span');
+      probe.style.color = rootStyle.getPropertyValue(name);
+      document.body.append(probe);
+      const value = getComputedStyle(probe).color;
+      probe.remove();
+      return value;
+    };
     return {
       border: style.borderTopColor,
       background: style.backgroundColor,
-      expectedBorder: rootStyle.getPropertyValue('--input-border-color').trim(),
-      expectedHover: rootStyle.getPropertyValue('--input-border-hover-color').trim(),
-      expectedDisabled: rootStyle.getPropertyValue('--input-disabled-background').trim()
+      expectedBorder: resolveColor('--input-border-color'),
+      expectedHover: resolveColor('--input-border-hover-color'),
+      expectedDisabled: resolveColor('--input-disabled-background')
     };
   });
 }
@@ -34,8 +42,10 @@ async function verifyTheme(page, theme) {
   expect(actual.border).not.toBe(actual.background);
 
   await control.hover();
-  actual = await colors(control);
-  expect(actual.border).toBe(actual.expectedHover);
+  await expect.poll(async () => {
+    const current = await colors(control);
+    return current.border === current.expectedHover;
+  }).toBe(true);
 
   await control.focus();
   await expect(control).toBeFocused();
@@ -43,9 +53,11 @@ async function verifyTheme(page, theme) {
   expect(actual.border).not.toBe(actual.expectedBorder);
 
   await control.evaluate(element => { element.disabled = true; });
-  actual = await colors(control);
-  expect(actual.background).toBe(actual.expectedDisabled);
-  expect(await control.isDisabled()).toBe(true);
+  await expect(control).toBeDisabled();
+  await expect.poll(async () => {
+    const current = await colors(control);
+    return current.background === current.expectedDisabled;
+  }).toBe(true);
   await control.evaluate(element => { element.disabled = false; });
 }
 
@@ -54,10 +66,12 @@ test('form controls remain visible and expose their states in both themes', asyn
   await login(page);
   await page.locator('#add-book-button').click();
   await verifyTheme(page, 'light');
+  await page.locator('#book-dialog').getByRole('button', {name: 'Annuler', exact: true}).click();
+  await expect(page.locator('#book-dialog')).not.toBeVisible();
 
   await page.locator('[data-theme-toggle]').click();
+  await page.locator('#add-book-button').click();
   await verifyTheme(page, 'dark');
-
-  await page.locator('[data-close="book-dialog"]').click();
+  await page.locator('#book-dialog').getByRole('button', {name: 'Annuler', exact: true}).click();
   await expect(page.locator('#book-dialog')).not.toBeVisible();
 });
