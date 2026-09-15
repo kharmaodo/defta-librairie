@@ -127,10 +127,16 @@ test('CSV exports download scoped data and sale/purchase receipts print', async 
   await page.waitForLoadState('networkidle');
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   const saleRow = page.locator('#sales-body tr').filter({hasText: customer});
-  await expect(async () => {
-    await page.locator('#sale-filters button[type=submit]').click();
-    await expect(saleRow).toHaveCount(1, {timeout: 2000});
-  }).toPass({timeout: 12000});
+  const filteredSalesResponse = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return response.request().method() === 'GET'
+      && url.pathname === '/api/manage/sales'
+      && url.searchParams.get('libraryId') === library.id;
+  });
+  await page.locator('#sale-filters button[type=submit]').click();
+  const filteredSales = await filteredSalesResponse;
+  expect(filteredSales.status(), await filteredSales.text()).toBe(200);
+  await expect(saleRow).toHaveCount(1);
   const saleReference = (await saleRow.locator('td').first().textContent()).trim();
 
   const exportButton = page.locator('#csv-exports-panel button[type=submit]');
