@@ -19,5 +19,5 @@ test('admin theme follows system preference and persists an accessible override'
     template.indexOf('/static/css/admin.css'));
   assert.match(css, /:root\[data-theme="dark"\]/);
   assert.match(css, /--surface-soft:/);
-  assert.match(css, /--input-border:/);
+  assert.match(css, /--input-border-color:/);
 });
