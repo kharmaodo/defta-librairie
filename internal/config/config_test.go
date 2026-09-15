@@ -15,3 +15,38 @@ func TestGetEnvPreservesMeaningfulSpaces(t *testing.T) {
 		t.Fatalf("expected spaces to be preserved, got %q", value)
 	}
 }
+
+func TestLoadCoverConfiguration(t *testing.T) {
+	t.Setenv("COVERS_ENABLED", "true")
+	t.Setenv("MINIO_ENDPOINT", "minio:9000")
+	t.Setenv("MINIO_ACCESS_KEY", "test-access")
+	t.Setenv("MINIO_SECRET_KEY", "test-secret")
+	t.Setenv("MINIO_USE_SSL", "true")
+	t.Setenv("MINIO_BUCKET_COVERS", "covers-test")
+	t.Setenv("COVER_MAX_BYTES", "1024")
+	t.Setenv("COVER_MAX_PIXELS", "2000")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if !cfg.CoversEnabled || cfg.MinIOEndpoint != "minio:9000" ||
+		cfg.MinIOAccessKey != "test-access" || cfg.MinIOSecretKey != "test-secret" ||
+		!cfg.MinIOUseSSL || cfg.MinIOBucketCovers != "covers-test" ||
+		cfg.CoverMaxBytes != 1024 || cfg.CoverMaxPixels != 2000 {
+		t.Fatalf("unexpected cover config: %+v", cfg)
+	}
+}
+
+func TestCoverLimitsRejectInvalidValues(t *testing.T) {
+	t.Setenv("COVER_MAX_BYTES", "-1")
+	t.Setenv("COVER_MAX_PIXELS", "invalid")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if cfg.CoverMaxBytes != 5*1024*1024 || cfg.CoverMaxPixels != 24_000_000 {
+		t.Fatalf("unexpected cover defaults: bytes=%d pixels=%d", cfg.CoverMaxBytes, cfg.CoverMaxPixels)
+	}
+}
