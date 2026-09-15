@@ -6,6 +6,9 @@ La refonte progressive du dashboard d’administration prévue pour `v1.1.0` est
 décrite dans [docs/ADMIN_UI_V1_1.md](docs/ADMIN_UI_V1_1.md).
 La feuille de route de l’expérience dashboard `v1.2.0` est définie dans
 [docs/ROADMAP_V1_2.md](docs/ROADMAP_V1_2.md).
+Les correctifs `v1.3.0` et la gestion des couvertures prévue pour `v1.4.0`
+sont cadrés dans
+[docs/ROADMAP_V1_3_V1_4.md](docs/ROADMAP_V1_3_V1_4.md).
 
 Catalogue web RTL de livres en arabe, développé en Go avec SQLite et son moteur de recherche plein texte FTS5.
 
@@ -141,7 +144,7 @@ Contenu de référence de `.env.example` :
 PORT=8080
 DB_PATH=./data/defta.db
 PAGE_SIZE=30
-VERSION=1.2.0
+VERSION=1.3.0
 BUILD_DATE=2026-09-15
 JWT_SECRET=
 JWT_ISSUER=defta-librairie
@@ -159,7 +162,7 @@ La préparation, le tag et le retour arrière de la version stable sont décrits
 dans [RELEASE.md](docs/RELEASE.md). Les changements publiés figurent dans
 [CHANGELOG.md](CHANGELOG.md).
 
-Les archives Windows AMD64 et Raspberry Pi de `v1.2.0` sont décrites dans
+Les archives Windows AMD64 et Raspberry Pi de `v1.3.0` sont décrites dans
 [RELEASE_ARTIFACTS.md](docs/RELEASE_ARTIFACTS.md).
 
 Sous Linux ou WSL, si `.env` a été modifié sous Windows, supprimer les retours chariot avant le lancement avec `sed -i 's/\r$//' .env`. Le chargeur neutralise également ces fins de ligne pour éviter qu'une valeur telle que `PORT=8080\r` soit transmise au serveur HTTP.
