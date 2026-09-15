@@ -18,8 +18,8 @@ import (
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 
-	"github.com/nats-io/nats.go"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/nats-io/nats.go"
 )
 
 func TestCoverUploadOutboxJetStreamIntegration(t *testing.T) {
@@ -64,8 +64,8 @@ func TestCoverUploadOutboxJetStreamIntegration(t *testing.T) {
 	claims.Subject = "owner-pipeline"
 	bookService := NewBookService(repositories.NewBookRepository(db))
 	book, err := bookService.Create(ctx, claims, models.BookInput{
-		Title: "Livre pipeline couverture",
-		Price: 1000,
+		Title:  "Livre pipeline couverture",
+		Price:  1000,
 		Volume: 1,
 	})
 	if err != nil {

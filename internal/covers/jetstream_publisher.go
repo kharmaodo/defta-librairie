@@ -65,16 +65,16 @@ func (p *JetStreamPublisher) ensureStream(ctx context.Context, streamName string
 	info, err := p.jetStream.StreamInfo(streamName, nats.Context(ctx))
 	if errors.Is(err, nats.ErrStreamNotFound) {
 		_, err = p.jetStream.AddStream(&nats.StreamConfig{
-			Name:            streamName,
-			Subjects:        []string{p.subject},
-			Retention:       nats.LimitsPolicy,
-			Discard:         nats.DiscardOld,
-			Storage:         nats.FileStorage,
-			MaxAge:          DefaultCoverStreamMaxAge,
-			Duplicates:      DefaultCoverDuplicateWindow,
-			AllowDirect:     true,
-			DenyDelete:      true,
-			DenyPurge:       true,
+			Name:        streamName,
+			Subjects:    []string{p.subject},
+			Retention:   nats.LimitsPolicy,
+			Discard:     nats.DiscardOld,
+			Storage:     nats.FileStorage,
+			MaxAge:      DefaultCoverStreamMaxAge,
+			Duplicates:  DefaultCoverDuplicateWindow,
+			AllowDirect: true,
+			DenyDelete:  true,
+			DenyPurge:   true,
 		}, nats.Context(ctx))
 		if err != nil {
 			return fmt.Errorf("create cover JetStream stream: %w", err)
