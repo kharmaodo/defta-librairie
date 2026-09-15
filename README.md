@@ -112,7 +112,7 @@ go mod download
 
 ## Configuration
 
-Toutes les variables sont optionnelles :
+Les variables disposent d’une valeur par défaut sauf les secrets explicitement signalés. `JWT_SECRET` reste obligatoire ; les identifiants MinIO et NATS le deviennent lorsque `COVERS_ENABLED=true` :
 
 | Variable | Valeur par défaut | Description |
 |---|---:|---|
