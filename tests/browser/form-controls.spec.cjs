@@ -42,8 +42,10 @@ async function verifyTheme(page, theme) {
   expect(actual.border).not.toBe(actual.background);
 
   await control.hover();
-  actual = await colors(control);
-  expect(actual.border).toBe(actual.expectedHover);
+  await expect.poll(async () => {
+    const current = await colors(control);
+    return current.border === current.expectedHover;
+  }).toBe(true);
 
   await control.focus();
   await expect(control).toBeFocused();
@@ -51,9 +53,11 @@ async function verifyTheme(page, theme) {
   expect(actual.border).not.toBe(actual.expectedBorder);
 
   await control.evaluate(element => { element.disabled = true; });
-  actual = await colors(control);
-  expect(actual.background).toBe(actual.expectedDisabled);
-  expect(await control.isDisabled()).toBe(true);
+  await expect(control).toBeDisabled();
+  await expect.poll(async () => {
+    const current = await colors(control);
+    return current.background === current.expectedDisabled;
+  }).toBe(true);
   await control.evaluate(element => { element.disabled = false; });
 }
 
