@@ -37,6 +37,8 @@ type Config struct {
 	NATSPassword      string
 	NATSCoversStream  string
 	NATSCoversSubject string
+	NATSCoversConsumer string
+	CoverWorkerMaxDeliver int
 }
 
 func Load() (*Config, error) {
@@ -70,6 +72,8 @@ func Load() (*Config, error) {
 		NATSPassword:      getEnv("NATS_PASSWORD", ""),
 		NATSCoversStream:  getEnv("NATS_COVERS_STREAM", "BOOK_COVERS"),
 		NATSCoversSubject: getEnv("NATS_COVERS_SUBJECT", "book.covers.process.v1"),
+		NATSCoversConsumer: getEnv("NATS_COVERS_CONSUMER", "cover-worker-v1"),
+		CoverWorkerMaxDeliver: int(getEnvPositiveInt64("COVER_WORKER_MAX_DELIVER", 5)),
 	}
 
 	return cfg, nil
