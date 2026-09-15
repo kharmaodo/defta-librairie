@@ -95,8 +95,7 @@ func TestCoverOutboxPublisherReschedulesFailedMessage(t *testing.T) {
 	store := &coverOutboxStoreStub{events: []repositories.CoverOutboxEvent{
 		{EventID: "event-3", Payload: "{}", Attempts: 2},
 	}}
-	messages := &coverMessagePublisherStub{err: errors.New("  nats
- unavailable  ")}
+	messages := &coverMessagePublisherStub{err: errors.New("  nats\\n unavailable  ")}
 	publisher := newCoverOutboxPublisherForTest(t, store, messages, now)
 
 	count, err := publisher.PublishAvailable(context.Background(), 10)
