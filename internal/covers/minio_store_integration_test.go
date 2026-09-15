@@ -18,11 +18,15 @@ func TestMinIOStoreIntegration(t *testing.T) {
 	if endpoint == "" || endpoint == "minio:9000" {
 		endpoint = "127.0.0.1:9000"
 	}
+	bucket := os.Getenv("MINIO_BUCKET_COVERS")
+	if bucket == "" {
+		bucket = "book-covers"
+	}
 	store, err := NewMinIOStore(
 		endpoint,
 		os.Getenv("MINIO_ACCESS_KEY"),
 		os.Getenv("MINIO_SECRET_KEY"),
-		os.Getenv("MINIO_BUCKET_COVERS"),
+		bucket,
 		false,
 	)
 	if err != nil {
