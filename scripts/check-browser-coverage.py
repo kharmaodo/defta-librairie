@@ -19,7 +19,7 @@ REQUIRED_SPECS = {
     "payment-lifecycle.spec.cjs": ("cash, mobile money and card",),
     "performance.spec.cjs": ("coalesces concurrent profile reads",),
     "procurement-lifecycle.spec.cjs": ("weighted average cost",),
-    "responsive.spec.cjs": ("390px", "768px", "1024px", "1440px"),
+    "responsive.spec.cjs": ("const widths = [390, 768, 1024, 1440];",),
     "supplier-return-lifecycle.spec.cjs": ("supplier return",),
     "theme.spec.cjs": ("theme is accessible and persists",),
 }
