@@ -311,13 +311,15 @@
           return;
         }
         if (button.dataset.action === "delete-sale") {
-          if (!window.confirm(`Supprimer définitivement le brouillon ${sale.reference} ?`)) return;
-          button.disabled = true;
-          try {
-            await apiFetch(`/api/manage/sales/${sale.id}`, {method: "DELETE"});
-            await Promise.all([reloadSales(), reloadAudit()]);
-          } catch (error) { showError(errorBox, error); }
-          finally { button.disabled = false; }
+          await window.DeftaDeleteConfirmation.run({
+            trigger: button,
+            expected: sale.reference,
+            subject: `le brouillon de vente ${sale.reference}`,
+            execute: async () => {
+              await apiFetch(`/api/manage/sales/${sale.id}`, {method: "DELETE"});
+              await Promise.all([reloadSales(), reloadAudit()]);
+            }
+          });
           return;
         }
         const confirm = button.dataset.action === "confirm-sale";
