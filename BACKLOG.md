@@ -161,16 +161,19 @@ Linux ARMv7 demeure obligatoire.
 
 | Ordre | Incrément | Livrable vérifiable | État |
 |---|---|---|---|
-| 1 | Contrat, menace et migration | Modèle de clé, transition de `coverUrl`, contrôle d’accès et stratégie de nettoyage définis | À réaliser |
-| 2 | Configuration MinIO | Client testable, bucket `MINIO_BUCKET_COVERS`, secrets protégés et diagnostic d’exploitation | À réaliser |
-| 3 | Validation et traitement | JPEG/PNG réels, magic bytes, limite 5 Mio, plafond de pixels, recadrage et compression | À réaliser |
-| 4 | Cycle de vie de la couverture | Upload, lecture, remplacement compensé, suppression et absence d’objets orphelins testés | À réaliser |
-| 5 | Interface et fallback | Upload admin, affichage catalogue/admin et image par défaut centralisée | À réaliser |
-| 6 | Stabilisation et release | Sécurité, Go/FTS5, Playwright, restauration et archives multiplateformes `v1.4.0` | À réaliser |
+| 1 | Fondation asynchrone | Contrat de menace, états, outbox SQLite, topologie API/JetStream/worker/MinIO et infrastructure Docker | À valider |
+| 2 | Upload et stockage source | Client MinIO testable, bucket privé, JPEG/PNG réels, limites et source temporaire | À réaliser |
+| 3 | Messagerie et worker | Publisher outbox, stream JetStream, consommateur durable, reprises et idempotence | À réaliser |
+| 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels et images OCI multiarchitectures | À réaliser |
+| 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | À réaliser |
+| 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | À réaliser |
+| 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | À réaliser |
 
-L’extraction du traitement d’image dans un microservice séparé est différée à
-`v1.5.0` et ne sera entreprise que si les mesures de charge ou la réutilisation
-la justifient.
+Le traitement asynchrone par worker Go est retenu pour `v1.4.0`. NATS
+JetStream assure la livraison persistante et une transactional outbox SQLite
+empêche la perte d’un travail entre la transaction métier et la publication.
+MinIO, NATS et l’initialisation du bucket sont dockerisés. Le master normalisé
+est conservé ; la source brute suit une rétention avant suppression.
 
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 

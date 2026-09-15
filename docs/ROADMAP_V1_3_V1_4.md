@@ -10,8 +10,8 @@ les parcours Playwright existants.
   les suppressions définitives.
 - `v1.4.0` remplace les URL externes de couverture par un upload JPEG/PNG
   traité par l’application et stocké dans un bucket MinIO privé.
-- Une extraction du traitement d’image dans un service déployé séparément reste
-  optionnelle pour `v1.5.0` et ne doit pas bloquer `v1.4.0`.
+- Le traitement d’image est confié dès `v1.4.0` à un worker Go asynchrone,
+  alimenté par NATS JetStream et déployé séparément de l’API.
 
 ## Décisions validées
 
@@ -118,13 +118,22 @@ d’exploitation retenue.
 - Couvrir fichier vide, faux MIME, fausse extension, signature invalide, image
   corrompue, dépassement de taille et accès inter-librairie.
 
-### Traitement d’image
+### Traitement asynchrone
 
-Le module interne Go effectue le recadrage centré, le redimensionnement
-800 × 1200 et l’encodage optimisé. L’objectif de 300–500 Kio est contrôlé sans
-promettre une taille impossible pour tout PNG. Toute dépendance ajoutée doit
-être maintenue, testable et compatible avec les builds Windows AMD64, Linux
-ARM64 et Linux ARMv7.
+L’API enregistre la source et une ligne de transactional outbox dans SQLite.
+Le publisher transmet le travail à NATS JetStream. Un worker Go idempotent
+effectue le recadrage centré, crée un master normalisé, redimensionne en
+800 × 1200 et produit les variantes JPEG, WebP et miniatures.
+
+Le message n’est acquitté qu’après stockage des variantes et passage de la
+couverture à l’état `READY`. Les états `PENDING`, `PROCESSING`, `READY` et
+`FAILED` sont observables. L’ancienne couverture reste active pendant un
+remplacement. La source brute est temporaire, tandis que le master est conservé
+pour permettre la régénération.
+
+Le worker est distribué comme image OCI pour Linux AMD64, ARM64 et ARMv7. Toute
+dépendance native, notamment l’encodeur WebP, doit être construite et testée pour
+ces trois architectures.
 
 ### Remplacement et cohérence
 
@@ -152,12 +161,13 @@ couverture, sans rendre la donnée métier incohérente si MinIO est indisponibl
 
 ### Séquence de livraison
 
-1. contrat de stockage, menace et migration ;
-2. client MinIO et configuration testable ;
-3. validation et traitement d’image ;
-4. upload, lecture et remplacement compensé ;
-5. formulaire admin et fallback commun ;
-6. sécurité, tests navigateur, restauration et release multiplateforme.
+1. contrat, menace, modèle d’états, outbox et infrastructure Docker ;
+2. client MinIO, upload de source et configuration testable ;
+3. publisher outbox, NATS JetStream et worker idempotent ;
+4. validation complète, master, JPEG, WebP et miniatures ;
+5. lecture, remplacement compensé, rétention et nettoyage ;
+6. formulaire admin, progression, reprise et fallback commun ;
+7. sécurité, observabilité, tests et release multiplateforme.
 
 ## Hors périmètre
 
@@ -165,7 +175,6 @@ couverture, sans rendre la donnée métier incohérente si MinIO est indisponibl
 - Formats SVG, GIF, WebP ou AVIF en entrée pour `v1.4.0`.
 - Galerie de plusieurs images par livre.
 - Éditeur manuel de zone de recadrage.
-- Microservice de traitement d’image obligatoire.
 - Assouplissement d’une assertion existante pour faire passer la recette.
 
 ## Critères communs de recette
