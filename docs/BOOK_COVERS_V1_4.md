@@ -158,6 +158,47 @@ COVER_MAX_BYTES=5242880
 COVER_MAX_PIXELS=24000000
 ```
 
+## Contrat d’upload livré par l’incrément 2
+
+La route protégée `POST /api/manage/books/{id}/cover` accepte une requête
+`multipart/form-data` contenant exactement un fichier nommé `cover`. Elle
+répond `202 Accepted` avec une couverture à l’état `PENDING` et un en-tête
+`Location`. Le propriétaire ne peut déposer une couverture que sur un livre
+de sa librairie ; le super-administrateur conserve son périmètre existant.
+
+L’API limite le corps avant sa lecture complète, vérifie JPEG/PNG par signature
+réelle, cohérence MIME, décodage et plafond de pixels. Une source valide est
+écrite dans MinIO avant la transaction SQLite qui crée la couverture, la ligne
+d’outbox et l’audit `UPLOAD_BOOK_COVER`. Si cette transaction échoue, l’objet
+source est supprimé par compensation. Une indisponibilité ou une désactivation
+du stockage renvoie `503` sans affecter les autres fonctions.
+
+Activation locale :
+
+```dotenv
+COVERS_ENABLED=true
+MINIO_ENDPOINT=localhost:9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_USE_SSL=false
+MINIO_BUCKET_COVERS=book-covers
+COVER_MAX_BYTES=5242880
+COVER_MAX_PIXELS=24000000
+```
+
+Exemple :
+
+```bash
+curl --fail-with-body -i \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "cover=@./couverture.jpg;type=image/jpeg" \
+  http://localhost:8080/api/manage/books/$BOOK_ID/cover
+```
+
+Les réponses de validation distinguent notamment corps trop volumineux
+(`413`), image invalide (`422`) et fonctionnalité indisponible (`503`).
+Le contrat complet et ses schémas restent définis dans `static/openapi.json`.
+
 ## Critères de validation de la fondation
 
 - la topologie et les responsabilités sont documentées ;
