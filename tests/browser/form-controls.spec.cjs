@@ -66,12 +66,12 @@ test('form controls remain visible and expose their states in both themes', asyn
   await login(page);
   await page.locator('#add-book-button').click();
   await verifyTheme(page, 'light');
-  await page.locator('[data-close="book-dialog"]').click();
+  await page.locator('#book-dialog').getByRole('button', {name: 'Annuler', exact: true}).click();
   await expect(page.locator('#book-dialog')).not.toBeVisible();
 
   await page.locator('[data-theme-toggle]').click();
   await page.locator('#add-book-button').click();
   await verifyTheme(page, 'dark');
-  await page.locator('[data-close="book-dialog"]').click();
+  await page.locator('#book-dialog').getByRole('button', {name: 'Annuler', exact: true}).click();
   await expect(page.locator('#book-dialog')).not.toBeVisible();
 });
