@@ -263,6 +263,16 @@ func main() {
 
 	signalContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	coverPublisherDone := make(chan struct{})
+	if cfg.CoversEnabled {
+		go func() {
+			defer close(coverPublisherDone)
+			runCoverOutboxPublisher(signalContext, cfg, database.DB, slog.Default())
+		}()
+	} else {
+		close(coverPublisherDone)
+	}
+
 	select {
 	case err = <-serverErrors:
 		if !errors.Is(err, http.ErrServerClosed) {
@@ -276,6 +286,12 @@ func main() {
 		if err = server.Shutdown(shutdownContext); err != nil {
 			log.Printf("Arrêt forcé après échec du shutdown : %v", err)
 		}
+	}
+	stop()
+	select {
+	case <-coverPublisherDone:
+	case <-time.After(5 * time.Second):
+		slog.Warn("cover_outbox_publisher_shutdown_timeout")
 	}
 }
 
