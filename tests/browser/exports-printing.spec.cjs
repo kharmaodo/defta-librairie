@@ -110,11 +110,11 @@ test('CSV exports download scoped data and sale/purchase receipts print', async 
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
-  await saleForm.locator('[name=customerName]').fill(customer);
   const saleLine = page.locator('#sale-lines .sale-line');
   const saleBook = saleLine.locator('[name=bookId] option').filter({hasText: title});
   await expect(saleBook).toHaveCount(1);
   await saleLine.locator('[name=bookId]').selectOption(await saleBook.getAttribute('value'));
+  await saleForm.locator('[name=customerName]').fill(customer);
   await saleLine.locator('[name=quantity]').fill('1');
   const createdResponse = page.waitForResponse(response =>
     response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/manage/sales');
@@ -127,10 +127,16 @@ test('CSV exports download scoped data and sale/purchase receipts print', async 
   await page.waitForLoadState('networkidle');
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   const saleRow = page.locator('#sales-body tr').filter({hasText: customer});
-  await expect(async () => {
-    await page.locator('#sale-filters button[type=submit]').click();
-    await expect(saleRow).toHaveCount(1, {timeout: 2000});
-  }).toPass({timeout: 12000});
+  const filteredSalesResponse = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return response.request().method() === 'GET'
+      && url.pathname === '/api/manage/sales'
+      && url.searchParams.get('libraryId') === library.id;
+  });
+  await page.locator('#sale-filters button[type=submit]').click();
+  const filteredSales = await filteredSalesResponse;
+  expect(filteredSales.status(), await filteredSales.text()).toBe(200);
+  await expect(saleRow).toHaveCount(1);
   const saleReference = (await saleRow.locator('td').first().textContent()).trim();
 
   const exportButton = page.locator('#csv-exports-panel button[type=submit]');

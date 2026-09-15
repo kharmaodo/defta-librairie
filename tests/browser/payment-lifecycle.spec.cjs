@@ -85,11 +85,11 @@ test('cash, mobile money and card payments update the remaining balance', async 
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
-  await saleForm.locator('[name=customerName]').fill(customer);
   const saleLine = page.locator('#sale-lines .sale-line');
   const bookOption = saleLine.locator('[name=bookId] option').filter({hasText: title});
   await expect(bookOption).toHaveCount(1);
   await saleLine.locator('[name=bookId]').selectOption(await bookOption.getAttribute('value'));
+  await saleForm.locator('[name=customerName]').fill(customer);
   await saleLine.locator('[name=quantity]').fill('1');
   const createdResponse = page.waitForResponse(response =>
     response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/manage/sales');
@@ -105,10 +105,16 @@ test('cash, mobile money and card payments update the remaining balance', async 
 
   await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   const sale = page.locator('#sales-body tr').filter({hasText: customer});
-  await expect(async () => {
-    await page.locator('#sale-filters button[type=submit]').click();
-    await expect(sale).toHaveCount(1, {timeout: 2000});
-  }).toPass({timeout: 12000});
+  const filteredSalesResponse = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return response.request().method() === 'GET'
+      && url.pathname === '/api/manage/sales'
+      && url.searchParams.get('libraryId') === library.id;
+  });
+  await page.locator('#sale-filters button[type=submit]').click();
+  const filteredSales = await filteredSalesResponse;
+  expect(filteredSales.status(), await filteredSales.text()).toBe(200);
+  await expect(sale).toHaveCount(1);
   page.once('dialog', dialog => dialog.accept());
   await sale.getByRole('button', {name: 'Confirmer'}).click();
   await expect(sale).toContainText('Confirmée');

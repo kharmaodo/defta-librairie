@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 14 septembre 2026 sur `develop`, commit `995943c`
-(performance frontend de `v1.2.0` fusionnée par la PR #68). Les douze priorités et leurs éléments
+État consolidé le 14 septembre 2026 sur `develop`, commit `5397e7e`
+(performance frontend de `v1.2.0` stabilisée et fusionnée par les PR #68 et #69). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -90,14 +90,14 @@ les critères de décision sont définis dans `docs/ROADMAP_V1_2.md`.
 | 2 | Synthèse du tableau de bord | Indicateurs métier prioritaires, états vide/chargement/erreur et accès aux rubriques | Réalisé |
 | 3 | Responsive et ergonomie | Navigation et panneaux affinés pour mobile, tablette et bureau | Réalisé |
 | 4 | Système visuel | Composants harmonisés et thème sombre accessible, sans duplication des règles CSS | Réalisé |
-| 5 | Performance frontend | Chargement mesuré, initialisation différée sûre et réduction du travail initial | À valider |
-| 6 | Couverture navigateur | Tests Playwright desktop/mobile, thème, clavier et non-régression métier | À réaliser |
+| 5 | Performance frontend | Chargement mesuré, initialisation différée sûre et réduction du travail initial | Réalisé |
+| 6 | Couverture navigateur | Tests Playwright desktop/mobile, thème, clavier et non-régression métier | À valider |
 | 7 | Stabilisation et release | Recette complète, documentation, changelog, archives et sommes SHA-256 | À réaliser |
 
-La mutualisation transitoire et les budgets de performance sont fusionnés par la
-PR #68. Les corrections de stabilité validées après cette fusion restent à
-intégrer dans `develop`. L’incrément performance demeure « À valider » jusqu’à
-cette fusion corrective ; la couverture navigateur consolidée viendra ensuite.
+La mutualisation transitoire, les budgets de performance et la protection contre
+les réponses obsolètes sont fusionnés par les PR #68 et #69 au commit `5397e7e`.
+L’incrément performance est réalisé. La couverture navigateur consolidée devient
+l’incrément actif et demeure « À valider » jusqu’à sa recette complète.
 
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 

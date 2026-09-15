@@ -55,9 +55,30 @@ mots de passe et jetons. Les rapports locaux et dépendances sont ignorés par G
 - Accessibilité clavier : lien d’évitement, indicateur de focus, nom accessible
   et confinement d’un dialogue, fermeture avec Échap, retour au déclencheur et
   annonce d’une erreur de validation.
+- Modes combinés : dashboard mobile à 390 px, thème sombre issu du système,
+  mouvement réduit, menu thématique au clavier, focus restauré et absence de
+  débordement horizontal.
 
 Le dernier scénario exerce le chemin 401 sans attendre une expiration réelle.
 Les cookies, requêtes et serveur sont réels ; aucune réponse API n’est simulée.
+
+## Matrice v1.2 consolidée
+
+| Garantie | Preuve Playwright |
+|---|---|
+| Structure, ancres et synthèse | `admin-dashboard.spec.cjs` |
+| Mobile, tablette et bureau | `responsive.spec.cjs` |
+| Thème persistant | `theme.spec.cjs` |
+| Clavier et dialogues | `accessibility.spec.cjs` |
+| Mobile + sombre + mouvement réduit | `experience-modes.spec.cjs` |
+| Coût initial et requêtes mutualisées | `performance.spec.cjs` |
+| Authentification et autorisations | `auth.spec.cjs` |
+| Parcours métier | fichiers `*-lifecycle.spec.cjs` |
+| Exports et impressions | `exports-printing.spec.cjs` |
+
+Le script `scripts/check-browser-coverage.py` vérifie la présence de cette
+matrice, la configuration Chromium sans retry et l’absence de `test.skip`,
+`describe.skip` ou `fixme`.
 
 ## Portée et validation
 
@@ -71,6 +92,7 @@ nouvel incrément validé qu’après l’exécution réelle de Chromium.
 
 ```sh
 npm run test:browser -- --list
+python3 scripts/check-browser-coverage.py
 node --test scripts/test-admin-*.cjs
 python3 scripts/check-admin-accessibility.py
 go test -tags fts5 ./...
