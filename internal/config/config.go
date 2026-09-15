@@ -24,6 +24,14 @@ type Config struct {
 	AuthRateLimit    int
 	AuthRateWindow   time.Duration
 	AuthCookieSecure bool
+	CoversEnabled     bool
+	MinIOEndpoint     string
+	MinIOAccessKey    string
+	MinIOSecretKey    string
+	MinIOUseSSL       bool
+	MinIOBucketCovers string
+	CoverMaxBytes     int64
+	CoverMaxPixels    uint64
 }
 
 func Load() (*Config, error) {
@@ -44,6 +52,14 @@ func Load() (*Config, error) {
 		AuthRateLimit:    getEnvInt("AUTH_RATE_LIMIT_REQUESTS", 10),
 		AuthRateWindow:   time.Duration(getEnvInt("AUTH_RATE_LIMIT_WINDOW_SECONDS", 60)) * time.Second,
 		AuthCookieSecure: getEnvBool("AUTH_COOKIE_SECURE", false),
+		CoversEnabled:     getEnvBool("COVERS_ENABLED", false),
+		MinIOEndpoint:     getEnv("MINIO_ENDPOINT", "localhost:9000"),
+		MinIOAccessKey:    getEnv("MINIO_ACCESS_KEY", ""),
+		MinIOSecretKey:    getEnv("MINIO_SECRET_KEY", ""),
+		MinIOUseSSL:       getEnvBool("MINIO_USE_SSL", false),
+		MinIOBucketCovers: getEnv("MINIO_BUCKET_COVERS", "book-covers"),
+		CoverMaxBytes:     int64(getEnvInt("COVER_MAX_BYTES", 5*1024*1024)),
+		CoverMaxPixels:    uint64(getEnvInt("COVER_MAX_PIXELS", 24_000_000)),
 	}
 
 	return cfg, nil
