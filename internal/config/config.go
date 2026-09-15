@@ -58,8 +58,8 @@ func Load() (*Config, error) {
 		MinIOSecretKey:    getEnv("MINIO_SECRET_KEY", ""),
 		MinIOUseSSL:       getEnvBool("MINIO_USE_SSL", false),
 		MinIOBucketCovers: getEnv("MINIO_BUCKET_COVERS", "book-covers"),
-		CoverMaxBytes:     int64(getEnvInt("COVER_MAX_BYTES", 5*1024*1024)),
-		CoverMaxPixels:    uint64(getEnvInt("COVER_MAX_PIXELS", 24_000_000)),
+		CoverMaxBytes:     getEnvPositiveInt64("COVER_MAX_BYTES", 5*1024*1024),
+		CoverMaxPixels:    uint64(getEnvPositiveInt64("COVER_MAX_PIXELS", 24_000_000)),
 	}
 
 	return cfg, nil
@@ -98,4 +98,17 @@ func getEnvInt(key string, fallback int) int {
 		return fallback
 	}
 	return n
+}
+
+func getEnvPositiveInt64(key string, fallback int64) int64 {
+	value := getEnv(key, "")
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.ParseInt(value, 10, 64)
+	if err != nil || parsed < 1 {
+		log.Printf("Valeur invalide pour %s → utilisation de %d", key, fallback)
+		return fallback
+	}
+	return parsed
 }
