@@ -12327,6 +12327,9 @@
                     "description": "Image JPEG ou PNG, 5 Mio maximum."
                   }
                 }
+              },
+              "example": {
+                "cover": "cover.jpg"
               }
             }
           }
