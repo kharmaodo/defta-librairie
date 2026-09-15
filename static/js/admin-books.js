@@ -156,9 +156,16 @@
           try { await openBookHistory(book); } catch (error) { showError(errorBox, error); }
         }
         if (button.dataset.action === "edit-book") openBookForm(book);
-        if (button.dataset.action === "delete-book" && window.confirm(`Supprimer « ${book.title} » ?`)) {
-          try { await apiFetch(`/api/manage/books/${id}`, {method: "DELETE"}); await Promise.all([reloadBooks(), reloadInventory()]); }
-          catch (error) { showError(errorBox, error); }
+        if (button.dataset.action === "delete-book") {
+          await window.DeftaDeleteConfirmation.run({
+            trigger: button,
+            expected: book.title,
+            subject: `le livre « ${book.title} »`,
+            execute: async () => {
+              await apiFetch(`/api/manage/books/${id}`, {method: "DELETE"});
+              await Promise.all([reloadBooks(), reloadInventory()]);
+            }
+          });
         }
       });
     }

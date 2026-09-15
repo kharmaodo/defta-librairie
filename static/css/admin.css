@@ -722,6 +722,48 @@ tbody tr:last-child td {
   font-size: .82rem;
   line-height: 1.6;
 }
+
+.delete-confirmation-field {
+  display: grid;
+  gap: .5rem;
+  color: var(--ink);
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.delete-confirmation-field code {
+  width: fit-content;
+  padding: .2rem .4rem;
+  border-radius: 5px;
+  color: var(--ink);
+  background: var(--surface-soft);
+  font-size: .85rem;
+  overflow-wrap: anywhere;
+}
+
+.delete-confirmation-field input {
+  width: 100%;
+  padding: .72rem .8rem;
+  border: 1px solid var(--input-border-color);
+  border-radius: 9px;
+  color: var(--ink);
+  background: var(--white);
+  font: inherit;
+  outline: none;
+}
+
+.button.danger-action {
+  color: #fff;
+  background: #a73737;
+}
+
+.button.danger-action:hover:not(:disabled) {
+  background: #852828;
+}
+
+.button.danger-action:disabled {
+  cursor: not-allowed;
+}
 .modal.history-modal {
   width: min(1050px,calc(100% - 2rem));
 }

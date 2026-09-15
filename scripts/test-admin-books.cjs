@@ -16,7 +16,7 @@ function setup(api) {
  };
  for(const name of ['id','version','title','auteur','editeur','price','volume','status','categorie','tags','coverUrl','libraryId'])get('#book-form').elements[name]={value:''};
  get('#book-search-form').elements.q={value:''};
- const window={confirm:()=>h.confirmed};vm.runInNewContext(source,{window,document:{querySelector:get},URLSearchParams,Intl});
+ const window={DeftaDeleteConfirmation:{run:async({execute})=>h.confirmed?execute():false}};vm.runInNewContext(source,{window,document:{querySelector:get},URLSearchParams,Intl});
  h.get=get;h.errorBox={};
  h.module=window.DeftaBooks.create({
   apiFetch:async(url,options)=>{h.calls.push({url,options});return api?api(url,options):page();},

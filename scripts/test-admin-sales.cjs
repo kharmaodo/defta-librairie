@@ -18,7 +18,7 @@ function setup(api) {
  };
  for(const name of ['id','version','customerId','customerName','libraryId'])get('#sale-form').elements[name]={value:''};
  for(const name of ['status','libraryId','from','to'])get('#sale-filters').elements[name]={value:''};
- const window={confirm:()=>h.confirmed};vm.runInNewContext(source,{window,document:{querySelector:get,querySelectorAll:()=>h.lines||[]},URLSearchParams,Intl});
+ const window={confirm:()=>h.confirmed,DeftaDeleteConfirmation:{run:async({execute})=>h.confirmed?execute():false}};vm.runInNewContext(source,{window,document:{querySelector:get,querySelectorAll:()=>h.lines||[]},URLSearchParams,Intl});
  h.get=get;h.errorBox={};
  h.module=window.DeftaSales.create({
   apiFetch:async(url,options)=>{h.calls.push({url,options});return api?api(url,options):page();},

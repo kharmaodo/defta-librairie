@@ -53,9 +53,16 @@
         const button = event.target.closest("button[data-id]");
         if (!button) return;
         const tag = state.tags.find((item) => item.id === button.dataset.id);
-        if (!tag || !window.confirm(`Supprimer le tag « ${tag.name} » ?`)) return;
-        try { await apiFetch(`/api/manage/tags/${tag.id}`, {method: "DELETE"}); await Promise.all([reloadTags(), reloadAudit()]); }
-        catch (error) { showError(errorBox, error); }
+        if (!tag) return;
+        await window.DeftaDeleteConfirmation.run({
+          trigger: button,
+          expected: tag.name,
+          subject: `le tag « ${tag.name} »`,
+          execute: async () => {
+            await apiFetch(`/api/manage/tags/${tag.id}`, {method: "DELETE"});
+            await Promise.all([reloadTags(), reloadAudit()]);
+          }
+        });
       });
 
     }
