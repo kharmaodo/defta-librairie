@@ -85,11 +85,11 @@ test('cash, mobile money and card payments update the remaining balance', async 
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
-  await saleForm.locator('[name=customerName]').fill(customer);
   const saleLine = page.locator('#sale-lines .sale-line');
   const bookOption = saleLine.locator('[name=bookId] option').filter({hasText: title});
   await expect(bookOption).toHaveCount(1);
   await saleLine.locator('[name=bookId]').selectOption(await bookOption.getAttribute('value'));
+  await saleForm.locator('[name=customerName]').fill(customer);
   await saleLine.locator('[name=quantity]').fill('1');
   const createdResponse = page.waitForResponse(response =>
     response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/manage/sales');
