@@ -80,6 +80,9 @@ func (v Validator) Validate(reader io.Reader, declaredContentType string) (Valid
 	if pixels > v.MaxPixels {
 		return ValidatedImage{}, ErrTooManyPixels
 	}
+	if _, decodedFormat, err = image.Decode(bytes.NewReader(data)); err != nil || decodedFormat != format {
+		return ValidatedImage{}, ErrCorruptImage
+	}
 
 	return ValidatedImage{
 		Data:        data,
