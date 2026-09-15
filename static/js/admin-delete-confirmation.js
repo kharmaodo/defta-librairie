@@ -42,7 +42,7 @@
     reset(view);
     if (view.dialog.open) view.dialog.close();
     current?.resolve(confirmed);
-    current?.trigger?.focus();
+    current?.trigger?.focus?.();
   }
 
   function cancel(view) {
@@ -98,7 +98,7 @@
       view.input.focus();
       return Promise.resolve(false);
     }
-    if (!(trigger instanceof HTMLElement) || typeof expected !== 'string' ||
+    if (!trigger || typeof expected !== 'string' ||
         !expected || typeof execute !== 'function') {
       return Promise.reject(new TypeError('Confirmation de suppression invalide'));
     }
