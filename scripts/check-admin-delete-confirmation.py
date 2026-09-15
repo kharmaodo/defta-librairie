@@ -48,9 +48,9 @@ for fragment in required_logic:
         errors.append(f"garantie du composant absente : {fragment}")
 
 modules = {
-    "livre": ("static/js/admin-books.js", "expected: book.title", 'data-action === "delete-book"'),
+    "livre": ("static/js/admin-books.js", "expected: book.title", 'dataset.action === "delete-book"'),
     "tag": ("static/js/admin-tags.js", "expected: tag.name", "api/manage/tags"),
-    "vente": ("static/js/admin-sales.js", "expected: sale.reference", 'data-action === "delete-sale"'),
+    "vente": ("static/js/admin-sales.js", "expected: sale.reference", 'dataset.action === "delete-sale"'),
 }
 for label, (path, expected, action) in modules.items():
     source = (ROOT / path).read_text(encoding="utf-8")
