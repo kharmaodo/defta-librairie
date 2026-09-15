@@ -161,13 +161,17 @@ Linux ARMv7 demeure obligatoire.
 
 | Ordre | Incrément | Livrable vérifiable | État |
 |---|---|---|---|
-| 1 | Fondation asynchrone | Contrat de menace, états, outbox SQLite, topologie API/JetStream/worker/MinIO et infrastructure Docker | À valider |
+| 1 | Fondation asynchrone | Contrat de menace, états, outbox SQLite, topologie API/JetStream/worker/MinIO et infrastructure Docker | Réalisé |
 | 2 | Upload et stockage source | Client MinIO testable, bucket privé, JPEG/PNG réels, limites et source temporaire | À réaliser |
 | 3 | Messagerie et worker | Publisher outbox, stream JetStream, consommateur durable, reprises et idempotence | À réaliser |
 | 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels et images OCI multiarchitectures | À réaliser |
 | 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | À réaliser |
 | 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | À réaliser |
 | 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | À réaliser |
+
+La fondation asynchrone est validée et fusionnée par la PR #83 au commit
+`892a6fa`. L’incrément actif est l’upload sécurisé et le stockage temporaire
+de la source dans le bucket MinIO privé.
 
 Le traitement asynchrone par worker Go est retenu pour `v1.4.0`. NATS
 JetStream assure la livraison persistante et une transactional outbox SQLite
