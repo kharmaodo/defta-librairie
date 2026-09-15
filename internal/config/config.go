@@ -32,6 +32,11 @@ type Config struct {
 	MinIOBucketCovers string
 	CoverMaxBytes     int64
 	CoverMaxPixels    uint64
+	NATSURL           string
+	NATSUser          string
+	NATSPassword      string
+	NATSCoversStream  string
+	NATSCoversSubject string
 }
 
 func Load() (*Config, error) {
@@ -60,6 +65,11 @@ func Load() (*Config, error) {
 		MinIOBucketCovers: getEnv("MINIO_BUCKET_COVERS", "book-covers"),
 		CoverMaxBytes:     getEnvPositiveInt64("COVER_MAX_BYTES", 5*1024*1024),
 		CoverMaxPixels:    uint64(getEnvPositiveInt64("COVER_MAX_PIXELS", 24_000_000)),
+		NATSURL:           getEnv("NATS_URL", "nats://localhost:4222"),
+		NATSUser:          getEnv("NATS_USER", ""),
+		NATSPassword:      getEnv("NATS_PASSWORD", ""),
+		NATSCoversStream:  getEnv("NATS_COVERS_STREAM", "BOOK_COVERS"),
+		NATSCoversSubject: getEnv("NATS_COVERS_SUBJECT", "book.covers.process.v1"),
 	}
 
 	return cfg, nil
