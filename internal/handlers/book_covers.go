@@ -10,6 +10,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strconv"
 )
 
 const multipartEnvelopeAllowance int64 = 64 * 1024
@@ -95,7 +96,7 @@ func (h *BookCoverHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		writeBookCoverError(w, err)
 		return
 	}
-	w.Header().Set("Location", "/api/manage/books/"+headerValueID(id)+"/cover/"+pending.ID)
+	w.Header().Set("Location", "/api/manage/books/"+strconv.Itoa(id)+"/cover/"+pending.ID)
 	writeAuthJSON(w, http.StatusAccepted, pending)
 }
 
@@ -105,10 +106,6 @@ func singleCoverFile(form *multipart.Form) bool {
 	}
 	files, ok := form.File["cover"]
 	return ok && len(files) == 1
-}
-
-func headerValueID(id int) string {
-	return fmtInt(id)
 }
 
 func writeBookCoverError(w http.ResponseWriter, err error) {
