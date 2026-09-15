@@ -109,16 +109,20 @@ suppressions définitives et exige la saisie exacte du nom ou de la référence.
 
 | Ordre | Incrément | Livrable vérifiable | État |
 |---|---|---|---|
-| 1 | Contrat et inventaire | Classement des suppressions définitives, suppressions logiques et transitions métier ; identifiants attendus documentés | À valider |
-| 2 | Lisibilité des formulaires | Variable `--input-border-color`, états clair/sombre, focus, survol, désactivation et invalidité couverts | À réaliser |
+| 1 | Contrat et inventaire | Classement des suppressions définitives, suppressions logiques et transitions métier ; identifiants attendus documentés | Réalisé |
+| 2 | Lisibilité des formulaires | Variable `--input-border-color`, états clair/sombre, focus, survol, désactivation et invalidité couverts | À valider |
 | 3 | Confirmation renforcée | Dialogue commun accessible, égalité stricte, réinitialisation, focus et prévention de double soumission | À réaliser |
 | 4 | Stabilisation et release | Tests JS, Go/FTS5 et Playwright complets ; sélecteurs documentés ; publication `v1.3.0` | À réaliser |
 
-L’inventaire candidat est documenté dans
-`docs/ADMIN_DELETE_SAFETY_V1_3.md`. Il protège le livre, le tag et le
-brouillon de vente ; il documente aussi la route non exposée de suppression
-d’un brouillon d’achat. Désactivations, révocations et transitions métier
-restent explicitement hors du dialogue renforcé.
+L’inventaire est réalisé et fusionné par la PR #74 au commit
+`3ea36c0`. Il protège le livre, le tag et le brouillon de vente ; il documente
+aussi la route non exposée de suppression d’un brouillon d’achat.
+Désactivations, révocations et transitions métier restent hors du dialogue
+renforcé.
+
+Le correctif candidat des champs introduit les variables partagées des thèmes,
+couvre les états survol, focus et désactivation, et ajoute un contrôle statique
+ainsi qu’un parcours Playwright dédié.
 
 ## Backlog v1.4.0 — couvertures de livre
 
