@@ -54,3 +54,10 @@ conserver le droit d’exécution du binaire extrait ; au besoin :
 ```sh
 chmod +x defta-librairie
 ```
+
+## État de publication
+
+La release `v1.3.0` a été publiée le 15 septembre 2026 depuis le commit
+`9f6bc6f`. Les trois archives Windows AMD64, Linux ARM64 et Linux ARMv7,
+`BUILD-INFO.txt` et `SHA256SUMS` sont présents. La vérification des sommes
+SHA-256 après téléchargement est validée.
