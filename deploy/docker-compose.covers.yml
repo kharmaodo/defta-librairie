@@ -1,0 +1,70 @@
+name: defta-book-covers
+
+services:
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+    volumes:
+      - minio-covers-data:/data
+    ports:
+      - "${MINIO_API_BIND:-127.0.0.1:9000}:9000"
+      - "${MINIO_CONSOLE_BIND:-127.0.0.1:9001}:9001"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - covers
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      MINIO_BUCKET_COVERS: ${MINIO_BUCKET_COVERS:-book-covers}
+    volumes:
+      - ./minio/init-bucket.sh:/opt/defta/init-bucket.sh:ro
+    entrypoint: ["/bin/sh", "/opt/defta/init-bucket.sh"]
+    restart: "no"
+    networks:
+      - covers
+
+  nats:
+    image: nats:2.11.8-alpine
+    command: ["--config", "/etc/nats/nats-server.conf"]
+    environment:
+      NATS_USER: ${NATS_USER:?NATS_USER is required}
+      NATS_PASSWORD: ${NATS_PASSWORD:?NATS_PASSWORD is required}
+    volumes:
+      - ./nats/nats-server.conf:/etc/nats/nats-server.conf:ro
+      - nats-jetstream-data:/data/jetstream
+    ports:
+      - "${NATS_CLIENT_BIND:-127.0.0.1:4222}:4222"
+      - "${NATS_MONITOR_BIND:-127.0.0.1:8222}:8222"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "-", "http://localhost:8222/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - covers
+
+volumes:
+  minio-covers-data:
+  nats-jetstream-data:
+
+networks:
+  covers:
+    internal: false
