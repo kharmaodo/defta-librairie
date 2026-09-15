@@ -703,9 +703,34 @@
     </div>
   </dialog>
 
+  <dialog id="delete-confirmation-dialog" class="modal narrow" aria-labelledby="delete-confirmation-title" aria-describedby="delete-confirmation-warning">
+    <form id="delete-confirmation-form" class="entity-form">
+      <div class="modal-heading">
+        <div>
+          <p class="eyebrow">Action irréversible</p>
+          <h2 id="delete-confirmation-title">Confirmer la suppression</h2>
+        </div>
+        <button class="icon-button" type="button" data-delete-cancel aria-label="Fermer la confirmation de suppression">×</button>
+      </div>
+      <p id="delete-confirmation-warning" class="form-note">
+        La suppression de <strong data-delete-subject></strong> est irréversible dans l’application.
+      </p>
+      <label class="delete-confirmation-field">
+        Saisissez exactement <code data-delete-expected></code> pour continuer
+        <input name="confirmation" autocomplete="off" spellcheck="false" required>
+      </label>
+      <p class="alert" data-delete-error role="alert" hidden></p>
+      <div class="modal-actions">
+        <button class="button ghost" type="button" data-delete-cancel>Annuler</button>
+        <button class="button primary danger-action" type="submit" data-delete-confirm disabled>Supprimer définitivement</button>
+      </div>
+    </form>
+  </dialog>
+
   <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
   <script src="/static/js/admin-navigation.js" defer></script>
   <script src="/static/js/admin-http.js" defer></script>
+  <script src="/static/js/admin-delete-confirmation.js" defer></script>
   <script src="/static/js/admin-summary.js" defer></script>
 <script src="/static/js/admin-audit.js" defer></script>
 <script src="/static/js/admin-sessions.js" defer></script>
