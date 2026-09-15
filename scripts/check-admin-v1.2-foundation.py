@@ -49,7 +49,7 @@ for attribute in (
 ):
     require(attribute in HTML, f"attribut de navigation absent : {attribute}")
 
-require(HTML.count("<dialog ") == 19, "dix-neuf dialogues statiques sont attendus")
+require(HTML.count("<dialog ") == 20, "vingt dialogues statiques sont attendus")
 require(
     "<dialog " in SUPPLIER_RETURNS_JAVASCRIPT,
     "le dialogue dynamique de retour fournisseur est absent",
