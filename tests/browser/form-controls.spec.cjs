@@ -14,12 +14,20 @@ async function colors(control) {
   return control.evaluate(element => {
     const style = getComputedStyle(element);
     const rootStyle = getComputedStyle(document.documentElement);
+    const resolveColor = name => {
+      const probe = document.createElement('span');
+      probe.style.color = rootStyle.getPropertyValue(name);
+      document.body.append(probe);
+      const value = getComputedStyle(probe).color;
+      probe.remove();
+      return value;
+    };
     return {
       border: style.borderTopColor,
       background: style.backgroundColor,
-      expectedBorder: rootStyle.getPropertyValue('--input-border-color').trim(),
-      expectedHover: rootStyle.getPropertyValue('--input-border-hover-color').trim(),
-      expectedDisabled: rootStyle.getPropertyValue('--input-disabled-background').trim()
+      expectedBorder: resolveColor('--input-border-color'),
+      expectedHover: resolveColor('--input-border-hover-color'),
+      expectedDisabled: resolveColor('--input-disabled-background')
     };
   });
 }
