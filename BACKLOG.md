@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 15 septembre 2026 sur `develop`, commit `f7783cb`
-(couverture navigateur de `v1.2.0` fusionnée par la PR #70). Les douze priorités et leurs éléments
+État consolidé le 15 septembre 2026 sur `develop`, commit `fdab7db`
+(candidat `v1.2.0` fusionné par la PR #71 et release publiée). Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -92,13 +92,14 @@ les critères de décision sont définis dans `docs/ROADMAP_V1_2.md`.
 | 4 | Système visuel | Composants harmonisés et thème sombre accessible, sans duplication des règles CSS | Réalisé |
 | 5 | Performance frontend | Chargement mesuré, initialisation différée sûre et réduction du travail initial | Réalisé |
 | 6 | Couverture navigateur | Tests Playwright desktop/mobile, thème, clavier et non-régression métier | Réalisé |
-| 7 | Stabilisation et release | Recette complète, documentation, changelog, archives et sommes SHA-256 | À valider |
+| 7 | Stabilisation et release | Recette complète, documentation, changelog, archives et sommes SHA-256 | Réalisé |
 
 La mutualisation transitoire, les budgets de performance et la protection contre
 les réponses obsolètes sont fusionnés par les PR #68 et #69. La couverture
 navigateur consolidée est fusionnée par la PR #70 au commit `f7783cb`, avec vingt
-parcours Chromium sans test ignoré. L’incrément final de stabilisation et release
-devient actif et demeure « À valider » jusqu’à la publication de `v1.2.0`.
+parcours Chromium sans test ignoré. L’incrément final de stabilisation et release est réalisé. Le tag annoté
+`v1.2.0` pointe sur `fdab7db` ; la release publique contient les archives Windows
+AMD64, Raspberry Pi OS ARM64 et ARMv7, `BUILD-INFO.txt` et `SHA256SUMS`.
 
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 
