@@ -9,8 +9,10 @@ import (
 	"defta-librairie/internal/auth"
 	"defta-librairie/internal/bootstrap"
 	"defta-librairie/internal/config"
+	"defta-librairie/internal/covers"
 	"defta-librairie/internal/database"
 	"defta-librairie/internal/handlers"
+	"defta-librairie/internal/identity"
 	"defta-librairie/internal/middleware"
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
@@ -88,6 +90,28 @@ func main() {
 	ownerHandler := handlers.NewOwnerHandler(ownerService)
 	bookService := services.NewBookService(repositories.NewBookRepository(database.DB))
 	bookHandler := handlers.NewBookManagementHandler(bookService)
+	bookCoverHandler := handlers.NewBookCoverHandler(nil, false, cfg.CoverMaxBytes)
+	if cfg.CoversEnabled {
+		coverStore, coverErr := covers.NewMinIOStore(
+			cfg.MinIOEndpoint, cfg.MinIOAccessKey, cfg.MinIOSecretKey,
+			cfg.MinIOBucketCovers, cfg.MinIOUseSSL,
+		)
+		if coverErr != nil {
+			log.Fatalf("Configuration MinIO invalide : %v", coverErr)
+		}
+		coverUploader, coverErr := covers.NewSourceUploader(
+			coverStore,
+			covers.NewValidator(cfg.CoverMaxBytes, cfg.CoverMaxPixels),
+			identity.NewID,
+		)
+		if coverErr != nil {
+			log.Fatalf("Initialisation upload couvertures impossible : %v", coverErr)
+		}
+		coverService := services.NewBookCoverService(
+			true, bookService, repositories.NewCoverRepository(database.DB), coverUploader,
+		)
+		bookCoverHandler = handlers.NewBookCoverHandler(coverService, true, cfg.CoverMaxBytes)
+	}
 	inventoryService := services.NewInventoryService(repositories.NewInventoryRepository(database.DB))
 	inventoryHandler := handlers.NewInventoryHandler(inventoryService)
 	statisticsService := services.NewCommercialStatisticsService(repositories.NewCommercialStatisticsRepository(database.DB))
@@ -175,6 +199,7 @@ func main() {
 	mux.Handle("GET /api/manage/books/{id}/history", bookManagers(http.HandlerFunc(bookHandler.History)))
 	mux.Handle("PUT /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Update)))
 	mux.Handle("DELETE /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Delete)))
+	mux.Handle("POST /api/manage/books/{id}/cover", bookManagers(http.HandlerFunc(bookCoverHandler.Upload)))
 	mux.Handle("GET /api/manage/inventory", bookManagers(http.HandlerFunc(inventoryHandler.List)))
 	mux.Handle("GET /api/manage/books/{id}/inventory", bookManagers(http.HandlerFunc(inventoryHandler.Get)))
 	mux.Handle("POST /api/manage/books/{id}/inventory/entries", bookManagers(http.HandlerFunc(inventoryHandler.Entry)))
