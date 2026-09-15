@@ -110,11 +110,11 @@ test('CSV exports download scoped data and sale/purchase receipts print', async 
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
-  await saleForm.locator('[name=customerName]').fill(customer);
   const saleLine = page.locator('#sale-lines .sale-line');
   const saleBook = saleLine.locator('[name=bookId] option').filter({hasText: title});
   await expect(saleBook).toHaveCount(1);
   await saleLine.locator('[name=bookId]').selectOption(await saleBook.getAttribute('value'));
+  await saleForm.locator('[name=customerName]').fill(customer);
   await saleLine.locator('[name=quantity]').fill('1');
   const createdResponse = page.waitForResponse(response =>
     response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/manage/sales');
