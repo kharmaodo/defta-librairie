@@ -1,7 +1,7 @@
 # Backlog de référence — Defta Librairie
 
-État consolidé le 15 septembre 2026 sur `develop`, commit `d0b44e2`
-(correctifs `v1.3.0` fusionnés jusqu’à la PR #78 ; release en préparation). Les douze priorités et leurs éléments
+État consolidé le 15 septembre 2026 sur `develop` après publication de
+`v1.3.0` sur le commit `9f6bc6f`. Les douze priorités et leurs éléments
 principaux reprennent le périmètre rappelé par le propriétaire du projet.
 Les validations et fusions annoncées sont prises en compte ; cette consolidation
 n’exécute pas une nouvelle recette ni un audit de production.
@@ -112,7 +112,7 @@ suppressions définitives et exige la saisie exacte du nom ou de la référence.
 | 1 | Contrat et inventaire | Classement des suppressions définitives, suppressions logiques et transitions métier ; identifiants attendus documentés | Réalisé |
 | 2 | Lisibilité des formulaires | Variable `--input-border-color`, états clair/sombre, focus, survol, désactivation et invalidité couverts | Réalisé |
 | 3 | Confirmation renforcée | Dialogue commun accessible, égalité stricte, réinitialisation, focus et prévention de double soumission | Réalisé |
-| 4 | Stabilisation et release | Tests JS, Go/FTS5 et Playwright complets ; sélecteurs documentés ; publication `v1.3.0` | À valider |
+| 4 | Stabilisation et release | Tests JS, Go/FTS5 et Playwright complets ; sélecteurs documentés ; publication `v1.3.0` | Réalisé |
 
 L’inventaire est réalisé et fusionné par la PR #74 au commit
 `3ea36c0`. Il protège le livre, le tag et le brouillon de vente ; il documente
@@ -134,9 +134,13 @@ La correction de recette est fusionnée par la PR #78 au commit `d0b44e2`.
 La suite validée comprend les tests frontend, le parcours de confirmation répété
 et vingt-deux parcours Chromium.
 
-La préparation candidate `v1.3.0` actualise les métadonnées, le changelog, la
-procédure de release et les archives Windows AMD64, Linux ARM64 et Linux ARMv7.
-L’incrément restera « À valider » jusqu’à la recette finale sur son commit.
+La version `v1.3.0` est publiée le 15 septembre 2026 sur le commit
+`9f6bc6f`. La recette finale est validée avec vingt-deux parcours Chromium.
+La release contient les archives Windows AMD64, Linux ARM64 et Linux ARMv7,
+`BUILD-INFO.txt` et `SHA256SUMS`. Les sommes SHA-256 téléchargées sont validées.
+
+La `v1.3.0` est clôturée. Le prochain incrément actif est le contrat, la menace
+et la migration des couvertures de livre pour `v1.4.0`.
 
 ## Backlog v1.4.0 — couvertures de livre
 
