@@ -114,7 +114,7 @@ func coverPublishError(err error) string {
 	if err == nil {
 		return ""
 	}
-	message := strings.NewReplacer(`\\n`, " ", `\\r`, " ", `\\t`, " ").Replace(err.Error())
+	message := strings.NewReplacer(`\n`, " ", `\r`, " ", `\t`, " ").Replace(err.Error())
 	message = strings.Join(strings.Fields(message), " ")
 	const maxRunes = 512
 	runes := []rune(message)
