@@ -39,6 +39,7 @@ required_logic = (
     "view.form.reset()",
     "view.dialog.addEventListener('cancel'",
     "active.busy",
+    "controlledClose",
     "current?.trigger?.focus?.()",
     "await active.execute()",
 )

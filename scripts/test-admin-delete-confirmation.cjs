@@ -37,7 +37,7 @@ function setup() {
   const error = new Node();
   dialog.open = false;
   dialog.showModal = () => { dialog.open = true; };
-  dialog.close = () => { dialog.open = false; dialog.dispatch('close'); };
+  dialog.close = () => { dialog.open = false; queueMicrotask(() => dialog.dispatch('close')); };
   dialog.querySelector = selector => ({
     '[data-delete-subject]': subject,
     '[data-delete-expected]': expected,
@@ -91,6 +91,8 @@ test('confirmation is exact, resets and restores focus', async () => {
 
   const cancelled = h.api.run({trigger, expected: 'Livre Exact', execute: async () => { executions++; }});
   assert.equal(h.input.value, '');
+  await Promise.resolve();
+  assert.equal(h.dialog.open, true);
   await h.cancel.dispatch('click');
   assert.equal(await cancelled, false);
   assert.equal(executions, 1);
