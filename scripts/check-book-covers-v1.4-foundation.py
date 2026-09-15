@@ -52,6 +52,13 @@ for volume in ("minio-covers-data", "nats-jetstream-data"):
 if ":latest" in compose or "image: latest" in compose:
     errors.append("tag Docker latest interdit")
 
+for image in (
+    "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z",
+    "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z",
+):
+    if image not in compose:
+        errors.append(f"image MinIO officielle épinglée absente : {image}")
+
 if "healthcheck:" not in compose:
     errors.append("health checks Docker absents")
 
