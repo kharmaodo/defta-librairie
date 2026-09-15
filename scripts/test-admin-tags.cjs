@@ -7,7 +7,7 @@ function setup(api) {
  const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);};
  const h={calls:[],audits:0,root:false,confirmed:true,get};
  get('#tag-form').elements={name:{value:''},libraryId:{value:''}};
- const window={confirm:()=>h.confirmed};vm.runInNewContext(source,{window,document:{querySelector:get,createElement:node,createTextNode:text=>({textContent:text})},URLSearchParams});
+ const window={DeftaDeleteConfirmation:{run:async({execute})=>h.confirmed?execute():false}};vm.runInNewContext(source,{window,document:{querySelector:get,createElement:node,createTextNode:text=>({textContent:text})},URLSearchParams});
  h.errorBox={};h.module=window.DeftaTags.create({apiFetch:async(url,options)=>{h.calls.push({url,options});return api?api(url,options):{results:[{id:'tag',name:'Roman'}]};},isRoot:()=>h.root,reloadAudit:async()=>{h.audits++;},errorBox:h.errorBox,showError:(box,e)=>{box.textContent=e.message;box.hidden=false;}});
  h.event=async(id,event='click',tag='tag')=>{for(const fn of get(id).handlers[event]||[])await fn({preventDefault(){},currentTarget:get(id),target:{closest:()=>({dataset:{id:tag}})}});};return h;
 }
