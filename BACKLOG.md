@@ -111,7 +111,7 @@ suppressions définitives et exige la saisie exacte du nom ou de la référence.
 |---|---|---|---|
 | 1 | Contrat et inventaire | Classement des suppressions définitives, suppressions logiques et transitions métier ; identifiants attendus documentés | Réalisé |
 | 2 | Lisibilité des formulaires | Variable `--input-border-color`, états clair/sombre, focus, survol, désactivation et invalidité couverts | Réalisé |
-| 3 | Confirmation renforcée | Dialogue commun accessible, égalité stricte, réinitialisation, focus et prévention de double soumission | À valider |
+| 3 | Confirmation renforcée | Dialogue commun accessible, égalité stricte, réinitialisation, focus et prévention de double soumission | Réalisé |
 | 4 | Stabilisation et release | Tests JS, Go/FTS5 et Playwright complets ; sélecteurs documentés ; publication `v1.3.0` | À réaliser |
 
 L’inventaire est réalisé et fusionné par la PR #74 au commit
@@ -124,10 +124,14 @@ Le correctif des champs est réalisé et fusionné par la PR #76 au commit
 `90633e1`. Les variables partagées couvrent les thèmes clair et sombre ainsi
 que les états survol, focus et désactivation.
 
-Le dialogue renforcé candidat est partagé par les suppressions du livre, du tag
-et du brouillon de vente. L’égalité stricte, les espaces, la casse, la
+Le dialogue renforcé est réalisé et fusionné par la PR #77 au commit
+`aef2038`. Il est partagé par les suppressions du livre, du tag et du
+brouillon de vente. L’égalité stricte, les espaces, la casse, la
 réinitialisation, le focus, l’erreur HTTP et la double soumission sont couverts
 par des tests unitaires et un parcours Playwright dédié.
+
+La recette de release doit être rejouée depuis `develop` après correction de
+l’assertion frontend historique portant encore le nom `--input-border`.
 
 ## Backlog v1.4.0 — couvertures de livre
 
