@@ -211,3 +211,38 @@ func TestMinIOProcessingStoreWrapsClientFailures(t *testing.T) {
 		t.Fatalf("delete err=%v", err)
 	}
 }
+
+func TestMinIOProcessingStoreReadsGeneratedVariant(t *testing.T) {
+	client := &processingMinIOStub{
+		reader: io.NopCloser(bytes.NewReader([]byte("variant"))),
+	}
+	store, _ := newMinIOProcessingStore(client, "book-covers")
+	key := "variants/library-1/42/cover-1/thumb.webp"
+
+	reader, err := store.OpenVariant(context.Background(), key)
+	if err != nil {
+		t.Fatalf("open variant: %v", err)
+	}
+	defer reader.Close()
+
+	body, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("read variant: %v", err)
+	}
+	if string(body) != "variant" || client.openedKey != key {
+		t.Fatalf("body=%q key=%q", body, client.openedKey)
+	}
+}
+
+func TestMinIOProcessingStoreRejectsSourceAsVariant(t *testing.T) {
+	client := &processingMinIOStub{}
+	store, _ := newMinIOProcessingStore(client, "book-covers")
+
+	_, err := store.OpenVariant(
+		context.Background(),
+		"sources/library-1/42/cover-1.jpg",
+	)
+	if !errors.Is(err, ErrInvalidObjectKey) {
+		t.Fatalf("open variant err=%v", err)
+	}
+}
