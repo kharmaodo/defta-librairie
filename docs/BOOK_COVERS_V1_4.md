@@ -4,8 +4,7 @@
 
 La version `v1.4.0` remplace la saisie d’une URL externe par un upload JPEG ou
 PNG traité de façon asynchrone. L’API Go existante reste propriétaire du contrat
-HTTP, de l’autorisation et des données métier. Un worker Go séparé produit les
-variantes. MinIO conserve les objets et NATS JetStream transporte les travaux
+HTTP, de l’autorisation et des données métier. Un superviseur worker Go distinct produit les variantes dans le processus applicatif ; son extraction dans un exécutable séparé reste compatible avec les mêmes contrats. MinIO conserve les objets et NATS JetStream transporte les travaux
 persistants.
 
 Cette séparation fait partie de `v1.4.0`. Elle n’autorise aucun accès direct du
@@ -91,16 +90,15 @@ crée pas de nouvel objet.
 ## Objets et variantes
 
 - source temporaire : `sources/{library_id}/{book_id}/{cover_id}.{ext}` ;
-- master conservé : `masters/{library_id}/{book_id}/{cover_id}.jpg` ;
+- master conservé : `masters/{library_id}/{book_id}/{cover_id}/master.jpg` ;
 - grande JPEG : `variants/{library_id}/{book_id}/{cover_id}/large.jpg` ;
 - grande WebP : `variants/{library_id}/{book_id}/{cover_id}/large.webp` ;
 - miniature JPEG : `variants/{library_id}/{book_id}/{cover_id}/thumb.jpg` ;
 - miniature WebP : `variants/{library_id}/{book_id}/{cover_id}/thumb.webp`.
 
 Le master normalisé 2:3 est conservé pour régénérer les formats futurs. La source
-brute n’est supprimée qu’après traitement réussi et délai de rétention. La
-grande variante cible 800 × 1200 pixels. Les dimensions exactes de la miniature
-seront figées avec les tests de traitement.
+brute n’est supprimée qu’après traitement réussi et délai de rétention. Les dimensions livrées et contrôlées sont 1000 × 1500 pour le master,
+800 × 1200 pour la grande variante et 160 × 240 pour la miniature.
 
 ## Sécurité
 
@@ -134,10 +132,10 @@ NATS JetStream. Les images sont épinglées, les données utilisent des volumes
 séparés et les services possèdent des health checks. Les ports d’administration
 ne doivent pas être publiés en production.
 
-Le worker aura une image OCI multiarchitecture `linux/amd64`, `linux/arm64`
-et `linux/arm/v7`. Une dépendance native d’encodage WebP devra être construite
-pour les trois cibles ; aucun assouplissement silencieux du format n’est permis.
-Les limites CPU et mémoire seront documentées et testées sur Raspberry Pi.
+Le worker doit encore recevoir une image OCI multiarchitecture `linux/amd64`,
+`linux/arm64` et `linux/arm/v7`. L’encodage WebP livré utilise un encodeur
+écrit entièrement en Go et ne dépend pas de `libwebp`. Les limites CPU et
+mémoire restent à documenter et à tester sur Raspberry Pi.
 
 ## Variables
 
@@ -221,6 +219,26 @@ l’incrément 4.
 Les tests optionnels `NATS_INTEGRATION=1` et
 `COVER_PIPELINE_INTEGRATION=1` exercent respectivement les reprises du consumer
 et le parcours MinIO → outbox → JetStream.
+
+## Traitement et variantes livrés par l’incrément 4
+
+Le processeur lit la source privée depuis MinIO, applique un recadrage centré
+au ratio 2:3 sans étirement, puis génère le master JPEG, les grandes variantes
+JPEG/WebP et les miniatures JPEG/WebP. Les clés sont déterministes et isolées
+par librairie, livre et couverture.
+
+Toutes les images sont produites avant la première écriture. Si une écriture
+MinIO échoue, les objets déjà publiés par cette tentative sont supprimés en
+ordre inverse. La base ne passe à `READY` qu’après les cinq écritures réussies.
+
+Le publisher et le worker possèdent des superviseurs indépendants. Une
+indisponibilité NATS ne bloque pas le démarrage HTTP ; chaque superviseur se
+reconnecte et respecte l’arrêt gracieux de l’application.
+
+Le test optionnel `COVER_PIPELINE_INTEGRATION=1` contrôle désormais le flux
+complet : upload, outbox, JetStream, consommation, génération, présence des cinq
+objets MinIO et activation de la couverture. La construction de l’image OCI
+multiarchitecture du worker reste nécessaire avant validation de l’incrément.
 
 ## Critères de validation de la fondation
 
