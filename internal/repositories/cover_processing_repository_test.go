@@ -26,6 +26,12 @@ func openCoverProcessingTestDB(t *testing.T) *sql.DB {
 			status TEXT NOT NULL,
 			source_object_key TEXT NOT NULL,
 			error_code TEXT,
+			master_object_key TEXT,
+			large_jpeg_object_key TEXT,
+			large_webp_object_key TEXT,
+			thumb_jpeg_object_key TEXT,
+			thumb_webp_object_key TEXT,
+			active INTEGER NOT NULL DEFAULT 0,
 			processing_by TEXT,
 			processing_until TEXT,
 			processing_attempts INTEGER NOT NULL DEFAULT 0,
@@ -200,5 +206,58 @@ func TestCoverProcessingMarkFailedIsIdempotentForTerminalCover(t *testing.T) {
 		context.Background(), "cover-3", "MAX_DELIVERIES", now,
 	); !errors.Is(err, ErrCoverProcessingTerminal) {
 		t.Fatalf("second mark err=%v", err)
+	}
+}
+
+func TestCoverProcessingCompleteActivatesNewCoverAtomically(t *testing.T) {
+	db := openCoverProcessingTestDB(t)
+	insertProcessingCover(t, db, "cover-old", "READY")
+	insertProcessingCover(t, db, "cover-new", "PENDING")
+	if _, err := db.Exec(`
+		UPDATE book_covers SET active=1 WHERE id='cover-old';
+		UPDATE book_covers
+		SET status='PROCESSING', processing_by='worker-a',
+		    processing_until='later'
+		WHERE id='cover-new';
+	`); err != nil {
+		t.Fatalf("prepare covers: %v", err)
+	}
+
+	repository := NewCoverProcessingRepository(db)
+	processed := ProcessedCover{
+		MasterObjectKey:    "masters/library-1/7/cover-new.jpg",
+		LargeJPEGObjectKey: "variants/library-1/7/cover-new/large.jpg",
+		LargeWebPObjectKey: "variants/library-1/7/cover-new/large.webp",
+		ThumbJPEGObjectKey: "variants/library-1/7/cover-new/thumb.jpg",
+		ThumbWebPObjectKey: "variants/library-1/7/cover-new/thumb.webp",
+	}
+	if err := repository.Complete(
+		context.Background(),
+		"cover-new",
+		"library-1",
+		"worker-a",
+		processed,
+		time.Date(2026, 9, 16, 10, 0, 0, 0, time.UTC),
+	); err != nil {
+		t.Fatalf("complete: %v", err)
+	}
+
+	var oldActive, newActive int
+	var status, master string
+	var processingBy sql.NullString
+	if err := db.QueryRow(`
+		SELECT
+			(SELECT active FROM book_covers WHERE id='cover-old'),
+			active, status, master_object_key, processing_by
+		FROM book_covers WHERE id='cover-new'
+	`).Scan(&oldActive, &newActive, &status, &master, &processingBy); err != nil {
+		t.Fatalf("read completion: %v", err)
+	}
+	if oldActive != 0 || newActive != 1 || status != "READY" ||
+		master != processed.MasterObjectKey || processingBy.Valid {
+		t.Fatalf(
+			"old=%d new=%d status=%q master=%q worker=%v",
+			oldActive, newActive, status, master, processingBy,
+		)
 	}
 }
