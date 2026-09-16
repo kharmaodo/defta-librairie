@@ -264,13 +264,19 @@ func main() {
 	signalContext, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	coverPublisherDone := make(chan struct{})
+	coverWorkerDone := make(chan struct{})
 	if cfg.CoversEnabled {
 		go func() {
 			defer close(coverPublisherDone)
 			runCoverOutboxPublisher(signalContext, cfg, database.DB, slog.Default())
 		}()
+		go func() {
+			defer close(coverWorkerDone)
+			runBookCoverWorker(signalContext, cfg, database.DB, slog.Default())
+		}()
 	} else {
 		close(coverPublisherDone)
+		close(coverWorkerDone)
 	}
 
 	select {
@@ -288,10 +294,23 @@ func main() {
 		}
 	}
 	stop()
-	select {
-	case <-coverPublisherDone:
-	case <-time.After(5 * time.Second):
-		slog.Warn("cover_outbox_publisher_shutdown_timeout")
+	coverShutdownTimer := time.NewTimer(5 * time.Second)
+	defer coverShutdownTimer.Stop()
+	for coverPublisherDone != nil || coverWorkerDone != nil {
+		select {
+		case <-coverPublisherDone:
+			coverPublisherDone = nil
+		case <-coverWorkerDone:
+			coverWorkerDone = nil
+		case <-coverShutdownTimer.C:
+			if coverPublisherDone != nil {
+				slog.Warn("cover_outbox_publisher_shutdown_timeout")
+			}
+			if coverWorkerDone != nil {
+				slog.Warn("cover_worker_shutdown_timeout")
+			}
+			return
+		}
 	}
 }
 
