@@ -18,7 +18,8 @@ import (
 
 const (
 	coverCleanupBatchSize    = 16
-	coverCleanupPollInterval = 2 * time.Second
+	coverCleanupPollInterval      = 2 * time.Second
+	coverCleanupReconcileInterval = 5 * time.Minute
 )
 
 func runCoverCleanup(
@@ -52,9 +53,32 @@ func runCoverCleanup(
 		logger.Error("cover_cleanup_worker_invalid", "error", err)
 		return
 	}
+	cleaner.WithSourceRetention(
+		time.Duration(cfg.MinIOSourceRetentionHours) * time.Hour,
+	)
 	logger.Info("cover_cleanup_worker_started", "worker_id", workerID)
 
+	nextReconciliation := time.Time{}
 	for ctx.Err() == nil {
+		now := time.Now().UTC()
+		if !now.Before(nextReconciliation) {
+			reconciled, reconcileErr := cleaner.Reconcile(ctx)
+			if reconcileErr != nil && ctx.Err() == nil {
+				logger.Warn(
+					"cover_cleanup_reconcile_failed",
+					"error", reconcileErr,
+					"worker_id", workerID,
+				)
+			} else if reconciled > 0 {
+				logger.Info(
+					"cover_cleanup_reconciled",
+					"jobs", reconciled,
+					"worker_id", workerID,
+				)
+			}
+			nextReconciliation = now.Add(coverCleanupReconcileInterval)
+		}
+
 		count, cleanupErr := cleaner.CleanAvailable(ctx, coverCleanupBatchSize)
 		if cleanupErr != nil && ctx.Err() == nil {
 			logger.Warn(
