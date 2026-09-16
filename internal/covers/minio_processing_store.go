@@ -146,6 +146,24 @@ func (s *MinIOProcessingStore) OpenSource(
 	return reader, nil
 }
 
+func (s *MinIOProcessingStore) OpenVariant(
+	ctx context.Context,
+	key string,
+) (io.ReadCloser, error) {
+	if ctx == nil || !validGeneratedObjectKey(key) {
+		return nil, ErrInvalidObjectKey
+	}
+
+	reader, err := s.client.Open(ctx, s.bucket, key)
+	if err != nil {
+		return nil, fmt.Errorf("%w: open processed cover: %v", ErrStoreUnavailable, err)
+	}
+	if reader == nil {
+		return nil, fmt.Errorf("%w: empty processed cover reader", ErrStoreUnavailable)
+	}
+	return reader, nil
+}
+
 func (s *MinIOProcessingStore) PutVariant(
 	ctx context.Context,
 	key string,
@@ -182,6 +200,26 @@ func (s *MinIOProcessingStore) PutVariant(
 	return nil
 }
 
+func (s *MinIOProcessingStore) DeleteObject(
+	ctx context.Context,
+	key string,
+) error {
+	if ctx == nil || (!validObjectKey(key) && !validGeneratedObjectKey(key)) {
+		return ErrInvalidObjectKey
+	}
+
+	err := s.client.RemoveObject(
+		ctx,
+		s.bucket,
+		key,
+		minio.RemoveObjectOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf("%w: delete cover object: %v", ErrStoreUnavailable, err)
+	}
+	return nil
+}
+
 func (s *MinIOProcessingStore) DeleteVariant(
 	ctx context.Context,
 	key string,
@@ -203,6 +241,8 @@ func (s *MinIOProcessingStore) DeleteVariant(
 }
 
 var (
-	_ SourceReader = (*MinIOProcessingStore)(nil)
-	_ VariantStore = (*MinIOProcessingStore)(nil)
+	_ SourceReader  = (*MinIOProcessingStore)(nil)
+	_ VariantReader = (*MinIOProcessingStore)(nil)
+	_ VariantStore  = (*MinIOProcessingStore)(nil)
+	_ ObjectDeleter = (*MinIOProcessingStore)(nil)
 )

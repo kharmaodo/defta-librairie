@@ -247,6 +247,51 @@ profil Compose `worker` attend MinIO, l’initialisation du bucket et NATS avant
 de démarrer. Les secrets restent injectés au runtime et ne sont jamais copiés
 dans l’image.
 
+## Lecture sécurisée livrée par l’incrément 5
+
+La route authentifiée `GET /api/manage/books/{id}/cover` diffuse uniquement
+la couverture active à l’état `READY`. Le propriétaire reste limité aux livres
+de sa librairie et le navigateur n’obtient jamais de clé MinIO ni d’URL signée.
+
+Les paramètres `variant=master|large|thumb` et `format=jpeg|webp` sélectionnent
+une clé déterminée par la base. Le master accepte uniquement JPEG. Sans
+paramètre, la représentation `large/jpeg` est utilisée. Les réponses définissent
+`Cache-Control: private, max-age=300`, un `ETag` déterministe et
+`X-Content-Type-Options: nosniff`. `If-None-Match` permet une réponse
+`304 Not Modified`.
+
+Une couverture absente, inactive, non prête ou hors périmètre n’expose aucun
+objet et produit une réponse contrôlée.
+
+Lorsqu’une nouvelle couverture devient `READY`, la même transaction SQLite
+enregistre chaque objet de l’ancienne couverture dans
+`cover_object_cleanup_jobs`, désactive l’ancienne version puis active la
+nouvelle. Si la mise en file échoue, toute la transaction est annulée et
+l’ancienne couverture reste active. Le nettoyage MinIO est ainsi différé sans
+fenêtre d’indisponibilité ni risque d’oubli silencieux.
+
+Les travaux de nettoyage sont réservés par bail afin que plusieurs exécuteurs
+ne suppriment jamais simultanément le même objet. Une suppression MinIO réussie
+est acquittée dans SQLite. Un échec est replanifié avec un backoff exponentiel
+borné et un message assaini ; un bail expiré redevient récupérable après un
+arrêt brutal.
+
+La source de la couverture active est conservée pendant la durée définie par
+`MINIO_SOURCE_RETENTION_HOURS`, soit 24 heures par défaut. Le superviseur de
+nettoyage démarre et s’arrête avec l’application sans bloquer le serveur HTTP.
+
+Une réconciliation initiale puis périodique recrée de manière idempotente les
+travaux absents pour les sources expirées et pour les objets des couvertures
+`READY` inactives. Elle ne programme jamais les variantes de la couverture
+active. Les clés déterministes, la compensation des écritures partielles et
+cette réconciliation empêchent les objets connus de la base de rester
+orphelins. Cette garantie ne constitue pas un parcours aveugle de tout le
+bucket MinIO : seuls les objets appartenant au modèle SQLite sont concernés.
+
+Les journaux `cover_cleanup_reconciled` et
+`cover_cleanup_reconcile_failed` rendent la réparation observable sans
+divulguer les clés ou les données des images.
+
 ## Critères de validation de la fondation
 
 - la topologie et les responsabilités sont documentées ;

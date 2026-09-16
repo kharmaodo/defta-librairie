@@ -127,6 +127,10 @@ func writeBookCoverError(w http.ResponseWriter, err error) {
 		writeAuthJSON(w, http.StatusNotFound, map[string]string{
 			"error": "book_not_found", "message": "Book not found",
 		})
+	case errors.Is(err, repositories.ErrActiveCoverNotFound):
+		writeAuthJSON(w, http.StatusNotFound, map[string]string{
+			"error": "cover_not_found", "message": "Active book cover not found",
+		})
 	case errors.Is(err, services.ErrBookForbidden):
 		writeAuthJSON(w, http.StatusForbidden, map[string]string{
 			"error": "forbidden", "message": "Insufficient permissions",

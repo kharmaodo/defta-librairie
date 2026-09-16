@@ -165,8 +165,8 @@ supervisé par l’exécutable natif de l’application.
 | 1 | Fondation asynchrone | Contrat de menace, états, outbox SQLite, topologie API/JetStream/worker/MinIO et infrastructure Docker | Réalisé |
 | 2 | Upload et stockage source | Client MinIO testable, bucket privé, JPEG/PNG réels, limites et source temporaire | Réalisé |
 | 3 | Messagerie et worker | Publisher outbox, stream JetStream, consommateur durable, reprises et idempotence | Réalisé |
-| 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels, image OCI Linux AMD64 et exécutable Windows AMD64 | À valider |
-| 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | À réaliser |
+| 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels, image OCI Linux AMD64 et exécutable Windows AMD64 | Réalisé |
+| 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | À valider |
 | 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | À réaliser |
 | 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | À réaliser |
 
@@ -180,7 +180,11 @@ reprises bornées et worker idempotent. L’incrément 4 est en cours sur
 `feature/book-covers-v1.4-processing`. Le recadrage 2:3, les cinq objets
 JPEG/WebP, la compensation MinIO et le pipeline d’intégration sont livrés ;
 l’exécutable worker, l’image OCI non-root Linux AMD64, la supervision dans
-l’exécutable Windows AMD64 et le workflow buildx sont également livrés. L’incrément 4 est prêt à valider par la PR.
+l’exécutable Windows AMD64 et le workflow buildx sont également livrés. L’incrément 4 est réalisé et fusionné par la PR #86 au commit `5c8d80a`.
+Il livre le recadrage 2:3, cinq objets JPEG/WebP, la compensation MinIO, le
+pipeline d’intégration, l’image OCI Linux AMD64 et la supervision native Windows
+AMD64. L’incrément 5 « cycle de vie » est désormais actif sur
+`feature/book-covers-v1.4-lifecycle`.
 
 Le traitement asynchrone par worker Go est retenu pour `v1.4.0`. NATS
 JetStream assure la livraison persistante et une transactional outbox SQLite

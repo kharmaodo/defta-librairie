@@ -22,11 +22,23 @@ const (
 )
 
 type CoverProcessingRepository struct {
-	db *sql.DB
+	db              *sql.DB
+	sourceRetention time.Duration
 }
 
 func NewCoverProcessingRepository(db *sql.DB) *CoverProcessingRepository {
-	return &CoverProcessingRepository{db: db}
+	return &CoverProcessingRepository{
+		db: db, sourceRetention: 24 * time.Hour,
+	}
+}
+
+func (r *CoverProcessingRepository) WithSourceRetention(
+	retention time.Duration,
+) *CoverProcessingRepository {
+	if retention > 0 {
+		r.sourceRetention = retention
+	}
+	return r
 }
 
 func (r *CoverProcessingRepository) Claim(
@@ -206,11 +218,71 @@ func (r *CoverProcessingRepository) Complete(
 	if err != nil {
 		return fmt.Errorf("inspect cover completion: %w", err)
 	}
+	nowText := now.UTC().Format(time.RFC3339Nano)
+	if _, err = tx.ExecContext(ctx, `
+		INSERT OR IGNORE INTO cover_object_cleanup_jobs(
+			cover_id, library_id, object_key, object_kind,
+			available_at, created_at
+		)
+		SELECT id, library_id, source_object_key, 'SOURCE', ?, ?
+		FROM book_covers
+		WHERE book_id = ? AND active = 1 AND id <> ?
+		UNION ALL
+		SELECT id, library_id, master_object_key, 'GENERATED', ?, ?
+		FROM book_covers
+		WHERE book_id = ? AND active = 1 AND id <> ?
+		  AND master_object_key IS NOT NULL
+		UNION ALL
+		SELECT id, library_id, large_jpeg_object_key, 'GENERATED', ?, ?
+		FROM book_covers
+		WHERE book_id = ? AND active = 1 AND id <> ?
+		  AND large_jpeg_object_key IS NOT NULL
+		UNION ALL
+		SELECT id, library_id, large_webp_object_key, 'GENERATED', ?, ?
+		FROM book_covers
+		WHERE book_id = ? AND active = 1 AND id <> ?
+		  AND large_webp_object_key IS NOT NULL
+		UNION ALL
+		SELECT id, library_id, thumb_jpeg_object_key, 'GENERATED', ?, ?
+		FROM book_covers
+		WHERE book_id = ? AND active = 1 AND id <> ?
+		  AND thumb_jpeg_object_key IS NOT NULL
+		UNION ALL
+		SELECT id, library_id, thumb_webp_object_key, 'GENERATED', ?, ?
+		FROM book_covers
+		WHERE book_id = ? AND active = 1 AND id <> ?
+		  AND thumb_webp_object_key IS NOT NULL
+	`,
+		nowText, nowText, bookID, coverID,
+		nowText, nowText, bookID, coverID,
+		nowText, nowText, bookID, coverID,
+		nowText, nowText, bookID, coverID,
+		nowText, nowText, bookID, coverID,
+		nowText, nowText, bookID, coverID,
+	); err != nil {
+		return fmt.Errorf("queue previous cover cleanup: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT OR IGNORE INTO cover_object_cleanup_jobs(
+			cover_id, library_id, object_key, object_kind,
+			available_at, created_at
+		)
+		SELECT id, library_id, source_object_key, 'SOURCE', ?, ?
+		FROM book_covers
+		WHERE id = ? AND library_id = ?
+	`,
+		now.Add(r.sourceRetention).UTC().Format(time.RFC3339Nano),
+		nowText,
+		coverID,
+		libraryID,
+	); err != nil {
+		return fmt.Errorf("queue processed cover source cleanup: %w", err)
+	}
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE book_covers
 		SET active = 0, updated_at = ?
 		WHERE book_id = ? AND active = 1 AND id <> ?
-	`, now.UTC().Format(time.RFC3339Nano), bookID, coverID); err != nil {
+	`, nowText, bookID, coverID); err != nil {
 		return fmt.Errorf("deactivate previous cover: %w", err)
 	}
 	result, err := tx.ExecContext(ctx, `
@@ -234,7 +306,7 @@ func (r *CoverProcessingRepository) Complete(
 		processed.LargeWebPObjectKey,
 		processed.ThumbJPEGObjectKey,
 		processed.ThumbWebPObjectKey,
-		now.UTC().Format(time.RFC3339Nano),
+		nowText,
 		coverID,
 		libraryID,
 		workerID,

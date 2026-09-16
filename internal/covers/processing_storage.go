@@ -12,6 +12,14 @@ type SourceReader interface {
 	OpenSource(ctx context.Context, key string) (io.ReadCloser, error)
 }
 
+type VariantReader interface {
+	OpenVariant(ctx context.Context, key string) (io.ReadCloser, error)
+}
+
+type ObjectDeleter interface {
+	DeleteObject(ctx context.Context, key string) error
+}
+
 type VariantStore interface {
 	PutVariant(
 		ctx context.Context,
