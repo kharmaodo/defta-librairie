@@ -163,7 +163,7 @@ Linux ARMv7 demeure obligatoire.
 |---|---|---|---|
 | 1 | Fondation asynchrone | Contrat de menace, états, outbox SQLite, topologie API/JetStream/worker/MinIO et infrastructure Docker | Réalisé |
 | 2 | Upload et stockage source | Client MinIO testable, bucket privé, JPEG/PNG réels, limites et source temporaire | Réalisé |
-| 3 | Messagerie et worker | Publisher outbox, stream JetStream, consommateur durable, reprises et idempotence | À réaliser |
+| 3 | Messagerie et worker | Publisher outbox, stream JetStream, consommateur durable, reprises et idempotence | À valider |
 | 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels et images OCI multiarchitectures | À réaliser |
 | 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | À réaliser |
 | 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | À réaliser |
@@ -173,8 +173,10 @@ La fondation asynchrone est validée et fusionnée par la PR #83 au commit
 `892a6fa`. L’upload sécurisé et le stockage temporaire sont validés et fusionnés
 par la PR #84 au commit `c25f054`. Ils couvrent la validation JPEG/PNG réelle,
 les limites, le stockage MinIO privé, la transaction couverture/outbox/audit,
-la compensation et la route multipart documentée. L’incrément actif est la
-messagerie : publisher outbox, JetStream et worker Go idempotent.
+la compensation et la route multipart documentée. L’incrément 3 est prêt à
+valider sur `feature/book-covers-v1.4-messaging` : baux récupérables, publisher
+avec acquittement, consumer durable, reprises bornées et worker idempotent. Il
+ne passera à `Réalisé` qu’après fusion dans `develop`.
 
 Le traitement asynchrone par worker Go est retenu pour `v1.4.0`. NATS
 JetStream assure la livraison persistante et une transactional outbox SQLite
