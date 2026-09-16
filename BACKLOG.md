@@ -156,15 +156,16 @@ technique des couvertures de livre de la version `v1.4.0`.
 
 Le bucket MinIO sera privé, la base conservera une clé d’objet et l’application
 servira les images. Le traitement retenu est un recadrage centré 2:3 en
-800 × 1200 pixels. La compatibilité des builds Windows AMD64, Linux ARM64 et
-Linux ARMv7 demeure obligatoire.
+800 × 1200 pixels. La compatibilité Windows AMD64 et Linux AMD64 demeure obligatoire. Le worker
+séparé est distribué comme image OCI Linux AMD64 ; sous Windows AMD64, il est
+supervisé par l’exécutable natif de l’application.
 
 | Ordre | Incrément | Livrable vérifiable | État |
 |---|---|---|---|
 | 1 | Fondation asynchrone | Contrat de menace, états, outbox SQLite, topologie API/JetStream/worker/MinIO et infrastructure Docker | Réalisé |
 | 2 | Upload et stockage source | Client MinIO testable, bucket privé, JPEG/PNG réels, limites et source temporaire | Réalisé |
 | 3 | Messagerie et worker | Publisher outbox, stream JetStream, consommateur durable, reprises et idempotence | Réalisé |
-| 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels et images OCI multiarchitectures | À valider |
+| 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels, image OCI Linux AMD64 et exécutable Windows AMD64 | À valider |
 | 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | À réaliser |
 | 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | À réaliser |
 | 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | À réaliser |
@@ -178,8 +179,8 @@ la compensation et la route multipart documentée. L’incrément 3 est réalis�
 reprises bornées et worker idempotent. L’incrément 4 est en cours sur
 `feature/book-covers-v1.4-processing`. Le recadrage 2:3, les cinq objets
 JPEG/WebP, la compensation MinIO et le pipeline d’intégration sont livrés ;
-l’exécutable worker, l’image OCI non-root AMD64/ARM64/ARMv7 et le workflow
-buildx sont également livrés. L’incrément 4 est prêt à valider par la PR.
+l’exécutable worker, l’image OCI non-root Linux AMD64, la supervision dans
+l’exécutable Windows AMD64 et le workflow buildx sont également livrés. L’incrément 4 est prêt à valider par la PR.
 
 Le traitement asynchrone par worker Go est retenu pour `v1.4.0`. NATS
 JetStream assure la livraison persistante et une transactional outbox SQLite
