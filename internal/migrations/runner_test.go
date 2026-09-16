@@ -54,8 +54,8 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	if err = db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&migrationsCount); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if migrationsCount != 25 {
-		t.Fatalf("expected 25 migrations, got %d", migrationsCount)
+	if migrationsCount != 27 {
+		t.Fatalf("expected 27 migrations, got %d", migrationsCount)
 	}
 
 	var assignedBooks int
@@ -160,6 +160,20 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	}
 	if coverTables != 2 {
 		t.Fatalf("expected cover and outbox tables, got %d", coverTables)
+	}
+	var outboxLeaseColumns int
+	if err = db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('cover_processing_outbox') WHERE name IN ('locked_by','locked_until')`).Scan(&outboxLeaseColumns); err != nil {
+		t.Fatalf("inspect cover outbox lease columns: %v", err)
+	}
+	if outboxLeaseColumns != 2 {
+		t.Fatalf("expected cover outbox lease columns, got %d", outboxLeaseColumns)
+	}
+	var coverProcessingColumns int
+	if err = db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('book_covers') WHERE name IN ('processing_by','processing_until','processing_attempts')`).Scan(&coverProcessingColumns); err != nil {
+		t.Fatalf("inspect cover processing columns: %v", err)
+	}
+	if coverProcessingColumns != 3 {
+		t.Fatalf("expected cover processing columns, got %d", coverProcessingColumns)
 	}
 
 	if _, err = db.Exec("UPDATE defta SET library_id = 'missing-library' WHERE id = 1"); err == nil {

@@ -112,7 +112,7 @@ go mod download
 
 ## Configuration
 
-Toutes les variables sont optionnelles :
+Les variables disposent d’une valeur par défaut sauf les secrets explicitement signalés. `JWT_SECRET` reste obligatoire ; les identifiants MinIO et NATS le deviennent lorsque `COVERS_ENABLED=true` :
 
 | Variable | Valeur par défaut | Description |
 |---|---:|---|
@@ -129,6 +129,21 @@ Toutes les variables sont optionnelles :
 | `AUTH_RATE_LIMIT_REQUESTS` | `10` | Nombre de requêtes login/refresh autorisées par IP et par fenêtre |
 | `AUTH_RATE_LIMIT_WINDOW_SECONDS` | `60` | Fenêtre du rate limit d'authentification |
 | `AUTH_COOKIE_SECURE` | `false` | Mettre à `true` derrière HTTPS pour le cookie de refresh du navigateur |
+| `COVERS_ENABLED` | `false` | Active l’upload MinIO et la publication asynchrone des couvertures |
+| `MINIO_ENDPOINT` | `localhost:9000` | Adresse MinIO sans préfixe HTTP |
+| `MINIO_ACCESS_KEY` | aucune | Identifiant MinIO, obligatoire lorsque les couvertures sont activées |
+| `MINIO_SECRET_KEY` | aucune | Secret MinIO, obligatoire lorsque les couvertures sont activées |
+| `MINIO_USE_SSL` | `false` | Active TLS pour la connexion MinIO |
+| `MINIO_BUCKET_COVERS` | `book-covers` | Bucket privé des sources et variantes |
+| `COVER_MAX_BYTES` | `5242880` | Taille maximale d’une source, 5 Mio |
+| `COVER_MAX_PIXELS` | `24000000` | Plafond de pixels après lecture des dimensions |
+| `MINIO_SOURCE_RETENTION_HOURS` | `24` | Rétention prévue de la source brute après traitement |
+| `NATS_URL` | `nats://localhost:4222` | Adresse du serveur NATS |
+| `NATS_USER` | aucune | Utilisateur NATS ; doit être fourni avec le mot de passe |
+| `NATS_PASSWORD` | aucune | Mot de passe NATS ; doit être fourni avec l’utilisateur |
+| `NATS_COVERS_STREAM` | `BOOK_COVERS` | Stream JetStream persistant des couvertures |
+| `NATS_COVERS_SUBJECT` | `book.covers.process.v1` | Sujet versionné publié par l’outbox |
+| `NATS_COVERS_CONSUMER` | `cover-worker-v1` | Consommateur durable réservé au worker |
 
 Créer la configuration locale, qui reste ignorée par Git, puis générer un secret propre à l'environnement :
 
@@ -154,6 +169,23 @@ JWT_REFRESH_TTL_SECONDS=604800
 AUTH_RATE_LIMIT_REQUESTS=10
 AUTH_RATE_LIMIT_WINDOW_SECONDS=60
 AUTH_COOKIE_SECURE=false
+
+# Couvertures de livre v1.4
+COVERS_ENABLED=false
+MINIO_ENDPOINT=minio:9000
+MINIO_ACCESS_KEY=
+MINIO_SECRET_KEY=
+MINIO_USE_SSL=false
+MINIO_BUCKET_COVERS=book-covers
+MINIO_SOURCE_RETENTION_HOURS=24
+NATS_URL=nats://nats:4222
+NATS_USER=
+NATS_PASSWORD=
+NATS_COVERS_STREAM=BOOK_COVERS
+NATS_COVERS_SUBJECT=book.covers.process.v1
+NATS_COVERS_CONSUMER=cover-worker-v1
+COVER_MAX_BYTES=5242880
+COVER_MAX_PIXELS=24000000
 ```
 
 Ne jamais commiter `.env`, une sauvegarde de ce fichier, ni une valeur réelle de `JWT_SECRET`.
@@ -391,7 +423,7 @@ export DEFTA_ROOT_USERNAME='kharmaodo'
 export DEFTA_ROOT_EMAIL='root@example.com'
 export DEFTA_ROOT_PASSWORD='une-valeur-longue-et-unique'
 
-go run -tags fts5 ./cmd/main.go bootstrap-admin
+go run -tags fts5 ./cmd bootstrap-admin
 
 unset DEFTA_ROOT_PASSWORD
 ```
@@ -431,7 +463,7 @@ Cette commande locale fonctionne sans `JWT_SECRET`. Elle remplace le hash Argon2
 read -rsp 'Nouveau mot de passe root : ' DEFTA_ROOT_NEW_PASSWORD
 echo
 export DEFTA_ROOT_NEW_PASSWORD
-go run -tags fts5 ./cmd/main.go reset-root-password
+go run -tags fts5 ./cmd reset-root-password
 unset DEFTA_ROOT_NEW_PASSWORD
 ```
 
@@ -446,12 +478,56 @@ sqlite3 -header -column data/defta.db \
 
 ## Démarrage
 
-La balise `fts5` est obligatoire pour compiler le pilote avec le moteur plein texte :
+La balise `fts5` est obligatoire pour compiler le pilote avec le moteur plein
+texte. La commande cible le package `./cmd` afin d’inclure tous ses fichiers,
+notamment le superviseur de l’outbox des couvertures.
+
+### Mode standard
+
+Les couvertures restent désactivées par défaut et MinIO/NATS ne sont pas requis :
 
 ```bash
 export JWT_SECRET="$(openssl rand -base64 48)"
-go run -tags fts5 ./cmd/main.go
+export COVERS_ENABLED=false
+go run -tags fts5 ./cmd
 ```
+
+### Mode v1.4 avec couvertures
+
+Créer d’abord `.env`, puis renseigner des secrets locaux non vides. Ces valeurs
+d’exemple sont réservées au développement et ne doivent jamais être utilisées
+en production ni commitées :
+
+```dotenv
+COVERS_ENABLED=true
+MINIO_ENDPOINT=127.0.0.1:9000
+MINIO_ACCESS_KEY=defta-minio-dev
+MINIO_SECRET_KEY=Defta-MinIO-Dev-2026!
+MINIO_USE_SSL=false
+MINIO_BUCKET_COVERS=book-covers
+NATS_URL=nats://127.0.0.1:4222
+NATS_USER=defta-covers-dev
+NATS_PASSWORD=Defta-NATS-Dev-2026!
+NATS_COVERS_STREAM=BOOK_COVERS
+NATS_COVERS_SUBJECT=book.covers.process.v1
+```
+
+Démarrer l’infrastructure puis l’API :
+
+```bash
+docker compose \
+  --env-file .env \
+  -f deploy/docker-compose.covers.yml \
+  up -d
+
+go run -tags fts5 ./cmd
+```
+
+MinIO doit être correctement configuré pour accepter un upload. En revanche,
+une indisponibilité NATS ne bloque pas le serveur HTTP : les couvertures restent
+`PENDING`, l’outbox les conserve et le publisher tente de se reconnecter. Les
+logs `cover_outbox_nats_unavailable` puis
+`cover_outbox_publisher_connected` permettent de suivre cette reprise.
 
 Puis ouvrir :
 
@@ -1179,8 +1255,8 @@ go test -race -tags fts5 ./cmd -run '^TestCommercialHTTPLifecycle$' -count=1 -v
 ```
 
 L’enregistrement des routes a seulement été regroupé dans `cmd/main.go` : URL,
-méthodes HTTP et protections restent identiques. Le lancement historique
-`go run -tags fts5 ./cmd/main.go` reste compatible. Aucune migration supplémentaire.
+méthodes HTTP et protections restent identiques. Le lancement doit cibler le
+package complet avec `go run -tags fts5 ./cmd`.
 
 
 ### Historique des achats d’un client

@@ -199,6 +199,29 @@ Les réponses de validation distinguent notamment corps trop volumineux
 (`413`), image invalide (`422`) et fonctionnalité indisponible (`503`).
 Le contrat complet et ses schémas restent définis dans `static/openapi.json`.
 
+## Messagerie et worker livrés par l’incrément 3
+
+L’API réserve atomiquement les lignes d’outbox avec un bail récupérable après
+arrêt brutal. Elle publie par lots sur JetStream avec `Nats-Msg-Id` égal à
+`eventId`, puis renseigne `published_at` uniquement après acquittement du
+serveur. Les erreurs sont replanifiées avec un backoff exponentiel borné.
+
+Le consumer pull `NATS_COVERS_CONSUMER` est durable et utilise un acquittement
+explicite. Une erreur transitoire provoque `NakWithDelay`. Un message invalide
+ou une erreur permanente est terminé. Après `COVER_WORKER_MAX_DELIVER`, le
+worker marque la couverture `FAILED` avant de terminer le message.
+
+Chaque traitement réserve également la couverture avec
+`processing_by`/`processing_until`. Un worker concurrent est refusé, un bail
+expiré est récupérable et une couverture déjà `READY` est acquittée sans être
+retraitée. La finalisation active la nouvelle couverture et désactive l’ancienne
+dans une même transaction SQLite. Le processeur de pixels reste l’objet de
+l’incrément 4.
+
+Les tests optionnels `NATS_INTEGRATION=1` et
+`COVER_PIPELINE_INTEGRATION=1` exercent respectivement les reprises du consumer
+et le parcours MinIO → outbox → JetStream.
+
 ## Critères de validation de la fondation
 
 - la topologie et les responsabilités sont documentées ;
