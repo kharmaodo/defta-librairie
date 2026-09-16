@@ -247,6 +247,23 @@ profil Compose `worker` attend MinIO, l’initialisation du bucket et NATS avant
 de démarrer. Les secrets restent injectés au runtime et ne sont jamais copiés
 dans l’image.
 
+## Lecture sécurisée livrée par l’incrément 5
+
+La route authentifiée `GET /api/manage/books/{id}/cover` diffuse uniquement
+la couverture active à l’état `READY`. Le propriétaire reste limité aux livres
+de sa librairie et le navigateur n’obtient jamais de clé MinIO ni d’URL signée.
+
+Les paramètres `variant=master|large|thumb` et `format=jpeg|webp` sélectionnent
+une clé déterminée par la base. Le master accepte uniquement JPEG. Sans
+paramètre, la représentation `large/jpeg` est utilisée. Les réponses définissent
+`Cache-Control: private, max-age=300`, un `ETag` déterministe et
+`X-Content-Type-Options: nosniff`. `If-None-Match` permet une réponse
+`304 Not Modified`.
+
+Une couverture absente, inactive, non prête ou hors périmètre n’expose aucun
+objet et produit une réponse contrôlée. Le remplacement, la rétention et le
+nettoyage des anciennes versions restent les tranches suivantes de l’incrément.
+
 ## Critères de validation de la fondation
 
 - la topologie et les responsabilités sont documentées ;
