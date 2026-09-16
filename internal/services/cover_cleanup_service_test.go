@@ -14,7 +14,20 @@ type cleanupStoreStub struct {
 	completedID int64
 	failedID    int64
 	availableAt time.Time
-	lastError   string
+	lastError    string
+	reconciled   int64
+	reconcileNow time.Time
+	sourceBefore time.Time
+}
+
+func (s *cleanupStoreStub) Reconcile(
+	_ context.Context,
+	now time.Time,
+	sourceBefore time.Time,
+) (int64, error) {
+	s.reconcileNow = now
+	s.sourceBefore = sourceBefore
+	return s.reconciled, nil
 }
 
 func (s *cleanupStoreStub) ClaimNext(
@@ -115,5 +128,28 @@ func TestCoverCleanupServiceReschedulesStoreFailure(t *testing.T) {
 	}
 	if store.lastError != "minio unavailable" {
 		t.Fatalf("last error=%q", store.lastError)
+	}
+}
+
+func TestCoverCleanupServiceReconcilesConfiguredRetention(t *testing.T) {
+	store := &cleanupStoreStub{reconciled: 6}
+	objects := &cleanupObjectStoreStub{}
+	service, _ := NewCoverCleanupService(store, objects, "cleanup-worker")
+	service.WithSourceRetention(48 * time.Hour)
+	now := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
+	service.now = func() time.Time { return now }
+
+	created, err := service.Reconcile(context.Background())
+	if err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+	if created != 6 || !store.reconcileNow.Equal(now) ||
+		!store.sourceBefore.Equal(now.Add(-48*time.Hour)) {
+		t.Fatalf(
+			"created=%d now=%v source before=%v",
+			created,
+			store.reconcileNow,
+			store.sourceBefore,
+		)
 	}
 }
