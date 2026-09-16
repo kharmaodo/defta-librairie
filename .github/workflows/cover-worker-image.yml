@@ -1,12 +1,33 @@
 name: Build book cover worker image
 
 on:
+  pull_request:
+    paths:
+      - "cmd/cover-worker/**"
+      - "internal/covers/**"
+      - "internal/coverruntime/**"
+      - "internal/services/book_cover_worker.go"
+      - "internal/services/cover_variant_processor.go"
+      - "deploy/Dockerfile.cover-worker"
+      - ".dockerignore"
+      - ".github/workflows/cover-worker-image.yml"
+      - "go.mod"
+      - "go.sum"
   workflow_dispatch:
     inputs:
-      tag:
-        description: Existing v1.4 release tag to build
+      ref:
+        description: Branch, commit or existing tag to build
         required: true
-        default: v1.4.0
+        default: develop
+      publish:
+        description: Publish the image to GHCR
+        required: true
+        type: boolean
+        default: false
+      image_tag:
+        description: Image tag used when publishing
+        required: true
+        default: edge
   push:
     tags:
       - "v1.4.*"
@@ -16,19 +37,20 @@ permissions:
   packages: write
 
 jobs:
-  build-and-publish:
+  build:
     runs-on: ubuntu-22.04
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/defta-cover-worker
-      IMAGE_TAG: ${{ inputs.tag || github.ref_name }}
+      IMAGE_TAG: ${{ inputs.image_tag || github.ref_name }}
 
     steps:
-      - name: Check out the tagged source
+      - name: Check out the requested source
         uses: actions/checkout@v6
         with:
-          ref: ${{ env.IMAGE_TAG }}
+          ref: ${{ inputs.ref || github.sha }}
 
-      - name: Verify the release tag
+      - name: Verify a pushed release tag
+        if: github.event_name == 'push'
         shell: bash
         run: |
           set -euo pipefail
@@ -45,19 +67,20 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push' || inputs.publish
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and publish the worker
+      - name: Build the worker on every review and publish on demand
         uses: docker/build-push-action@v6
         with:
           context: .
           file: deploy/Dockerfile.cover-worker
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: true
+          push: ${{ github.event_name == 'push' || inputs.publish }}
           provenance: mode=max
           sbom: true
           tags: |
