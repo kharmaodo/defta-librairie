@@ -37,6 +37,20 @@ func openCoverProcessingTestDB(t *testing.T) *sql.DB {
 			processing_attempts INTEGER NOT NULL DEFAULT 0,
 			updated_at TEXT NOT NULL
 		);
+		CREATE TABLE cover_object_cleanup_jobs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			cover_id TEXT NOT NULL,
+			library_id TEXT NOT NULL,
+			object_key TEXT NOT NULL UNIQUE,
+			object_kind TEXT NOT NULL,
+			available_at TEXT NOT NULL,
+			attempts INTEGER NOT NULL DEFAULT 0,
+			locked_by TEXT,
+			locked_until TEXT,
+			completed_at TEXT,
+			last_error TEXT,
+			created_at TEXT NOT NULL
+		);
 	`); err != nil {
 		t.Fatalf("create covers: %v", err)
 	}
@@ -214,7 +228,14 @@ func TestCoverProcessingCompleteActivatesNewCoverAtomically(t *testing.T) {
 	insertProcessingCover(t, db, "cover-old", "READY")
 	insertProcessingCover(t, db, "cover-new", "PENDING")
 	if _, err := db.Exec(`
-		UPDATE book_covers SET active=1 WHERE id='cover-old';
+		UPDATE book_covers
+		SET active=1,
+		    master_object_key='masters/library-1/7/cover-old/master.jpg',
+		    large_jpeg_object_key='variants/library-1/7/cover-old/large.jpg',
+		    large_webp_object_key='variants/library-1/7/cover-old/large.webp',
+		    thumb_jpeg_object_key='variants/library-1/7/cover-old/thumb.jpg',
+		    thumb_webp_object_key='variants/library-1/7/cover-old/thumb.webp'
+		WHERE id='cover-old';
 		UPDATE book_covers
 		SET status='PROCESSING', processing_by='worker-a',
 		    processing_until='later'
@@ -259,5 +280,16 @@ func TestCoverProcessingCompleteActivatesNewCoverAtomically(t *testing.T) {
 			"old=%d new=%d status=%q master=%q worker=%v",
 			oldActive, newActive, status, master, processingBy,
 		)
+	}
+
+	var cleanupJobs int
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM cover_object_cleanup_jobs
+		WHERE cover_id='cover-old' AND completed_at IS NULL
+	`).Scan(&cleanupJobs); err != nil {
+		t.Fatalf("count cleanup jobs: %v", err)
+	}
+	if cleanupJobs != 6 {
+		t.Fatalf("cleanup jobs=%d expected=6", cleanupJobs)
 	}
 }
