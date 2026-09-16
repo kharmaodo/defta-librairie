@@ -62,6 +62,26 @@ require(
     "go.mod",
     ("github.com/HugoSmits86/nativewebp", "golang.org/x/image"),
 )
+require(
+    "cmd/cover-worker/main.go",
+    ("COVERS_ENABLED", "RunWorker", "signal.NotifyContext"),
+)
+require(
+    "deploy/Dockerfile.cover-worker",
+    ("USER 65532:65532", "HEALTHCHECK", "./cmd/cover-worker", "CGO_ENABLED=1"),
+)
+require(
+    "deploy/docker-compose.covers.yml",
+    ('profiles: ["worker"]', "read_only: true", "no-new-privileges:true", "cap_drop:"),
+)
+require(
+    ".github/workflows/cover-worker-image.yml",
+    ("linux/amd64,linux/arm64,linux/arm/v7", "setup-qemu-action", "sbom: true"),
+)
+require(
+    ".dockerignore",
+    ("data", "node_modules", "test-results", "*.db"),
+)
 
 if errors:
     print("ÉCHEC : traitement des couvertures v1.4 incomplet.", file=sys.stderr)
@@ -71,5 +91,5 @@ if errors:
 
 print(
     "OK: lecture privée, recadrage 2:3, variantes JPEG/WebP, compensation MinIO, "
-    "worker runtime et intégration complète contrôlés."
+    "worker runtime, image OCI multiarchitecture et intégration complète contrôlés."
 )
