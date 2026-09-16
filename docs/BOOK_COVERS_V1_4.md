@@ -132,10 +132,11 @@ NATS JetStream. Les images sont épinglées, les données utilisent des volumes
 séparés et les services possèdent des health checks. Les ports d’administration
 ne doivent pas être publiés en production.
 
-Le worker possède une image OCI non-root construite pour `linux/amd64`,
-`linux/arm64` et `linux/arm/v7`. Le workflow utilise QEMU et buildx, publie
-sur GHCR lors d’un tag `v1.4.*` et construit les trois plateformes sur chaque
-pull request concernée. L’image est accompagnée d’un SBOM et d’une provenance.
+Le worker séparé possède une image OCI non-root construite pour `linux/amd64`.
+Le workflow utilise buildx, publie sur GHCR lors d’un tag `v1.4.*` et valide
+cette plateforme sur chaque pull request concernée. Sous Windows AMD64, le
+worker est supervisé dans l’exécutable natif de l’application lorsque
+`COVERS_ENABLED=true`. L’image est accompagnée d’un SBOM et d’une provenance.
 L’encodage WebP est écrit entièrement en Go et ne dépend pas de `libwebp`.
 
 ## Variables
@@ -255,5 +256,5 @@ dans l’image.
 - le master est conservé et la source brute possède une rétention explicite ;
 - le compose n’emploie aucun tag `latest` et ne contient aucun secret réel ;
 - MinIO, JetStream et leurs volumes sont configurés ;
-- la matrice AMD64/ARM64/ARMv7 du worker est exigée ;
+- l’image du worker Linux AMD64 et l’exécutable natif Windows AMD64 sont exigés ;
 - le contrôle statique est intégré à la recette globale.
