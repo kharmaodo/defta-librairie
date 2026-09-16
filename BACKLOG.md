@@ -164,7 +164,7 @@ Linux ARMv7 demeure obligatoire.
 | 1 | Fondation asynchrone | Contrat de menace, états, outbox SQLite, topologie API/JetStream/worker/MinIO et infrastructure Docker | Réalisé |
 | 2 | Upload et stockage source | Client MinIO testable, bucket privé, JPEG/PNG réels, limites et source temporaire | Réalisé |
 | 3 | Messagerie et worker | Publisher outbox, stream JetStream, consommateur durable, reprises et idempotence | Réalisé |
-| 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels et images OCI multiarchitectures | En cours |
+| 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels et images OCI multiarchitectures | À valider |
 | 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | À réaliser |
 | 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | À réaliser |
 | 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | À réaliser |
@@ -178,7 +178,8 @@ la compensation et la route multipart documentée. L’incrément 3 est réalis�
 reprises bornées et worker idempotent. L’incrément 4 est en cours sur
 `feature/book-covers-v1.4-processing`. Le recadrage 2:3, les cinq objets
 JPEG/WebP, la compensation MinIO et le pipeline d’intégration sont livrés ;
-l’image OCI multiarchitecture du worker reste à finaliser avant validation.
+l’exécutable worker, l’image OCI non-root AMD64/ARM64/ARMv7 et le workflow
+buildx sont également livrés. L’incrément 4 est prêt à valider par la PR.
 
 Le traitement asynchrone par worker Go est retenu pour `v1.4.0`. NATS
 JetStream assure la livraison persistante et une transactional outbox SQLite
