@@ -1,0 +1,49 @@
+# syntax=docker/dockerfile:1.7
+
+FROM --platform=$TARGETPLATFORM golang:1.25-bookworm AS build
+
+WORKDIR /src
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+ARG TARGETOS
+ARG TARGETARCH
+ARG TARGETVARIANT
+
+RUN test "$TARGETOS" = "linux" && \
+    CGO_ENABLED=1 \
+    go build \
+      -trimpath \
+      -tags fts5 \
+      -ldflags="-s -w" \
+      -o /out/defta-cover-worker \
+      ./cmd/cover-worker
+
+FROM debian:bookworm-slim
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates tzdata && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --system --gid 65532 defta && \
+    useradd --system --uid 65532 --gid 65532 --home-dir /nonexistent defta && \
+    mkdir -p /app/data && \
+    chown -R 65532:65532 /app
+
+WORKDIR /app
+
+COPY --from=build --chown=65532:65532 /out/defta-cover-worker /app/defta-cover-worker
+
+ENV COVERS_ENABLED=true \
+    DB_PATH=/app/data/defta.db
+
+USER 65532:65532
+
+VOLUME ["/app/data"]
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["sh", "-c", "kill -0 1"]
+
+ENTRYPOINT ["/app/defta-cover-worker"]
