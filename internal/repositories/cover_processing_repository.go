@@ -90,11 +90,14 @@ func (r *CoverProcessingRepository) Claim(
 		FROM book_covers
 		WHERE id = ? AND book_id = ? AND library_id = ?
 	`, coverID, bookID, libraryID).Scan(&status, &storedSource)
-	if errors.Is(err, sql.ErrNoRows) || storedSource != sourceObjectKey {
+	if errors.Is(err, sql.ErrNoRows) {
 		return 0, ErrCoverProcessingNotFound
 	}
 	if err != nil {
 		return 0, fmt.Errorf("inspect cover processing claim: %w", err)
+	}
+	if storedSource != sourceObjectKey {
+		return 0, ErrCoverProcessingNotFound
 	}
 	switch status {
 	case "READY":
