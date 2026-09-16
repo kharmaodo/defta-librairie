@@ -19,6 +19,8 @@ import (
 	"defta-librairie/internal/repositories"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/nats-io/nats.go"
 )
 
@@ -27,7 +29,7 @@ func TestCoverUploadOutboxJetStreamIntegration(t *testing.T) {
 		t.Skip("set COVER_PIPELINE_INTEGRATION=1 to test MinIO and JetStream")
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 	db, err := sql.Open(
 		"sqlite3",
@@ -198,6 +200,123 @@ func TestCoverUploadOutboxJetStreamIntegration(t *testing.T) {
 	if len(message.Data) == 0 {
 		t.Fatal("published payload is empty")
 	}
+
+	processingStore, err := covers.NewMinIOProcessingStore(
+		integrationEnv("MINIO_ENDPOINT", "127.0.0.1:9000"),
+		os.Getenv("MINIO_ACCESS_KEY"),
+		os.Getenv("MINIO_SECRET_KEY"),
+		integrationEnv("MINIO_BUCKET_COVERS", "book-covers"),
+		false,
+	)
+	if err != nil {
+		t.Fatalf("new processing store: %v", err)
+	}
+	variantProcessor, err := NewStoredCoverVariantProcessor(
+		processingStore,
+		processingStore,
+		covers.NewImageProcessor(),
+	)
+	if err != nil {
+		t.Fatalf("new variant processor: %v", err)
+	}
+	worker, err := NewBookCoverWorker(
+		repositories.NewCoverProcessingRepository(db),
+		variantProcessor,
+		"pipeline-worker",
+	)
+	if err != nil {
+		t.Fatalf("new cover worker: %v", err)
+	}
+	consumer, err := covers.NewJetStreamConsumer(
+		ctx,
+		natsURL,
+		natsUser,
+		natsPassword,
+		streamName,
+		subject,
+		"pipeline-worker-"+suffix,
+		3,
+	)
+	if err != nil {
+		t.Fatalf("new JetStream consumer: %v", err)
+	}
+	t.Cleanup(func() { _ = consumer.Close() })
+
+	handled, err := consumer.FetchAndHandle(ctx, 1, 10*time.Second, worker)
+	if err != nil {
+		t.Fatalf("consume and process cover: %v", err)
+	}
+	if handled != 1 {
+		t.Fatalf("handled count=%d", handled)
+	}
+
+	var (
+		status                                   string
+		active                                   int
+		masterKey, largeJPEGKey, largeWebPKey   string
+		thumbJPEGKey, thumbWebPKey               string
+	)
+	if err = db.QueryRowContext(ctx, `
+		SELECT status, active, master_object_key,
+		       large_jpeg_object_key, large_webp_object_key,
+		       thumb_jpeg_object_key, thumb_webp_object_key
+		FROM book_covers
+		WHERE id = ?
+	`, pending.ID).Scan(
+		&status,
+		&active,
+		&masterKey,
+		&largeJPEGKey,
+		&largeWebPKey,
+		&thumbJPEGKey,
+		&thumbWebPKey,
+	); err != nil {
+		t.Fatalf("read processed cover: %v", err)
+	}
+	if status != "READY" || active != 1 {
+		t.Fatalf("status=%q active=%d", status, active)
+	}
+
+	minioClient, err := minio.New(
+		integrationEnv("MINIO_ENDPOINT", "127.0.0.1:9000"),
+		&minio.Options{
+			Creds: credentials.NewStaticV4(
+				os.Getenv("MINIO_ACCESS_KEY"),
+				os.Getenv("MINIO_SECRET_KEY"),
+				"",
+			),
+			Secure: false,
+		},
+	)
+	if err != nil {
+		t.Fatalf("new MinIO inspection client: %v", err)
+	}
+	bucket := integrationEnv("MINIO_BUCKET_COVERS", "book-covers")
+	generatedKeys := []string{
+		masterKey,
+		largeJPEGKey,
+		largeWebPKey,
+		thumbJPEGKey,
+		thumbWebPKey,
+	}
+	for _, key := range generatedKeys {
+		if key == "" {
+			t.Fatal("processed cover contains an empty object key")
+		}
+		if _, err = minioClient.StatObject(
+			ctx,
+			bucket,
+			key,
+			minio.StatObjectOptions{},
+		); err != nil {
+			t.Fatalf("stat generated object %q: %v", key, err)
+		}
+	}
+	t.Cleanup(func() {
+		for _, key := range generatedKeys {
+			_ = processingStore.DeleteVariant(context.Background(), key)
+		}
+	})
 }
 
 func integrationEnv(name, fallback string) string {
