@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/defta-cover-worker
-      IMAGE_TAG: ${{ inputs.image_tag || github.ref_name }}
+      IMAGE_TAG: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || inputs.image_tag || github.ref_name }}
 
     steps:
       - name: Check out the requested source
@@ -67,7 +67,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
-        if: github.event_name == 'push' || inputs.publish
+        if: github.event_name == 'push' || inputs.publish == true
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -80,7 +80,7 @@ jobs:
           context: .
           file: deploy/Dockerfile.cover-worker
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: ${{ github.event_name == 'push' || inputs.publish }}
+          push: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish == true) }}
           provenance: mode=max
           sbom: true
           tags: |
