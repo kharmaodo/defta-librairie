@@ -7,7 +7,6 @@ import (
 	"defta-librairie/internal/covers"
 	"defta-librairie/internal/repositories"
 	"encoding/hex"
-	"fmt"
 	"io"
 )
 
@@ -75,4 +74,3 @@ func (s *BookCoverReadService) Open(
 	}, nil
 }
 
-var _ = fmt.Sprintf
