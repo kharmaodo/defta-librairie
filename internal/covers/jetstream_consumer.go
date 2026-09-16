@@ -12,7 +12,10 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-var ErrInvalidCoverMessage = errors.New("invalid cover processing message")
+var (
+	ErrInvalidCoverMessage      = errors.New("invalid cover processing message")
+	ErrPermanentCoverProcessing = errors.New("permanent cover processing failure")
+)
 
 type ProcessingEvent struct {
 	SchemaVersion   int    `json:"schemaVersion"`
@@ -28,11 +31,16 @@ type CoverEventHandler interface {
 	Handle(ctx context.Context, event ProcessingEvent) error
 }
 
+type CoverEventFailureHandler interface {
+	MarkFailed(ctx context.Context, event ProcessingEvent, cause error) error
+}
+
 type JetStreamConsumer struct {
 	connection *nats.Conn
 	jetStream  nats.JetStreamContext
 	subscription *nats.Subscription
 	retryDelay time.Duration
+	maxDeliver int
 }
 
 func NewJetStreamConsumer(
@@ -96,6 +104,7 @@ func NewJetStreamConsumer(
 		jetStream: jetStream,
 		subscription: subscription,
 		retryDelay: 5 * time.Second,
+		maxDeliver: maxDeliver,
 	}, nil
 }
 
@@ -136,6 +145,27 @@ func (c *JetStreamConsumer) FetchAndHandle(
 			continue
 		}
 		if handleErr := handler.Handle(ctx, event); handleErr != nil {
+			if errors.Is(handleErr, ErrPermanentCoverProcessing) {
+				if termErr := message.Term(); termErr != nil {
+					return handled, errors.Join(handleErr, fmt.Errorf("terminate cover message: %w", termErr))
+				}
+				continue
+			}
+			metadata, metadataErr := message.Metadata()
+			if metadataErr != nil {
+				return handled, errors.Join(handleErr, fmt.Errorf("read cover delivery metadata: %w", metadataErr))
+			}
+			if int(metadata.NumDelivered) >= c.maxDeliver {
+				if failureHandler, ok := handler.(CoverEventFailureHandler); ok {
+					if failureErr := failureHandler.MarkFailed(ctx, event, handleErr); failureErr != nil {
+						return handled, errors.Join(handleErr, fmt.Errorf("mark cover processing failed: %w", failureErr))
+					}
+				}
+				if termErr := message.Term(); termErr != nil {
+					return handled, errors.Join(handleErr, fmt.Errorf("terminate exhausted cover message: %w", termErr))
+				}
+				continue
+			}
 			if nakErr := message.NakWithDelay(c.retryDelay); nakErr != nil {
 				return handled, errors.Join(handleErr, fmt.Errorf("retry cover message: %w", nakErr))
 			}
