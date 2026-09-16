@@ -7,7 +7,10 @@ import (
 	"fmt"
 )
 
-var ErrCoverBookNotFound = errors.New("cover book not found")
+var (
+	ErrCoverBookNotFound   = errors.New("cover book not found")
+	ErrActiveCoverNotFound = errors.New("active book cover not found")
+)
 
 type PendingCover struct {
 	ID                string
@@ -85,4 +88,67 @@ func (r *CoverRepository) CreatePending(
 		return fmt.Errorf("commit pending cover: %w", err)
 	}
 	return nil
+}
+
+
+type ActiveCoverVariant struct {
+	CoverID    string
+	ObjectKey  string
+	ContentType string
+	UpdatedAt  string
+}
+
+func (r *CoverRepository) ActiveVariant(
+	ctx context.Context,
+	bookID int,
+	libraryID string,
+	variant string,
+	format string,
+) (ActiveCoverVariant, error) {
+	if bookID < 1 || libraryID == "" {
+		return ActiveCoverVariant{}, ErrActiveCoverNotFound
+	}
+
+	column := ""
+	contentType := ""
+	switch variant + "/" + format {
+	case "master/jpeg":
+		column, contentType = "master_object_key", "image/jpeg"
+	case "large/jpeg":
+		column, contentType = "large_jpeg_object_key", "image/jpeg"
+	case "large/webp":
+		column, contentType = "large_webp_object_key", "image/webp"
+	case "thumb/jpeg":
+		column, contentType = "thumb_jpeg_object_key", "image/jpeg"
+	case "thumb/webp":
+		column, contentType = "thumb_webp_object_key", "image/webp"
+	default:
+		return ActiveCoverVariant{}, ErrActiveCoverNotFound
+	}
+
+	var result ActiveCoverVariant
+	query := `
+		SELECT c.id, c.` + column + `, c.updated_at
+		FROM book_covers c
+		JOIN defta b ON b.id = c.book_id
+		WHERE c.book_id = ?
+		  AND c.library_id = ?
+		  AND c.status = 'READY'
+		  AND c.active = 1
+		  AND c.` + column + ` IS NOT NULL
+		  AND b.deleted_at IS NULL
+	`
+	err := r.db.QueryRowContext(ctx, query, bookID, libraryID).Scan(
+		&result.CoverID,
+		&result.ObjectKey,
+		&result.UpdatedAt,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ActiveCoverVariant{}, ErrActiveCoverNotFound
+	}
+	if err != nil {
+		return ActiveCoverVariant{}, fmt.Errorf("find active cover variant: %w", err)
+	}
+	result.ContentType = contentType
+	return result, nil
 }
