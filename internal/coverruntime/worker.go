@@ -59,8 +59,10 @@ func RunWorker(
 		return
 	}
 
+	processingRepository := repositories.NewCoverProcessingRepository(db).
+		WithSourceRetention(time.Duration(cfg.MinIOSourceRetentionHours) * time.Hour)
 	worker, err := services.NewBookCoverWorker(
-		repositories.NewCoverProcessingRepository(db),
+		processingRepository,
 		variantProcessor,
 		workerID,
 	)
