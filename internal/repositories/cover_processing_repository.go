@@ -22,11 +22,23 @@ const (
 )
 
 type CoverProcessingRepository struct {
-	db *sql.DB
+	db              *sql.DB
+	sourceRetention time.Duration
 }
 
 func NewCoverProcessingRepository(db *sql.DB) *CoverProcessingRepository {
-	return &CoverProcessingRepository{db: db}
+	return &CoverProcessingRepository{
+		db: db, sourceRetention: 24 * time.Hour,
+	}
+}
+
+func (r *CoverProcessingRepository) WithSourceRetention(
+	retention time.Duration,
+) *CoverProcessingRepository {
+	if retention > 0 {
+		r.sourceRetention = retention
+	}
+	return r
 }
 
 func (r *CoverProcessingRepository) Claim(
@@ -249,6 +261,22 @@ func (r *CoverProcessingRepository) Complete(
 		nowText, nowText, bookID, coverID,
 	); err != nil {
 		return fmt.Errorf("queue previous cover cleanup: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT OR IGNORE INTO cover_object_cleanup_jobs(
+			cover_id, library_id, object_key, object_kind,
+			available_at, created_at
+		)
+		SELECT id, library_id, source_object_key, 'SOURCE', ?, ?
+		FROM book_covers
+		WHERE id = ? AND library_id = ?
+	`,
+		now.Add(r.sourceRetention).UTC().Format(time.RFC3339Nano),
+		nowText,
+		coverID,
+		libraryID,
+	); err != nil {
+		return fmt.Errorf("queue processed cover source cleanup: %w", err)
 	}
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE book_covers
