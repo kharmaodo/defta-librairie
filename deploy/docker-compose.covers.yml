@@ -61,6 +61,46 @@ services:
     networks:
       - covers
 
+  cover-worker:
+    profiles: ["worker"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.cover-worker
+    depends_on:
+      minio:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      nats:
+        condition: service_healthy
+    environment:
+      COVERS_ENABLED: "true"
+      DB_PATH: /app/data/defta.db
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}
+      MINIO_USE_SSL: "false"
+      MINIO_BUCKET_COVERS: ${MINIO_BUCKET_COVERS:-book-covers}
+      NATS_URL: nats://nats:4222
+      NATS_USER: ${NATS_USER:?NATS_USER is required}
+      NATS_PASSWORD: ${NATS_PASSWORD:?NATS_PASSWORD is required}
+      NATS_COVERS_STREAM: ${NATS_COVERS_STREAM:-BOOK_COVERS}
+      NATS_COVERS_SUBJECT: ${NATS_COVERS_SUBJECT:-book.covers.process.v1}
+      NATS_COVERS_CONSUMER: ${NATS_COVERS_CONSUMER:-cover-worker-v1}
+      COVER_WORKER_MAX_DELIVER: ${COVER_WORKER_MAX_DELIVER:-5}
+    volumes:
+      - ../data:/app/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    restart: unless-stopped
+    networks:
+      - covers
+
 volumes:
   minio-covers-data:
   nats-jetstream-data:
