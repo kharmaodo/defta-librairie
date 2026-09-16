@@ -14,12 +14,12 @@ var (
 )
 
 type CoverCleanupJob struct {
-	ID        int64
-	CoverID   string
-	LibraryID string
-	ObjectKey string
+	ID         int64
+	CoverID    string
+	LibraryID  string
+	ObjectKey  string
 	ObjectKind string
-	Attempts  int
+	Attempts   int
 }
 
 type CoverCleanupRepository struct {

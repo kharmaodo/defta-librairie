@@ -34,8 +34,6 @@ required_architecture = (
     "sources/{library_id}/{book_id}/{cover_id}",
     "masters/{library_id}/{book_id}/{cover_id}",
     "linux/amd64",
-    "linux/arm64",
-    "linux/arm/v7",
 )
 for token in required_architecture:
     if token not in architecture:
