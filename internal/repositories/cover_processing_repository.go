@@ -163,6 +163,94 @@ func (r *CoverProcessingRepository) MarkFailed(
 	return nil
 }
 
+type ProcessedCover struct {
+	MasterObjectKey    string
+	LargeJPEGObjectKey string
+	LargeWebPObjectKey string
+	ThumbJPEGObjectKey string
+	ThumbWebPObjectKey string
+}
+
+func (r *CoverProcessingRepository) Complete(
+	ctx context.Context,
+	coverID string,
+	libraryID string,
+	workerID string,
+	processed ProcessedCover,
+	now time.Time,
+) error {
+	if coverID == "" || libraryID == "" || workerID == "" ||
+		processed.MasterObjectKey == "" ||
+		processed.LargeJPEGObjectKey == "" ||
+		processed.LargeWebPObjectKey == "" ||
+		processed.ThumbJPEGObjectKey == "" ||
+		processed.ThumbWebPObjectKey == "" {
+		return fmt.Errorf("invalid processed cover")
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin cover completion: %w", err)
+	}
+	defer tx.Rollback()
+
+	var bookID int
+	err = tx.QueryRowContext(ctx, `
+		SELECT book_id
+		FROM book_covers
+		WHERE id = ? AND library_id = ?
+		  AND status = 'PROCESSING' AND processing_by = ?
+	`, coverID, libraryID, workerID).Scan(&bookID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrCoverProcessingBusy
+	}
+	if err != nil {
+		return fmt.Errorf("inspect cover completion: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `
+		UPDATE book_covers
+		SET active = 0, updated_at = ?
+		WHERE book_id = ? AND active = 1 AND id <> ?
+	`, now.UTC().Format(time.RFC3339Nano), bookID, coverID); err != nil {
+		return fmt.Errorf("deactivate previous cover: %w", err)
+	}
+	result, err := tx.ExecContext(ctx, `
+		UPDATE book_covers
+		SET status = 'READY',
+		    master_object_key = ?,
+		    large_jpeg_object_key = ?,
+		    large_webp_object_key = ?,
+		    thumb_jpeg_object_key = ?,
+		    thumb_webp_object_key = ?,
+		    active = 1,
+		    error_code = NULL,
+		    processing_by = NULL,
+		    processing_until = NULL,
+		    updated_at = ?
+		WHERE id = ? AND library_id = ?
+		  AND status = 'PROCESSING' AND processing_by = ?
+	`,
+		processed.MasterObjectKey,
+		processed.LargeJPEGObjectKey,
+		processed.LargeWebPObjectKey,
+		processed.ThumbJPEGObjectKey,
+		processed.ThumbWebPObjectKey,
+		now.UTC().Format(time.RFC3339Nano),
+		coverID,
+		libraryID,
+		workerID,
+	)
+	if err != nil {
+		return fmt.Errorf("complete cover processing: %w", err)
+	}
+	if err = requireCoverProcessingLease(result); err != nil {
+		return err
+	}
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("commit cover completion: %w", err)
+	}
+	return nil
+}
+
 func requireCoverProcessingLease(result sql.Result) error {
 	affected, err := result.RowsAffected()
 	if err != nil {
