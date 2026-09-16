@@ -132,10 +132,11 @@ NATS JetStream. Les images sont épinglées, les données utilisent des volumes
 séparés et les services possèdent des health checks. Les ports d’administration
 ne doivent pas être publiés en production.
 
-Le worker doit encore recevoir une image OCI multiarchitecture `linux/amd64`,
-`linux/arm64` et `linux/arm/v7`. L’encodage WebP livré utilise un encodeur
-écrit entièrement en Go et ne dépend pas de `libwebp`. Les limites CPU et
-mémoire restent à documenter et à tester sur Raspberry Pi.
+Le worker possède une image OCI non-root construite pour `linux/amd64`,
+`linux/arm64` et `linux/arm/v7`. Le workflow utilise QEMU et buildx, publie
+sur GHCR lors d’un tag `v1.4.*` et construit les trois plateformes sur chaque
+pull request concernée. L’image est accompagnée d’un SBOM et d’une provenance.
+L’encodage WebP est écrit entièrement en Go et ne dépend pas de `libwebp`.
 
 ## Variables
 
@@ -237,8 +238,13 @@ reconnecte et respecte l’arrêt gracieux de l’application.
 
 Le test optionnel `COVER_PIPELINE_INTEGRATION=1` contrôle désormais le flux
 complet : upload, outbox, JetStream, consommation, génération, présence des cinq
-objets MinIO et activation de la couverture. La construction de l’image OCI
-multiarchitecture du worker reste nécessaire avant validation de l’incrément.
+objets MinIO et activation de la couverture.
+
+L’exécutable `cmd/cover-worker` permet un déploiement séparé. Son image est
+non-root, en lecture seule, sans capability et avec `no-new-privileges`. Le
+profil Compose `worker` attend MinIO, l’initialisation du bucket et NATS avant
+de démarrer. Les secrets restent injectés au runtime et ne sont jamais copiés
+dans l’image.
 
 ## Critères de validation de la fondation
 
