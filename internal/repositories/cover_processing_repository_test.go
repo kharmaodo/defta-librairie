@@ -292,4 +292,24 @@ func TestCoverProcessingCompleteActivatesNewCoverAtomically(t *testing.T) {
 	if cleanupJobs != 6 {
 		t.Fatalf("cleanup jobs=%d expected=6", cleanupJobs)
 	}
+
+	var retainedSources int
+	var availableAt string
+	if err := db.QueryRow(`
+		SELECT COUNT(*), MIN(available_at)
+		FROM cover_object_cleanup_jobs
+		WHERE cover_id='cover-new' AND object_kind='SOURCE'
+	`).Scan(&retainedSources, &availableAt); err != nil {
+		t.Fatalf("read retained source: %v", err)
+	}
+	expectedCleanup := time.Date(2026, 9, 17, 10, 0, 0, 0, time.UTC).
+		Format(time.RFC3339Nano)
+	if retainedSources != 1 || availableAt != expectedCleanup {
+		t.Fatalf(
+			"retained sources=%d available=%q expected=%q",
+			retainedSources,
+			availableAt,
+			expectedCleanup,
+		)
+	}
 }
