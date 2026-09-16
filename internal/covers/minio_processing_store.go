@@ -146,6 +146,24 @@ func (s *MinIOProcessingStore) OpenSource(
 	return reader, nil
 }
 
+func (s *MinIOProcessingStore) OpenVariant(
+	ctx context.Context,
+	key string,
+) (io.ReadCloser, error) {
+	if ctx == nil || !validGeneratedObjectKey(key) {
+		return nil, ErrInvalidObjectKey
+	}
+
+	reader, err := s.client.Open(ctx, s.bucket, key)
+	if err != nil {
+		return nil, fmt.Errorf("%w: open processed cover: %v", ErrStoreUnavailable, err)
+	}
+	if reader == nil {
+		return nil, fmt.Errorf("%w: empty processed cover reader", ErrStoreUnavailable)
+	}
+	return reader, nil
+}
+
 func (s *MinIOProcessingStore) PutVariant(
 	ctx context.Context,
 	key string,
@@ -203,6 +221,7 @@ func (s *MinIOProcessingStore) DeleteVariant(
 }
 
 var (
-	_ SourceReader = (*MinIOProcessingStore)(nil)
-	_ VariantStore = (*MinIOProcessingStore)(nil)
+	_ SourceReader  = (*MinIOProcessingStore)(nil)
+	_ VariantReader = (*MinIOProcessingStore)(nil)
+	_ VariantStore  = (*MinIOProcessingStore)(nil)
 )
