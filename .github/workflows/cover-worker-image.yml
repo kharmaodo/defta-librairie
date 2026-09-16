@@ -1,0 +1,65 @@
+name: Build book cover worker image
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing v1.4 release tag to build
+        required: true
+        default: v1.4.0
+  push:
+    tags:
+      - "v1.4.*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-22.04
+    env:
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/defta-cover-worker
+      IMAGE_TAG: ${{ inputs.tag || github.ref_name }}
+
+    steps:
+      - name: Check out the tagged source
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.IMAGE_TAG }}
+
+      - name: Verify the release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$IMAGE_TAG" in
+            v1.4.*) ;;
+            *) echo "Tag invalide: $IMAGE_TAG" >&2; exit 1 ;;
+          esac
+          test "$(git describe --tags --exact-match)" = "$IMAGE_TAG"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish the worker
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.cover-worker
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ${{ env.IMAGE_NAME }}:1.4
