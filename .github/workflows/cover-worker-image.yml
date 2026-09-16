@@ -60,9 +60,6 @@ jobs:
           esac
           test "$(git describe --tags --exact-match)" = "$IMAGE_TAG"
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -74,12 +71,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build the worker on every review and publish on demand
+      - name: Build the Linux AMD64 worker and publish on demand
         uses: docker/build-push-action@v6
         with:
           context: .
           file: deploy/Dockerfile.cover-worker
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/amd64
           push: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.publish == true) }}
           provenance: mode=max
           sbom: true
