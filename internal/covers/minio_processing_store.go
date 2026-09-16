@@ -200,6 +200,26 @@ func (s *MinIOProcessingStore) PutVariant(
 	return nil
 }
 
+func (s *MinIOProcessingStore) DeleteObject(
+	ctx context.Context,
+	key string,
+) error {
+	if ctx == nil || (!validObjectKey(key) && !validGeneratedObjectKey(key)) {
+		return ErrInvalidObjectKey
+	}
+
+	err := s.client.RemoveObject(
+		ctx,
+		s.bucket,
+		key,
+		minio.RemoveObjectOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf("%w: delete cover object: %v", ErrStoreUnavailable, err)
+	}
+	return nil
+}
+
 func (s *MinIOProcessingStore) DeleteVariant(
 	ctx context.Context,
 	key string,
@@ -224,4 +244,5 @@ var (
 	_ SourceReader  = (*MinIOProcessingStore)(nil)
 	_ VariantReader = (*MinIOProcessingStore)(nil)
 	_ VariantStore  = (*MinIOProcessingStore)(nil)
+	_ ObjectDeleter = (*MinIOProcessingStore)(nil)
 )
