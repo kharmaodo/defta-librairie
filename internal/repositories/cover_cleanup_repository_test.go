@@ -33,8 +33,24 @@ func openCoverCleanupTestDB(t *testing.T) *sql.DB {
 			last_error TEXT,
 			created_at TEXT NOT NULL
 		);
+
+		CREATE TABLE book_covers (
+			id TEXT PRIMARY KEY,
+			book_id TEXT NOT NULL,
+			library_id TEXT NOT NULL,
+			status TEXT NOT NULL,
+			source_object_key TEXT,
+			master_object_key TEXT,
+			large_jpeg_object_key TEXT,
+			large_webp_object_key TEXT,
+			thumb_jpeg_object_key TEXT,
+			thumb_webp_object_key TEXT,
+			active INTEGER NOT NULL DEFAULT 0,
+			updated_at TEXT NOT NULL
+		);
+
 	`); err != nil {
-		t.Fatalf("create cleanup queue: %v", err)
+		t.Fatalf("create cover cleanup schema: %v", err)
 	}
 	return db
 }
@@ -157,5 +173,96 @@ func TestCoverCleanupFailureReleasesLeaseAndDelaysRetry(t *testing.T) {
 			lastError,
 			lockedBy,
 		)
+	}
+}
+
+func TestCoverCleanupReconcileIsIdempotentAndPreservesActiveVariants(t *testing.T) {
+	db := openCoverCleanupTestDB(t)
+	now := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
+	updatedAt := now.Add(-48 * time.Hour).Format(time.RFC3339Nano)
+
+	if _, err := db.Exec(`
+		INSERT INTO book_covers(
+			id, book_id, library_id, status, source_object_key,
+			master_object_key, large_jpeg_object_key,
+			large_webp_object_key, thumb_jpeg_object_key,
+			thumb_webp_object_key, active, updated_at
+		) VALUES
+		(
+			'cover-old', 'book-1', 'library-1', 'READY',
+			'sources/library-1/book-1/cover-old.jpg',
+			'masters/library-1/book-1/cover-old/master.jpg',
+			'variants/library-1/book-1/cover-old/large.jpg',
+			'variants/library-1/book-1/cover-old/large.webp',
+			'variants/library-1/book-1/cover-old/thumb.jpg',
+			'variants/library-1/book-1/cover-old/thumb.webp',
+			0, ?
+		),
+		(
+			'cover-active', 'book-1', 'library-1', 'READY',
+			'sources/library-1/book-1/cover-active.jpg',
+			'masters/library-1/book-1/cover-active/master.jpg',
+			'variants/library-1/book-1/cover-active/large.jpg',
+			'variants/library-1/book-1/cover-active/large.webp',
+			'variants/library-1/book-1/cover-active/thumb.jpg',
+			'variants/library-1/book-1/cover-active/thumb.webp',
+			1, ?
+		),
+		(
+			'cover-failed', 'book-1', 'library-1', 'FAILED',
+			'sources/library-1/book-1/cover-failed.png',
+			NULL, NULL, NULL, NULL, NULL,
+			0, ?
+		)
+	`, updatedAt, updatedAt, updatedAt); err != nil {
+		t.Fatalf("insert covers: %v", err)
+	}
+
+	repository := NewCoverCleanupRepository(db)
+	inserted, err := repository.Reconcile(
+		context.Background(),
+		now,
+		now.Add(-24*time.Hour),
+	)
+	if err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+	if inserted != 8 {
+		t.Fatalf("inserted=%d want=8", inserted)
+	}
+
+	inserted, err = repository.Reconcile(
+		context.Background(),
+		now,
+		now.Add(-24*time.Hour),
+	)
+	if err != nil {
+		t.Fatalf("second reconcile: %v", err)
+	}
+	if inserted != 0 {
+		t.Fatalf("second inserted=%d want=0", inserted)
+	}
+
+	var jobs int
+	if err = db.QueryRow(
+		"SELECT COUNT(*) FROM cover_object_cleanup_jobs",
+	).Scan(&jobs); err != nil {
+		t.Fatalf("count cleanup jobs: %v", err)
+	}
+	if jobs != 8 {
+		t.Fatalf("jobs=%d want=8", jobs)
+	}
+
+	var activeVariants int
+	if err = db.QueryRow(`
+		SELECT COUNT(*)
+		FROM cover_object_cleanup_jobs
+		WHERE object_key LIKE 'masters/library-1/book-1/cover-active/%'
+		   OR object_key LIKE 'variants/library-1/book-1/cover-active/%'
+	`).Scan(&activeVariants); err != nil {
+		t.Fatalf("count active variants: %v", err)
+	}
+	if activeVariants != 0 {
+		t.Fatalf("active variant cleanup jobs=%d want=0", activeVariants)
 	}
 }

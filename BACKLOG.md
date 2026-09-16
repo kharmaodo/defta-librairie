@@ -166,7 +166,7 @@ supervisé par l’exécutable natif de l’application.
 | 2 | Upload et stockage source | Client MinIO testable, bucket privé, JPEG/PNG réels, limites et source temporaire | Réalisé |
 | 3 | Messagerie et worker | Publisher outbox, stream JetStream, consommateur durable, reprises et idempotence | Réalisé |
 | 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels, image OCI Linux AMD64 et exécutable Windows AMD64 | Réalisé |
-| 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | En cours |
+| 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | À valider |
 | 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | À réaliser |
 | 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | À réaliser |
 
