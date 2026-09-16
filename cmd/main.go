@@ -91,6 +91,7 @@ func main() {
 	bookService := services.NewBookService(repositories.NewBookRepository(database.DB))
 	bookHandler := handlers.NewBookManagementHandler(bookService)
 	bookCoverHandler := handlers.NewBookCoverHandler(nil, false, cfg.CoverMaxBytes)
+	bookCoverReadHandler := handlers.NewBookCoverReadHandler(nil, false)
 	if cfg.CoversEnabled {
 		coverStore, coverErr := covers.NewMinIOStore(
 			cfg.MinIOEndpoint, cfg.MinIOAccessKey, cfg.MinIOSecretKey,
@@ -107,10 +108,23 @@ func main() {
 		if coverErr != nil {
 			log.Fatalf("Initialisation upload couvertures impossible : %v", coverErr)
 		}
+		coverRepository := repositories.NewCoverRepository(database.DB)
 		coverService := services.NewBookCoverService(
-			true, bookService, repositories.NewCoverRepository(database.DB), coverUploader,
+			true, bookService, coverRepository, coverUploader,
 		)
 		bookCoverHandler = handlers.NewBookCoverHandler(coverService, true, cfg.CoverMaxBytes)
+
+		coverReader, coverErr := covers.NewMinIOProcessingStore(
+			cfg.MinIOEndpoint, cfg.MinIOAccessKey, cfg.MinIOSecretKey,
+			cfg.MinIOBucketCovers, cfg.MinIOUseSSL,
+		)
+		if coverErr != nil {
+			log.Fatalf("Initialisation lecture couvertures impossible : %v", coverErr)
+		}
+		bookCoverReadHandler = handlers.NewBookCoverReadHandler(
+			services.NewBookCoverReadService(bookService, coverRepository, coverReader),
+			true,
+		)
 	}
 	inventoryService := services.NewInventoryService(repositories.NewInventoryRepository(database.DB))
 	inventoryHandler := handlers.NewInventoryHandler(inventoryService)
@@ -200,6 +214,7 @@ func main() {
 	mux.Handle("PUT /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Update)))
 	mux.Handle("DELETE /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Delete)))
 	mux.Handle("POST /api/manage/books/{id}/cover", bookManagers(http.HandlerFunc(bookCoverHandler.Upload)))
+	mux.Handle("GET /api/manage/books/{id}/cover", bookManagers(http.HandlerFunc(bookCoverReadHandler.Serve)))
 	mux.Handle("GET /api/manage/inventory", bookManagers(http.HandlerFunc(inventoryHandler.List)))
 	mux.Handle("GET /api/manage/books/{id}/inventory", bookManagers(http.HandlerFunc(inventoryHandler.Get)))
 	mux.Handle("POST /api/manage/books/{id}/inventory/entries", bookManagers(http.HandlerFunc(inventoryHandler.Entry)))
