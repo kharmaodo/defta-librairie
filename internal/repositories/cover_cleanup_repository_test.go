@@ -101,3 +101,61 @@ func TestCoverCleanupClaimIsExclusiveAndRecoverable(t *testing.T) {
 		t.Fatal("cleanup job was not completed")
 	}
 }
+
+func TestCoverCleanupFailureReleasesLeaseAndDelaysRetry(t *testing.T) {
+	db := openCoverCleanupTestDB(t)
+	now := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
+	if _, err := db.Exec(`
+		INSERT INTO cover_object_cleanup_jobs(
+			cover_id, library_id, object_key, object_kind,
+			available_at, created_at
+		) VALUES ('cover-2', 'library-1',
+		          'variants/library-1/7/cover-2/thumb.webp',
+		          'GENERATED', ?, ?)
+	`, now.Format(time.RFC3339Nano), now.Format(time.RFC3339Nano)); err != nil {
+		t.Fatalf("insert job: %v", err)
+	}
+
+	repository := NewCoverCleanupRepository(db)
+	job, err := repository.ClaimNext(
+		context.Background(),
+		"worker-a",
+		now,
+		now.Add(time.Minute),
+	)
+	if err != nil {
+		t.Fatalf("claim: %v", err)
+	}
+	retryAt := now.Add(30 * time.Second)
+	if err = repository.MarkFailed(
+		context.Background(),
+		job.ID,
+		"worker-a",
+		retryAt,
+		"minio unavailable",
+	); err != nil {
+		t.Fatalf("mark failed: %v", err)
+	}
+
+	var attempts int
+	var availableAt, lastError string
+	var lockedBy sql.NullString
+	if err = db.QueryRow(`
+		SELECT attempts, available_at, last_error, locked_by
+		FROM cover_object_cleanup_jobs WHERE id=?
+	`, job.ID).Scan(&attempts, &availableAt, &lastError, &lockedBy); err != nil {
+		t.Fatalf("read retry: %v", err)
+	}
+	if attempts != 1 ||
+		availableAt != retryAt.Format(time.RFC3339Nano) ||
+		lastError != "minio unavailable" ||
+		lockedBy.Valid {
+		t.Fatalf(
+			"attempts=%d available=%q error=%q locked=%v",
+			attempts,
+			availableAt,
+			lastError,
+			lockedBy,
+		)
+	}
+}
