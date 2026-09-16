@@ -249,12 +249,16 @@ func TestCoverUploadOutboxJetStreamIntegration(t *testing.T) {
 	if handled != 1 {
 		t.Fatalf("handled count=%d", handled)
 	}
+	if err = consumer.Close(); err != nil {
+		t.Fatalf("close JetStream consumer: %v", err)
+	}
+	consumer = nil
 
 	var (
-		status                                   string
-		active                                   int
-		masterKey, largeJPEGKey, largeWebPKey   string
-		thumbJPEGKey, thumbWebPKey               string
+		status                                string
+		active                                int
+		masterKey, largeJPEGKey, largeWebPKey string
+		thumbJPEGKey, thumbWebPKey            string
 	)
 	if err = db.QueryRowContext(ctx, `
 		SELECT status, active, master_object_key,
