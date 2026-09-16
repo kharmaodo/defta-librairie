@@ -11,6 +11,7 @@ import (
 )
 
 type CoverCleanupStore interface {
+	Reconcile(ctx context.Context, now, sourceBefore time.Time) (int64, error)
 	ClaimNext(
 		ctx context.Context,
 		workerID string,
@@ -33,8 +34,9 @@ type CoverCleanupService struct {
 	workerID      string
 	leaseDuration time.Duration
 	baseRetry     time.Duration
-	maxRetry      time.Duration
-	now           func() time.Time
+	maxRetry       time.Duration
+	sourceRetention time.Duration
+	now            func() time.Time
 }
 
 func NewCoverCleanupService(
@@ -49,9 +51,34 @@ func NewCoverCleanupService(
 		store: store, objects: objects, workerID: workerID,
 		leaseDuration: time.Minute,
 		baseRetry:     30 * time.Second,
-		maxRetry:      time.Hour,
-		now:           time.Now,
+		maxRetry:        time.Hour,
+		sourceRetention: 24 * time.Hour,
+		now:             time.Now,
 	}, nil
+}
+
+func (s *CoverCleanupService) WithSourceRetention(
+	retention time.Duration,
+) *CoverCleanupService {
+	if retention > 0 {
+		s.sourceRetention = retention
+	}
+	return s
+}
+
+func (s *CoverCleanupService) Reconcile(
+	ctx context.Context,
+) (int64, error) {
+	now := s.now().UTC()
+	created, err := s.store.Reconcile(
+		ctx,
+		now,
+		now.Add(-s.sourceRetention),
+	)
+	if err != nil {
+		return 0, fmt.Errorf("reconcile cover cleanup: %w", err)
+	}
+	return created, nil
 }
 
 func (s *CoverCleanupService) CleanAvailable(
