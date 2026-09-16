@@ -90,12 +90,11 @@ func (r *CoverRepository) CreatePending(
 	return nil
 }
 
-
 type ActiveCoverVariant struct {
-	CoverID    string
-	ObjectKey  string
+	CoverID     string
+	ObjectKey   string
 	ContentType string
-	UpdatedAt  string
+	UpdatedAt   string
 }
 
 func (r *CoverRepository) ActiveVariant(

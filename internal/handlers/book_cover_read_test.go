@@ -32,9 +32,9 @@ func (f *fakeBookCoverReader) Open(
 
 func TestBookCoverReadStreamsPrivateRepresentation(t *testing.T) {
 	reader := &fakeBookCoverReader{result: services.ActiveBookCover{
-		Body: io.NopCloser(bytes.NewBufferString("webp-cover")),
+		Body:        io.NopCloser(bytes.NewBufferString("webp-cover")),
 		ContentType: "image/webp",
-		ETag: "\"cover-etag\"",
+		ETag:        "\"cover-etag\"",
 	}}
 	handler := NewBookCoverReadHandler(reader, true)
 	request := httptest.NewRequest(
@@ -63,9 +63,9 @@ func TestBookCoverReadStreamsPrivateRepresentation(t *testing.T) {
 
 func TestBookCoverReadHonorsConditionalRequest(t *testing.T) {
 	reader := &fakeBookCoverReader{result: services.ActiveBookCover{
-		Body: io.NopCloser(bytes.NewBufferString("not-written")),
+		Body:        io.NopCloser(bytes.NewBufferString("not-written")),
 		ContentType: "image/jpeg",
-		ETag: "\"cover-etag\"",
+		ETag:        "\"cover-etag\"",
 	}}
 	handler := NewBookCoverReadHandler(reader, true)
 	request := httptest.NewRequest(http.MethodGet, "/api/manage/books/42/cover", nil)

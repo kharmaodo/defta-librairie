@@ -68,9 +68,8 @@ func (s *BookCoverReadService) Open(
 		stored.CoverID + "\x00" + stored.ObjectKey + "\x00" + stored.UpdatedAt,
 	))
 	return ActiveBookCover{
-		Body: body,
+		Body:        body,
 		ContentType: stored.ContentType,
-		ETag: "\"" + hex.EncodeToString(digest[:]) + "\"",
+		ETag:        "\"" + hex.EncodeToString(digest[:]) + "\"",
 	}, nil
 }
-
