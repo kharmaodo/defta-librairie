@@ -48,7 +48,11 @@ require(
 )
 require(
     "cmd/cover_worker_runtime.go",
-    ("runBookCoverWorker", "NewJetStreamConsumer", "NewImageProcessor"),
+    ("runBookCoverWorker", "coverruntime.RunWorker"),
+)
+require(
+    "internal/coverruntime/worker.go",
+    ("RunWorker", "NewJetStreamConsumer", "NewImageProcessor", "NewBookCoverWorker"),
 )
 require(
     "cmd/main.go",
