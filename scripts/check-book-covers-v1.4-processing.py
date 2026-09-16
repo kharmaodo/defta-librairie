@@ -80,7 +80,11 @@ require(
 )
 require(
     ".github/workflows/cover-worker-image.yml",
-    ("linux/amd64,linux/arm64,linux/arm/v7", "setup-qemu-action", "sbom: true"),
+    ("platforms: linux/amd64", "setup-buildx-action", "sbom: true"),
+)
+require(
+    ".github/workflows/release-binaries.yml",
+    ("GOOS=windows GOARCH=amd64", "gcc-mingw-w64-x86-64"),
 )
 require(
     ".dockerignore",
@@ -95,5 +99,5 @@ if errors:
 
 print(
     "OK: lecture privée, recadrage 2:3, variantes JPEG/WebP, compensation MinIO, "
-    "worker runtime, image OCI multiarchitecture et intégration complète contrôlés."
+    "worker runtime, image OCI Linux AMD64, exécutable Windows AMD64 et intégration complète contrôlés."
 )
