@@ -33,7 +33,7 @@ require(
 )
 require(
     "internal/covers/jetstream_publisher.go",
-    ("Nats-Msg-Id", "FileStorage", "PublishMsg", "Drain"),
+    ("MsgIdHdr", "FileStorage", "PublishMsg", "Drain"),
 )
 require(
     "internal/covers/jetstream_consumer.go",
@@ -70,7 +70,7 @@ require(
 )
 require(
     "internal/services/cover_pipeline_integration_test.go",
-    ("COVER_PIPELINE_INTEGRATION", "published_at", "Nats-Msg-Id"),
+    ("COVER_PIPELINE_INTEGRATION", "published_at", "MsgIdHdr"),
 )
 require(
     "internal/config/config.go",
