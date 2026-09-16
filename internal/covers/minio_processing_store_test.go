@@ -246,3 +246,21 @@ func TestMinIOProcessingStoreRejectsSourceAsVariant(t *testing.T) {
 		t.Fatalf("open variant err=%v", err)
 	}
 }
+
+func TestMinIOProcessingStoreDeletesQueuedSourceOrVariant(t *testing.T) {
+	client := &processingMinIOStub{}
+	store, _ := newMinIOProcessingStore(client, "book-covers")
+	keys := []string{
+		"sources/library-1/42/cover-1.jpg",
+		"variants/library-1/42/cover-1/thumb.webp",
+	}
+
+	for _, key := range keys {
+		if err := store.DeleteObject(context.Background(), key); err != nil {
+			t.Fatalf("delete %s: %v", key, err)
+		}
+		if client.removedKey != key {
+			t.Fatalf("removed=%q expected=%q", client.removedKey, key)
+		}
+	}
+}
