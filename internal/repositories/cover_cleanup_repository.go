@@ -30,6 +30,65 @@ func NewCoverCleanupRepository(db *sql.DB) *CoverCleanupRepository {
 	return &CoverCleanupRepository{db: db}
 }
 
+func (r *CoverCleanupRepository) Reconcile(
+	ctx context.Context,
+	now time.Time,
+	sourceBefore time.Time,
+) (int64, error) {
+	nowText := now.UTC().Format(time.RFC3339Nano)
+	sourceBeforeText := sourceBefore.UTC().Format(time.RFC3339Nano)
+	result, err := r.db.ExecContext(ctx, `
+		INSERT OR IGNORE INTO cover_object_cleanup_jobs(
+			cover_id, library_id, object_key, object_kind,
+			available_at, created_at
+		)
+		SELECT id, library_id, source_object_key, 'SOURCE', ?, ?
+		FROM book_covers
+		WHERE status IN ('READY', 'FAILED')
+		  AND updated_at <= ?
+		UNION ALL
+		SELECT id, library_id, master_object_key, 'GENERATED', ?, ?
+		FROM book_covers
+		WHERE status = 'READY' AND active = 0
+		  AND master_object_key IS NOT NULL
+		UNION ALL
+		SELECT id, library_id, large_jpeg_object_key, 'GENERATED', ?, ?
+		FROM book_covers
+		WHERE status = 'READY' AND active = 0
+		  AND large_jpeg_object_key IS NOT NULL
+		UNION ALL
+		SELECT id, library_id, large_webp_object_key, 'GENERATED', ?, ?
+		FROM book_covers
+		WHERE status = 'READY' AND active = 0
+		  AND large_webp_object_key IS NOT NULL
+		UNION ALL
+		SELECT id, library_id, thumb_jpeg_object_key, 'GENERATED', ?, ?
+		FROM book_covers
+		WHERE status = 'READY' AND active = 0
+		  AND thumb_jpeg_object_key IS NOT NULL
+		UNION ALL
+		SELECT id, library_id, thumb_webp_object_key, 'GENERATED', ?, ?
+		FROM book_covers
+		WHERE status = 'READY' AND active = 0
+		  AND thumb_webp_object_key IS NOT NULL
+	`,
+		nowText, nowText, sourceBeforeText,
+		nowText, nowText,
+		nowText, nowText,
+		nowText, nowText,
+		nowText, nowText,
+		nowText, nowText,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("reconcile cover cleanup jobs: %w", err)
+	}
+	created, err := result.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("inspect reconciled cover cleanup jobs: %w", err)
+	}
+	return created, nil
+}
+
 func (r *CoverCleanupRepository) ClaimNext(
 	ctx context.Context,
 	workerID string,
