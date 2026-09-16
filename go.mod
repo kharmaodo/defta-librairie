@@ -1,6 +1,6 @@
 module defta-librairie
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/joho/godotenv v1.5.1
@@ -12,7 +12,11 @@ require github.com/golang-jwt/jwt/v5 v5.3.1
 
 require github.com/mattn/go-sqlite3 v1.14.48
 
-require golang.org/x/crypto v0.55.0
+require (
+	github.com/HugoSmits86/nativewebp v1.3.0
+	golang.org/x/crypto v0.55.0
+	golang.org/x/image v0.46.0
+)
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -31,7 +35,7 @@ require (
 	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	gopkg.in/ini.v1 v1.67.3 // indirect
 )
