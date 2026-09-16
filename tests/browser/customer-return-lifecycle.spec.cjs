@@ -130,22 +130,25 @@ test('refund and credit note restore stock and remain audited', async ({page, re
   await saleLine.locator('[name=quantity]').fill('2');
   const createdResponse = page.waitForResponse(response =>
     response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/manage/sales');
-  const refreshedResponse = page.waitForResponse(response => {
+  await saleForm.locator('button[type=submit]').click();
+  const created = await createdResponse;
+  expect(created.status(), await created.text()).toBe(201);
+  await expect(saleForm).not.toBeVisible();
+
+  // The automatic post-create refresh may be superseded by another dashboard
+  // reload. Wait for it to settle, then request the deterministic library scope.
+  await page.waitForLoadState('networkidle');
+  await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
+  const sale = page.locator('#sales-body tr').filter({hasText: customer});
+  const filteredSalesResponse = page.waitForResponse(response => {
     const url = new URL(response.url());
     return response.request().method() === 'GET'
       && url.pathname === '/api/manage/sales'
       && url.searchParams.get('libraryId') === library.id;
   });
-  await saleForm.locator('button[type=submit]').click();
-  const created = await createdResponse;
-  expect(created.status(), await created.text()).toBe(201);
-  const refreshed = await refreshedResponse;
-  expect(refreshed.status(), await refreshed.text()).toBe(200);
-  await expect(saleForm).not.toBeVisible();
-  await expect(page.locator('#sales-body tr').filter({hasText: customer})).toHaveCount(1);
-  await page.locator('#sale-filters [name=libraryId]').selectOption(library.id);
   await page.locator('#sale-filters button[type=submit]').click();
-  const sale = page.locator('#sales-body tr').filter({hasText: customer});
+  const filteredSales = await filteredSalesResponse;
+  expect(filteredSales.status(), await filteredSales.text()).toBe(200);
   await expect(sale).toHaveCount(1);
   page.once('dialog', dialog => dialog.accept());
   await sale.getByRole('button', {name: 'Confirmer'}).click();
