@@ -54,8 +54,8 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	if err = db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&migrationsCount); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if migrationsCount != 26 {
-		t.Fatalf("expected 26 migrations, got %d", migrationsCount)
+	if migrationsCount != 27 {
+		t.Fatalf("expected 27 migrations, got %d", migrationsCount)
 	}
 
 	var assignedBooks int
@@ -167,6 +167,13 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	}
 	if outboxLeaseColumns != 2 {
 		t.Fatalf("expected cover outbox lease columns, got %d", outboxLeaseColumns)
+	}
+	var coverProcessingColumns int
+	if err = db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('book_covers') WHERE name IN ('processing_by','processing_until','processing_attempts')`).Scan(&coverProcessingColumns); err != nil {
+		t.Fatalf("inspect cover processing columns: %v", err)
+	}
+	if coverProcessingColumns != 3 {
+		t.Fatalf("expected cover processing columns, got %d", coverProcessingColumns)
 	}
 
 	if _, err = db.Exec("UPDATE defta SET library_id = 'missing-library' WHERE id = 1"); err == nil {
