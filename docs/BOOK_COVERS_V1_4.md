@@ -261,8 +261,17 @@ paramètre, la représentation `large/jpeg` est utilisée. Les réponses défini
 `304 Not Modified`.
 
 Une couverture absente, inactive, non prête ou hors périmètre n’expose aucun
-objet et produit une réponse contrôlée. Le remplacement, la rétention et le
-nettoyage des anciennes versions restent les tranches suivantes de l’incrément.
+objet et produit une réponse contrôlée.
+
+Lorsqu’une nouvelle couverture devient `READY`, la même transaction SQLite
+enregistre chaque objet de l’ancienne couverture dans
+`cover_object_cleanup_jobs`, désactive l’ancienne version puis active la
+nouvelle. Si la mise en file échoue, toute la transaction est annulée et
+l’ancienne couverture reste active. Le nettoyage MinIO est ainsi différé sans
+fenêtre d’indisponibilité ni risque d’oubli silencieux.
+
+L’exécution récupérable des travaux de nettoyage et la rétention de la source
+active restent les tranches suivantes de l’incrément.
 
 ## Critères de validation de la fondation
 
