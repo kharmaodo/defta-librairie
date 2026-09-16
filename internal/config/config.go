@@ -30,6 +30,7 @@ type Config struct {
 	MinIOSecretKey    string
 	MinIOUseSSL       bool
 	MinIOBucketCovers string
+	MinIOSourceRetentionHours int
 	CoverMaxBytes     int64
 	CoverMaxPixels    uint64
 	NATSURL           string
@@ -65,6 +66,7 @@ func Load() (*Config, error) {
 		MinIOSecretKey:    getEnv("MINIO_SECRET_KEY", ""),
 		MinIOUseSSL:       getEnvBool("MINIO_USE_SSL", false),
 		MinIOBucketCovers: getEnv("MINIO_BUCKET_COVERS", "book-covers"),
+		MinIOSourceRetentionHours: getEnvInt("MINIO_SOURCE_RETENTION_HOURS", 24),
 		CoverMaxBytes:     getEnvPositiveInt64("COVER_MAX_BYTES", 5*1024*1024),
 		CoverMaxPixels:    uint64(getEnvPositiveInt64("COVER_MAX_PIXELS", 24_000_000)),
 		NATSURL:           getEnv("NATS_URL", "nats://localhost:4222"),
