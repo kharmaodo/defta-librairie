@@ -15,6 +15,11 @@ import (
 
 const multipartEnvelopeAllowance int64 = 64 * 1024
 
+type bookCoverStatusService interface {
+	Status(ctx context.Context, claims *auth.Claims, bookID int) (services.BookCoverStatus, error)
+	Retry(ctx context.Context, claims *auth.Claims, bookID int) (services.BookCoverStatus, error)
+}
+
 type bookCoverUploader interface {
 	Upload(
 		ctx context.Context,
@@ -26,9 +31,10 @@ type bookCoverUploader interface {
 }
 
 type BookCoverHandler struct {
-	service  bookCoverUploader
-	enabled  bool
-	maxBytes int64
+	service       bookCoverUploader
+	statusService bookCoverStatusService
+	enabled       bool
+	maxBytes      int64
 }
 
 func NewBookCoverHandler(
@@ -39,7 +45,11 @@ func NewBookCoverHandler(
 	if maxBytes < 1 {
 		maxBytes = covers.DefaultMaxBytes
 	}
-	return &BookCoverHandler{service: service, enabled: enabled, maxBytes: maxBytes}
+	handler := &BookCoverHandler{service: service, enabled: enabled, maxBytes: maxBytes}
+	if statusService, ok := service.(bookCoverStatusService); ok {
+		handler.statusService = statusService
+	}
+	return handler
 }
 
 func (h *BookCoverHandler) Upload(w http.ResponseWriter, r *http.Request) {
@@ -100,6 +110,49 @@ func (h *BookCoverHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	writeAuthJSON(w, http.StatusAccepted, pending)
 }
 
+func (h *BookCoverHandler) Status(w http.ResponseWriter, r *http.Request) {
+	if !h.enabled || h.statusService == nil {
+		writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"error": "covers_disabled", "message": "Book cover uploads are disabled",
+		})
+		return
+	}
+	id, err := bookID(r)
+	if err != nil {
+		writeBookCoverError(w, services.ErrInvalidBook)
+		return
+	}
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	status, err := h.statusService.Status(r.Context(), claims, id)
+	if err != nil {
+		writeBookCoverError(w, err)
+		return
+	}
+	writeAuthJSON(w, http.StatusOK, status)
+}
+
+func (h *BookCoverHandler) Retry(w http.ResponseWriter, r *http.Request) {
+	if !h.enabled || h.statusService == nil {
+		writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"error": "covers_disabled", "message": "Book cover uploads are disabled",
+		})
+		return
+	}
+	id, err := bookID(r)
+	if err != nil {
+		writeBookCoverError(w, services.ErrInvalidBook)
+		return
+	}
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	status, err := h.statusService.Retry(r.Context(), claims, id)
+	if err != nil {
+		writeBookCoverError(w, err)
+		return
+	}
+	w.Header().Set("Location", "/api/manage/books/"+strconv.Itoa(id)+"/cover/status")
+	writeAuthJSON(w, http.StatusAccepted, status)
+}
+
 func singleCoverFile(form *multipart.Form) bool {
 	if form == nil || len(form.File) != 1 {
 		return false
@@ -130,6 +183,14 @@ func writeBookCoverError(w http.ResponseWriter, err error) {
 	case errors.Is(err, repositories.ErrActiveCoverNotFound):
 		writeAuthJSON(w, http.StatusNotFound, map[string]string{
 			"error": "cover_not_found", "message": "Active book cover not found",
+		})
+	case errors.Is(err, repositories.ErrBookCoverNotFound):
+		writeAuthJSON(w, http.StatusNotFound, map[string]string{
+			"error": "cover_not_found", "message": "Book cover not found",
+		})
+	case errors.Is(err, repositories.ErrBookCoverNotRetryable):
+		writeAuthJSON(w, http.StatusConflict, map[string]string{
+			"error": "cover_not_retryable", "message": "Book cover cannot be retried",
 		})
 	case errors.Is(err, services.ErrBookForbidden):
 		writeAuthJSON(w, http.StatusForbidden, map[string]string{
