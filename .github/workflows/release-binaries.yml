@@ -13,7 +13,6 @@ permissions:
 
 jobs:
   build-and-publish:
-    # Ubuntu 22.04 keeps a conservative glibc baseline for Raspberry Pi OS.
     runs-on: ubuntu-22.04
     env:
       RELEASE_TAG: ${{ inputs.tag }}
@@ -36,8 +35,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             gcc-mingw-w64-x86-64 \
-            gcc-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabihf \
             zip
 
       - name: Verify the tag
@@ -69,26 +66,18 @@ jobs:
             (cd "$staging" && zip -qr "$GITHUB_WORKSPACE/dist/$name.zip" "$name")
           }
 
-          package_linux() {
-            local arch="$1" compiler="$2" goarm="$3"
-            local name="defta-librairie-${version}-linux-${arch}"
+          package_linux_amd64() {
+            local name="defta-librairie-${version}-linux-amd64"
             mkdir -p "$staging/$name"
-            if [ -n "$goarm" ]; then
-              CGO_ENABLED=1 GOOS=linux GOARCH=arm GOARM="$goarm" CC="$compiler" \
-                go build -trimpath -tags fts5 -ldflags="-s -w" \
-                  -o "$staging/$name/defta-librairie" ./cmd
-            else
-              CGO_ENABLED=1 GOOS=linux GOARCH=arm64 CC="$compiler" \
-                go build -trimpath -tags fts5 -ldflags="-s -w" \
-                  -o "$staging/$name/defta-librairie" ./cmd
-            fi
+            CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
+              go build -trimpath -tags fts5 -ldflags="-s -w" \
+                -o "$staging/$name/defta-librairie" ./cmd
             cp -R templates static .env.example README.md "$staging/$name/"
             tar -C "$staging" -czf "dist/$name.tar.gz" "$name"
           }
 
           package_windows
-          package_linux arm64 aarch64-linux-gnu-gcc ""
-          package_linux armv7 arm-linux-gnueabihf-gcc 7
+          package_linux_amd64
 
           printf 'VERSION=%s\nBUILD_DATE=%s\n' "$version" "$build_date" > dist/BUILD-INFO.txt
           (cd dist && sha256sum *.zip *.tar.gz > SHA256SUMS)
