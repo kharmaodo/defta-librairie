@@ -17,8 +17,7 @@ test('book cover upload, failure, retry and authenticated preview in the form', 
         <input name="cover" type="file" accept="image/jpeg,image/png">
         <p id="book-cover-status" role="status"></p>
         <button id="book-cover-retry" type="button" hidden>Relancer le traitement</button>
-        <img id="book-cover-preview" hidden alt="Couverture du livre">
-        <span id="book-cover-fallback">Aucune couverture</span>
+        <img id="book-cover-preview" alt="Couverture par défaut" src="/static/img/book-cover-placeholder.svg">
         <p id="book-form-error" hidden></p>
         <button type="submit">Enregistrer</button>
       </form>
@@ -91,6 +90,8 @@ test('book cover upload, failure, retry and authenticated preview in the form', 
 
   await page.locator('#books-body').getByRole('button', {name: 'Modifier'}).click();
   await expect(page.locator('#book-cover-status')).toHaveText('Aucune couverture');
+  await expect(page.locator('#book-cover-preview')).toHaveAttribute('alt', 'Couverture par défaut');
+  await expect(page.locator('#books-body .book-cover-thumb')).toHaveAttribute('alt', 'Couverture par défaut');
   const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLttAAAAABJRU5ErkJggg==', 'base64');
   await page.locator('#book-form [name=cover]').setInputFiles({name: 'cover.png', mimeType: 'image/png', buffer: pixel});
   await page.locator('#book-form button[type=submit]').click();
@@ -98,6 +99,7 @@ test('book cover upload, failure, retry and authenticated preview in the form', 
   await expect(page.locator('#book-cover-retry')).toBeVisible();
   await page.locator('#book-cover-retry').click();
   await expect(page.locator('#book-cover-status')).toContainText('disponible');
+  await expect(page.locator('#book-cover-preview')).toHaveAttribute('alt', 'Couverture du livre');
   await expect(page.locator('#book-cover-preview')).toBeVisible();
   expect(await page.evaluate(() => window.coverScenario.uploads)).toBe(1);
   expect(await page.evaluate(() => window.coverScenario.retries)).toBe(1);
