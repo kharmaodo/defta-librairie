@@ -167,7 +167,7 @@ supervisé par l’exécutable natif de l’application.
 | 3 | Messagerie et worker | Publisher outbox, stream JetStream, consommateur durable, reprises et idempotence | Réalisé |
 | 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels, image OCI Linux AMD64 et exécutable Windows AMD64 | Réalisé |
 | 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | Réalisé |
-| 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | En cours |
+| 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | À valider |
 | 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | À réaliser |
 
 La fondation asynchrone est validée et fusionnée par la PR #83 au commit
@@ -176,15 +176,15 @@ par la PR #84 au commit `c25f054`. Ils couvrent la validation JPEG/PNG réelle,
 les limites, le stockage MinIO privé, la transaction couverture/outbox/audit,
 la compensation et la route multipart documentée. L’incrément 3 est réalisé et fusionné par la PR #85 au commit
 `a74c15b` : baux récupérables, publisher avec acquittement, consumer durable,
-reprises bornées et worker idempotent. L’incrément 4 est en cours sur
-`feature/book-covers-v1.4-processing`. Le recadrage 2:3, les cinq objets
-JPEG/WebP, la compensation MinIO et le pipeline d’intégration sont livrés ;
-l’exécutable worker, l’image OCI non-root Linux AMD64, la supervision dans
-l’exécutable Windows AMD64 et le workflow buildx sont également livrés. L’incrément 4 est réalisé et fusionné par la PR #86 au commit `5c8d80a`.
+reprises bornées et worker idempotent.
+
+L’incrément 4 est réalisé et fusionné par la PR #86 au commit `5c8d80a`.
 Il livre le recadrage 2:3, cinq objets JPEG/WebP, la compensation MinIO, le
 pipeline d’intégration, l’image OCI Linux AMD64 et la supervision native Windows
-AMD64. L’incrément 5 « cycle de vie » est désormais actif sur
-`feature/book-covers-v1.4-lifecycle`.
+AMD64. L’incrément 5 est réalisé et fusionné par la PR #87 : lecture privée,
+remplacement, rétention et nettoyage compensé. L’incrément 6 est proposé dans
+la PR #88 : formulaire d’upload, statut asynchrone, relance et couverture par
+défaut commune à la liste et au formulaire. Il reste à valider et fusionner.
 
 Le traitement asynchrone par worker Go est retenu pour `v1.4.0`. NATS
 JetStream assure la livraison persistante et une transactional outbox SQLite
