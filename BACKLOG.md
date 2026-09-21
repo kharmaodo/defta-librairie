@@ -168,7 +168,7 @@ supervisé par l’exécutable natif de l’application.
 | 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels, image OCI Linux AMD64 et exécutable Windows AMD64 | Réalisé |
 | 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | Réalisé |
 | 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | Réalisé |
-| 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | En cours |
+| 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | Réalisé |
 
 La fondation asynchrone est validée et fusionnée par la PR #83 au commit
 `892a6fa`. L’upload sécurisé et le stockage temporaire sont validés et fusionnés
@@ -185,8 +185,12 @@ AMD64. L’incrément 5 est réalisé et fusionné par la PR #87 : lecture priv�
 remplacement, rétention et nettoyage compensé. L’incrément 6 est réalisé et fusionné par la PR #88 : formulaire d’upload,
 statut asynchrone, relance et couverture par défaut commune à la liste et au
 formulaire. Les tests frontend, Playwright et la recette complète sont validés
-sur cet incrément. La stabilisation de `v1.4.0` est l’étape active ; le tag et
-les artefacts de release ne sont pas encore publiés.
+sur cet incrément. La recette finale est validée sur `a5025e3` (PR #90). Le tag annoté `v1.4.0`
+pointe sur ce commit. La PR #91 limite les archives à Windows AMD64 et Linux
+AMD64. Les workflows des exécutables et de l’image worker Linux AMD64 ont réussi
+(runs `35606968932` et `35606963706`). La release publique contient les deux
+archives, `BUILD-INFO.txt` et `SHA256SUMS` ; les sommes SHA-256 ont été
+vérifiées. `v1.4.0` est clôturée.
 
 Le traitement asynchrone par worker Go est retenu pour `v1.4.0`. NATS
 JetStream assure la livraison persistante et une transactional outbox SQLite
