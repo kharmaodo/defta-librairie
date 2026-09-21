@@ -15,7 +15,8 @@ Le workflow `.github/workflows/release-binaries.yml` construit ces archives
 depuis le tag. Chacune contient l’exécutable, `templates/`, `static/`,
 `.env.example` et le README ; garder ces ressources à côté de l’exécutable.
 Le binaire applicatif Windows AMD64 supervise le traitement des couvertures
-lorsque `COVERS_ENABLED=true`. L’archive Linux AMD64 peut héberger l’API à côté du worker séparé.
+lorsque `COVERS_ENABLED=true`. L’archive Linux AMD64 peut héberger l’API
+à côté du worker séparé.
 
 Les archives Raspberry Pi OS ARM64 et ARMv7 sont exclues de cette publication
 pour limiter le temps et les ressources de construction. La construction
@@ -23,8 +24,8 @@ locale Linux AMD64 est décrite dans `RELEASE.md`.
 
 ## Worker Linux AMD64
 
-Le workflow `.github/workflows/cover-worker-image.yml` construit pour `linux/amd64` depuis le
-tag `v1.4.0` l’image `ghcr.io/kharmaodo/defta-cover-worker:v1.4.0`
+Le workflow `.github/workflows/cover-worker-image.yml` construit pour
+`linux/amd64` depuis le tag `v1.4.0` l’image `ghcr.io/kharmaodo/defta-cover-worker:v1.4.0`
 et l’alias `:1.4`, avec SBOM et provenance. Le profil Compose `worker`
 construit aussi cette image localement. Le déploiement doit référencer le
 digest vérifié de l’image, avec la même base SQLite persistante que l’API et
@@ -36,8 +37,11 @@ Après validation du tag selon `RELEASE.md` et fusion du correctif du workflow
 sur `develop` :
 
 ```sh
+gh workflow run cover-worker-image.yml --ref develop \
+  -f ref=v1.4.0 -f publish=true -f image_tag=v1.4.0
 gh workflow run release-binaries.yml --ref develop -f tag=v1.4.0
 gh run list --workflow release-binaries.yml --limit 3
+gh run list --workflow cover-worker-image.yml --limit 3
 gh release view v1.4.0
 release_dir=$(mktemp -d)
 gh release download v1.4.0 --dir "$release_dir"
