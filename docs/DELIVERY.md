@@ -16,8 +16,7 @@ npx playwright install --with-deps chromium
 
 La commande vérifie successivement le patch, le contrat OpenAPI,
 l’accessibilité structurelle, le contrat du dashboard, la restauration SQLite,
-les tests Go normaux et avec détecteur de courses, les tests frontend et les
-treize parcours Chromium.
+les tests Go normaux et avec détecteur de courses, les tests frontend et la suite Chromium complète.
 Elle s’arrête dès le premier échec et ne touche pas à la base applicative.
 
 ## Matrice de couverture livrée
@@ -36,6 +35,7 @@ Elle s’arrête dès le premier échec et ne touche pas à la base applicative.
 | Accessibilité | Contrôle structurel et `accessibility.spec.cjs` |
 | Dashboard v1.1 | `check-admin-dashboard.py` et `admin-dashboard.spec.cjs` |
 | API et exploitation | Contrat OpenAPI, sondes, métriques et test de restauration |
+| Couvertures v1.4 | Validation des sources, outbox, worker JetStream, cycle de vie, lecture privée et `book-covers.spec.cjs` |
 
 ## Checklist de déploiement
 
@@ -48,6 +48,8 @@ Elle s’arrête dès le premier échec et ne touche pas à la base applicative.
 - Vérifier `/api/health/live`, `/api/health/ready` et la collecte des métriques.
 - Effectuer un smoke test de connexion, vente, stock, export et impression.
 - Conserver l’artefact précédent et documenter le responsable du retour arrière.
+- Si les couvertures sont activées : vérifier bucket privé, volume SQLite partagé avec le worker, persistance JetStream, sauvegarde MinIO et reprise de l’outbox.
+- Contrôler l’upload, les états asynchrones, la lecture autorisée, le remplacement et le nettoyage après rétention.
 
 ## Décision de mise en production
 
