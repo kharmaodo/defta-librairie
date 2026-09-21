@@ -455,7 +455,19 @@
         <label>Statut<select name="status"><option value="AVAILABLE">Disponible</option><option value="UNAVAILABLE">Indisponible</option><option value="OUT_OF_STOCK">Rupture</option></select></label>
         <label>Catégorie<input name="categorie" maxlength="120"></label>
         <label class="full">Tags<input name="tags" list="tag-suggestions" maxlength="500" placeholder="arabe, fiqh, promotion"><datalist id="tag-suggestions"></datalist></label>
-        <label class="full">URL de couverture<input name="coverUrl" type="url" maxlength="2048"></label>
+        <input name="coverUrl" type="hidden">
+        <div class="full book-cover-panel">
+          <div class="book-cover-preview">
+            <img id="book-cover-preview" alt="Couverture du livre" hidden>
+            <span id="book-cover-fallback">Aucune couverture</span>
+          </div>
+          <div>
+            <label for="book-cover-file">Couverture (JPEG ou PNG, 5 Mo maximum)</label>
+            <input id="book-cover-file" name="cover" type="file" accept="image/jpeg,image/png">
+            <p id="book-cover-status" role="status" aria-live="polite">Aucune couverture</p>
+            <button id="book-cover-retry" class="button ghost" type="button" hidden>Relancer le traitement</button>
+          </div>
+        </div>
       </div>
       <p id="book-form-error" class="alert" role="alert" hidden></p>
       <div class="modal-actions"><button class="button ghost" type="button" data-close="book-dialog">Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
