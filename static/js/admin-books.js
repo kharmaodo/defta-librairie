@@ -9,6 +9,29 @@
     let coverTimer = null;
     let coverPreviewURL = null;
     let coverRequest = 0;
+    let coverListGeneration = 0;
+    const listCoverURLs = new Set();
+    let coversAvailable = true;
+    const defaultCover = "/static/img/book-cover-placeholder.svg";
+
+    function setCoverImage(image, url) {
+      image.src = url || defaultCover;
+      image.alt = url ? "Couverture du livre" : "Couverture par défaut";
+    }
+
+    async function loadListCover(id, image, generation) {
+      if (!coversAvailable) return;
+      try {
+        const response = await window.DeftaHTTP.request(`/api/manage/books/${id}/cover?variant=thumb&format=jpeg`);
+        const blob = await response.blob();
+        if (generation !== coverListGeneration) return;
+        const url = URL.createObjectURL(blob);
+        listCoverURLs.add(url);
+        setCoverImage(image, url);
+      } catch (error) {
+        if (error.status === 503 && error.code === "covers_disabled") coversAvailable = false;
+      }
+    }
     const coverDialog = () => document.querySelector("#book-dialog");
     const coverStatus = () => document.querySelector("#book-cover-status");
     const coverRetry = () => document.querySelector("#book-cover-retry");
@@ -17,9 +40,7 @@
       if (coverPreviewURL) URL.revokeObjectURL(coverPreviewURL);
       coverPreviewURL = null;
       const image = document.querySelector("#book-cover-preview");
-      image.hidden = true;
-      image.removeAttribute("src");
-      document.querySelector("#book-cover-fallback").hidden = false;
+      setCoverImage(image, null);
     }
 
     function resetCoverState() {
@@ -39,9 +60,7 @@
         clearCoverPreview();
         coverPreviewURL = URL.createObjectURL(blob);
         const image = document.querySelector("#book-cover-preview");
-        image.src = coverPreviewURL;
-        image.hidden = false;
-        document.querySelector("#book-cover-fallback").hidden = true;
+        setCoverImage(image, coverPreviewURL);
       } catch (error) {
         if (generation === coverRequest && error.status !== 404) {
           coverStatus().textContent = "Aperçu indisponible. Vous pouvez réessayer plus tard.";
@@ -89,12 +108,25 @@
       document.querySelector("#book-total").textContent = payload.total;
       const body = document.querySelector("#books-body");
       body.replaceChildren();
+      const generation = ++coverListGeneration;
+      for (const url of listCoverURLs) URL.revokeObjectURL(url);
+      listCoverURLs.clear();
       if (!payload.results.length) {
         const row = body.insertRow(); textCell(row, "Aucun livre dans ce périmètre", "empty").colSpan = 6;
       } else {
         payload.results.forEach((book) => {
           const row = body.insertRow();
-          textCell(row, book.title); textCell(row, book.auteur);
+          const title = textCell(row, "");
+          const cover = document.createElement("img");
+          cover.className = "book-cover-thumb";
+          cover.loading = "lazy";
+          setCoverImage(cover, null);
+          const name = document.createElement("span");
+          name.textContent = book.title;
+          title.className = "book-cover-title";
+          title.append(cover, name);
+          loadListCover(book.id, cover, generation);
+          textCell(row, book.auteur);
           textCell(row, new Intl.NumberFormat("fr-FR").format(book.price || 0));
           textCell(row, book.tags); textCell(row, book.status, "pill");
           const actions = textCell(row, "");
