@@ -1,6 +1,6 @@
 # Journal des versions
 
-## [1.4.0] — en préparation
+## [1.4.0] — 2026-09-21
 
 Gestion des couvertures de livre par upload JPEG/PNG dans le dashboard.
 
@@ -16,7 +16,8 @@ Gestion des couvertures de livre par upload JPEG/PNG dans le dashboard.
 
 - Déploiement local MinIO/NATS/worker via Docker Compose ; image de worker Linux AMD64 et supervision native Windows AMD64.
 - Tests Go/FTS5, frontend, Playwright et parcours d’intégration optionnel avec MinIO et NATS.
-- Le tag, les exécutables et les sommes de contrôle restent à publier après validation du candidat.
+- Tag `v1.4.0` publié sur le commit validé `a5025e3` ; archives Windows AMD64 et Linux AMD64 accompagnées de `BUILD-INFO.txt` et `SHA256SUMS` vérifiées.
+- Image worker Linux AMD64 publiée sur GHCR avec SBOM et provenance.
 
 ## [1.3.0] — 2026-09-15
 
