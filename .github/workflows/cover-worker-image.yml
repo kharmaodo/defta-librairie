@@ -47,7 +47,8 @@ jobs:
       - name: Check out the requested source
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.sha }}
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
 
       - name: Verify a pushed release tag
         if: github.event_name == 'push'
