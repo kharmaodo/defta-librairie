@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 240" role="img" aria-labelledby="title">
+  <title id="title">Couverture par défaut</title>
+  <rect width="160" height="240" fill="#e8eee9"/>
+  <rect x="14" y="14" width="132" height="212" rx="5" fill="#f8faf8" stroke="#8b9e96" stroke-width="2"/>
+  <path d="M43 76c13-7 25-7 37 0 12-7 24-7 37 0v73c-13-7-25-7-37 0-12-7-24-7-37 0z" fill="none" stroke="#446658" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M80 76v73" stroke="#446658" stroke-width="4"/>
+  <path d="M55 92h13m24 0h13M55 104h13m24 0h13" stroke="#8b9e96" stroke-width="3" stroke-linecap="round"/>
+  <path d="M52 184h56" stroke="#446658" stroke-width="3" stroke-linecap="round"/>
+</svg>
