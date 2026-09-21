@@ -1,5 +1,23 @@
 # Journal des versions
 
+## [1.4.0] — en préparation
+
+Gestion des couvertures de livre par upload JPEG/PNG dans le dashboard.
+
+### Couvertures et traitement asynchrone
+
+- Validation du fichier réel, de sa taille et de ses dimensions avant stockage dans un bucket MinIO privé.
+- Écriture transactionnelle des métadonnées, de l’audit et d’une outbox SQLite ; publication fiable sur NATS JetStream.
+- Worker Go produisant un master recadré au format 2:3 et des variantes JPEG, WebP et miniatures.
+- Remplacement sans interruption de la couverture active, lecture authentifiée et nettoyage différé des sources et anciennes variantes.
+- Statuts PENDING, PROCESSING, READY et FAILED visibles dans l’administration, relance conditionnelle et image par défaut commune au formulaire et à la liste.
+
+### Livraison et qualité
+
+- Déploiement local MinIO/NATS/worker via Docker Compose ; image de worker Linux AMD64 et supervision native Windows AMD64.
+- Tests Go/FTS5, frontend, Playwright et parcours d’intégration optionnel avec MinIO et NATS.
+- Le tag, les exécutables et les sommes de contrôle restent à publier après validation du candidat.
+
 ## [1.3.0] — 2026-09-15
 
 Amélioration de la lisibilité des formulaires et sécurisation des suppressions

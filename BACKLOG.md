@@ -167,8 +167,8 @@ supervisé par l’exécutable natif de l’application.
 | 3 | Messagerie et worker | Publisher outbox, stream JetStream, consommateur durable, reprises et idempotence | Réalisé |
 | 4 | Traitement et variantes | Master 2:3, JPEG, WebP, miniatures, plafond de pixels, image OCI Linux AMD64 et exécutable Windows AMD64 | Réalisé |
 | 5 | Cycle de vie | Lecture, remplacement sans interruption, rétention, nettoyage compensé et absence d’orphelins | Réalisé |
-| 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | À valider |
-| 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | À réaliser |
+| 6 | Interface et fallback | Upload admin, progression PENDING/FAILED, relance et image par défaut centralisée | Réalisé |
+| 7 | Stabilisation et release | Sécurité, observabilité, Go/FTS5, Playwright, restauration et release `v1.4.0` | En cours |
 
 La fondation asynchrone est validée et fusionnée par la PR #83 au commit
 `892a6fa`. L’upload sécurisé et le stockage temporaire sont validés et fusionnés
@@ -182,9 +182,11 @@ L’incrément 4 est réalisé et fusionné par la PR #86 au commit `5c8d80a`.
 Il livre le recadrage 2:3, cinq objets JPEG/WebP, la compensation MinIO, le
 pipeline d’intégration, l’image OCI Linux AMD64 et la supervision native Windows
 AMD64. L’incrément 5 est réalisé et fusionné par la PR #87 : lecture privée,
-remplacement, rétention et nettoyage compensé. L’incrément 6 est proposé dans
-la PR #88 : formulaire d’upload, statut asynchrone, relance et couverture par
-défaut commune à la liste et au formulaire. Il reste à valider et fusionner.
+remplacement, rétention et nettoyage compensé. L’incrément 6 est réalisé et fusionné par la PR #88 : formulaire d’upload,
+statut asynchrone, relance et couverture par défaut commune à la liste et au
+formulaire. Les tests frontend, Playwright et la recette complète sont validés
+sur cet incrément. La stabilisation de `v1.4.0` est l’étape active ; le tag et
+les artefacts de release ne sont pas encore publiés.
 
 Le traitement asynchrone par worker Go est retenu pour `v1.4.0`. NATS
 JetStream assure la livraison persistante et une transactional outbox SQLite

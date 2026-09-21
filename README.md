@@ -27,7 +27,7 @@ L’application propose une recherche classée par pertinence sur les titres, au
 
 ## Stack technique
 
-- Go 1.24.4 ;
+- Go 1.26.0 ;
 - `net/http` et `html/template` ;
 - SQLite 3 avec FTS5 ;
 - `github.com/mattn/go-sqlite3` avec CGO ;
@@ -144,6 +144,7 @@ Les variables disposent d’une valeur par défaut sauf les secrets explicitemen
 | `NATS_COVERS_STREAM` | `BOOK_COVERS` | Stream JetStream persistant des couvertures |
 | `NATS_COVERS_SUBJECT` | `book.covers.process.v1` | Sujet versionné publié par l’outbox |
 | `NATS_COVERS_CONSUMER` | `cover-worker-v1` | Consommateur durable réservé au worker |
+| `COVER_WORKER_MAX_DELIVER` | `5` | Nombre maximal de livraisons du travail à traiter |
 
 Créer la configuration locale, qui reste ignorée par Git, puis générer un secret propre à l'environnement :
 
@@ -159,8 +160,8 @@ Contenu de référence de `.env.example` :
 PORT=8080
 DB_PATH=./data/defta.db
 PAGE_SIZE=30
-VERSION=1.3.0
-BUILD_DATE=2026-09-15
+VERSION=1.4.0
+BUILD_DATE=2026-09-21
 JWT_SECRET=
 JWT_ISSUER=defta-librairie
 JWT_AUDIENCE=defta-librairie-web
@@ -184,6 +185,7 @@ NATS_PASSWORD=
 NATS_COVERS_STREAM=BOOK_COVERS
 NATS_COVERS_SUBJECT=book.covers.process.v1
 NATS_COVERS_CONSUMER=cover-worker-v1
+COVER_WORKER_MAX_DELIVER=5
 COVER_MAX_BYTES=5242880
 COVER_MAX_PIXELS=24000000
 ```
@@ -194,7 +196,7 @@ La préparation, le tag et le retour arrière de la version stable sont décrits
 dans [RELEASE.md](docs/RELEASE.md). Les changements publiés figurent dans
 [CHANGELOG.md](CHANGELOG.md).
 
-Les archives Windows AMD64 et Raspberry Pi de `v1.3.0` sont décrites dans
+Les archives candidates Windows AMD64 et Raspberry Pi de `v1.4.0`, ainsi que l’image worker Linux AMD64, sont décrites dans
 [RELEASE_ARTIFACTS.md](docs/RELEASE_ARTIFACTS.md).
 
 Sous Linux ou WSL, si `.env` a été modifié sous Windows, supprimer les retours chariot avant le lancement avec `sed -i 's/\r$//' .env`. Le chargeur neutralise également ces fins de ligne pour éviter qu'une valeur telle que `PORT=8080\r` soit transmise au serveur HTTP.
@@ -204,6 +206,21 @@ Sous Linux ou WSL, si `.env` a été modifié sous Windows, supprimer les retour
 Les endpoints `login` et `refresh` partagent une limite en mémoire par adresse IP. Un dépassement retourne `429 Too Many Requests` avec `Retry-After`. Le serveur ajoute également un `X-Request-ID`, désactive la mise en cache des réponses d'authentification et applique des en-têtes CSP, anti-framing, MIME sniffing, permissions et referrer. `SIGINT` et `SIGTERM` déclenchent un arrêt gracieux de 10 secondes avant la fermeture SQLite.
 
 La route du catalogue est volontairement exacte (`GET /{$}`). Une URL inconnue, notamment sous `/api/`, retourne donc `404 Not Found` au lieu d'être rendue par erreur comme une page HTML du catalogue.
+
+### Couvertures v1.4.0
+
+L’administration accepte un fichier JPEG ou PNG de 5 Mio maximum par livre.
+La source est contrôlée par l’API, stockée dans un bucket MinIO privé, puis
+traitée par un worker via NATS JetStream. L’interface affiche l’état
+`PENDING`, `PROCESSING`, `READY` ou `FAILED`, permet une relance si la
+source est encore disponible et sert les miniatures par la route authentifiée.
+L’image par défaut locale est affichée en l’absence de couverture.
+
+Pour un démarrage local avec couvertures, suivre
+[docs/BOOK_COVERS_V1_4.md](docs/BOOK_COVERS_V1_4.md) et
+[docs/RELEASE.md](docs/RELEASE.md). Sauvegarder SQLite avant toute migration ;
+garder MinIO, JetStream et la base sur des volumes persistants. Les secrets
+MinIO/NATS et `JWT_SECRET` restent hors du dépôt.
 
 ## Migrations SQLite
 
