@@ -6,6 +6,84 @@
     errorBox, isRoot, reloadInventory, reloadTags, renderTags}) {
     const state = {books: [], bookOffset: 0, bookLimit: 10, bookQuery: ""};
     let initialized = false;
+    let coverTimer = null;
+    let coverPreviewURL = null;
+    let coverRequest = 0;
+    const coverDialog = () => document.querySelector("#book-dialog");
+    const coverStatus = () => document.querySelector("#book-cover-status");
+    const coverRetry = () => document.querySelector("#book-cover-retry");
+
+    function clearCoverPreview() {
+      if (coverPreviewURL) URL.revokeObjectURL(coverPreviewURL);
+      coverPreviewURL = null;
+      const image = document.querySelector("#book-cover-preview");
+      image.hidden = true;
+      image.removeAttribute("src");
+      document.querySelector("#book-cover-fallback").hidden = false;
+    }
+
+    function resetCoverState() {
+      coverRequest++;
+      clearTimeout(coverTimer);
+      coverTimer = null;
+      clearCoverPreview();
+      coverStatus().textContent = "Aucune couverture";
+      coverRetry().hidden = true;
+    }
+
+    async function loadCoverPreview(id, generation) {
+      try {
+        const response = await window.DeftaHTTP.request(`/api/manage/books/${id}/cover?variant=thumb&format=jpeg`);
+        const blob = await response.blob();
+        if (generation !== coverRequest || !coverDialog().open) return;
+        clearCoverPreview();
+        coverPreviewURL = URL.createObjectURL(blob);
+        const image = document.querySelector("#book-cover-preview");
+        image.src = coverPreviewURL;
+        image.hidden = false;
+        document.querySelector("#book-cover-fallback").hidden = true;
+      } catch (error) {
+        if (generation === coverRequest && error.status !== 404) {
+          coverStatus().textContent = "Aperçu indisponible. Vous pouvez réessayer plus tard.";
+        }
+      }
+    }
+
+    function displayCoverStatus(status) {
+      const labels = {
+        PENDING: "Couverture en attente de traitement.",
+        PROCESSING: "Traitement de la couverture en cours.",
+        READY: "Couverture disponible.",
+        FAILED: "Le traitement de la couverture a échoué."
+      };
+      coverStatus().textContent = labels[status.status] || "État de la couverture indisponible.";
+      coverRetry().hidden = !status.canRetry;
+    }
+
+    async function refreshCoverStatus(id, generation = coverRequest) {
+      try {
+        const status = await apiFetch(`/api/manage/books/${id}/cover/status`);
+        if (generation !== coverRequest || !coverDialog().open) return;
+        displayCoverStatus(status);
+        await loadCoverPreview(id, generation);
+        if (generation !== coverRequest || !coverDialog().open) return;
+        if (status.status === "PENDING" || status.status === "PROCESSING") {
+          clearTimeout(coverTimer);
+          coverTimer = setTimeout(() => refreshCoverStatus(id, generation), 3000);
+        }
+      } catch (error) {
+        if (generation !== coverRequest || !coverDialog().open) return;
+        if (error.status === 404) {
+          coverStatus().textContent = "Aucune couverture";
+        } else if (error.status === 503 && error.code === "covers_disabled") {
+          coverStatus().textContent = "L’ajout de couvertures est temporairement indisponible.";
+          document.querySelector("#book-cover-file").disabled = true;
+        } else {
+          coverStatus().textContent = "Impossible de vérifier la couverture. Réessayez en rouvrant le livre.";
+        }
+      }
+    }
+
     function renderBooks(payload) {
       state.books = payload.results;
       document.querySelector("#book-total").textContent = payload.total;
@@ -34,7 +112,9 @@
     function openBookForm(book = null) {
       const dialog = document.querySelector("#book-dialog");
       const form = document.querySelector("#book-form");
+      resetCoverState();
       form.reset();
+      form.elements.cover.disabled = false;
       form.elements.id.value = book ? book.id : "";
       form.elements.version.value = book ? book.version : "";
       form.elements.title.value = book ? book.title : "";
@@ -55,6 +135,7 @@
       document.querySelector("#book-form-title").textContent = book ? "Modifier le livre" : "Nouveau livre";
       document.querySelector("#book-form-error").hidden = true;
       dialog.showModal();
+      if (book) refreshCoverStatus(book.id);
     }
 
     function bookPayload(form) {
@@ -106,6 +187,18 @@
     function init() {
       if (initialized) return;
       initialized = true;
+      coverDialog().addEventListener("close", resetCoverState);
+      coverRetry().addEventListener("click", async () => {
+        const id = document.querySelector("#book-form").elements.id.value;
+        if (!id) return;
+        coverRetry().disabled = true;
+        try {
+          const status = await apiFetch(`/api/manage/books/${id}/cover/retry`, {method: "POST"});
+          displayCoverStatus(status);
+          refreshCoverStatus(id);
+        } catch (error) { showError(document.querySelector("#book-form-error"), error); }
+        finally { coverRetry().disabled = false; }
+      });
       document.querySelector("#add-book-button").addEventListener("click", () => openBookForm());
       document.querySelector("#book-search-form").addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -138,12 +231,28 @@
           showError(formError, new Error("Choisissez la librairie destinataire.")); return;
         }
         try {
-          await apiFetch(id ? `/api/manage/books/${id}` : "/api/manage/books", {
+          const file = form.elements.cover.files[0];
+          if (file && (!["image/jpeg", "image/png"].includes(file.type) || file.size > 5 * 1024 * 1024 || !file.size)) {
+            throw new Error("Choisissez une image JPEG ou PNG de 5 Mo maximum.");
+          }
+          const saved = await apiFetch(id ? `/api/manage/books/${id}` : "/api/manage/books", {
             method: id ? "PUT" : "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(bookPayload(form))
           });
-          document.querySelector("#book-dialog").close();
+          form.elements.id.value = saved.id;
+          form.elements.version.value = saved.version;
+          form.elements.libraryId.disabled = true;
           if (!id) state.bookOffset = 0;
           await Promise.all([reloadBooks(), reloadInventory()]);
+          if (file) {
+            const data = new FormData();
+            data.set("cover", file);
+            await apiFetch(`/api/manage/books/${saved.id}/cover`, {method: "POST", body: data});
+            form.elements.cover.value = "";
+            coverStatus().textContent = "Couverture en attente de traitement.";
+            refreshCoverStatus(saved.id);
+          } else {
+            coverDialog().close();
+          }
         } catch (error) { showError(formError, error); }
       });
       document.querySelector("#books-body").addEventListener("click", async (event) => {
