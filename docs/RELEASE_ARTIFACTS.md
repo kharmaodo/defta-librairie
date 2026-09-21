@@ -1,12 +1,12 @@
-# Artefacts candidats de la version 1.4.0
+# Artefacts publiés de la version 1.4.0
 
 Le tag immuable `v1.4.0` référence le commit validé `a5025e39d936d87fb366576528c4618f3c2a1430`.
-Les artefacts ne sont considérés comme publiés qu’après le succès des workflows
-et la vérification des sommes.
+Les workflows de publication des archives et de l’image worker ont réussi le
+21 septembre 2026. Les archives téléchargées ont passé le contrôle SHA-256.
 
 ## Application
 
-| Archive prévue | Système cible | Architecture |
+| Archive publiée | Système cible | Architecture |
 |---|---|---|
 | `defta-librairie-1.4.0-windows-amd64.zip` | Windows 10/11 64 bits | AMD64 |
 | `defta-librairie-1.4.0-linux-amd64.tar.gz` | Linux 64 bits | AMD64 |
@@ -33,13 +33,10 @@ l’accès aux services MinIO/NATS ; aucun secret n’est embarqué dans l’ima
 
 ## Publication et vérification
 
-Après validation du tag selon `RELEASE.md` et fusion du correctif du workflow
-sur `develop` :
+Publication réalisée depuis le tag `v1.4.0` après la fusion du correctif du
+workflow sur `develop` (PR #91). Pour vérifier à nouveau :
 
 ```sh
-gh workflow run cover-worker-image.yml --ref develop \
-  -f ref=v1.4.0 -f publish=true -f image_tag=v1.4.0
-gh workflow run release-binaries.yml --ref develop -f tag=v1.4.0
 gh run list --workflow release-binaries.yml --limit 3
 gh run list --workflow cover-worker-image.yml --limit 3
 gh release view v1.4.0
