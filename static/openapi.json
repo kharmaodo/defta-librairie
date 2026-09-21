@@ -12590,6 +12590,236 @@
           }
         ]
       }
+    },
+    "/api/manage/books/{id}/cover/status": {
+      "get": {
+        "operationId": "BookCoverHandler_Status",
+        "summary": "Lire l'état de la couverture la plus récente",
+        "description": "Lecture authentifiée et limitée à la librairie du livre. Aucune clé MinIO n'est exposée.",
+        "tags": [
+          "books_management"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "État courant de la couverture.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookCoverStatus"
+                },
+                "example": {
+                  "id": "cover-uuid",
+                  "status": "FAILED",
+                  "canRetry": true,
+                  "updatedAt": "2026-09-16T12:00:00Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request : identifiant de livre invalide",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized : authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden : accès interdit ou changement de mot de passe requis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "book_not_found / cover_not_found : livre inaccessible ou couverture absente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error : échec interne",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "covers_disabled : fonction désactivée ou session indisponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl — état de couverture",
+            "source": "curl --fail-with-body -sS \"${BASE_URL}/api/manage/books/${RESOURCE_ID}/cover/status\" \\\n  -H \"Authorization: Bearer ${TOKEN}\""
+          }
+        ]
+      }
+    },
+    "/api/manage/books/{id}/cover/retry": {
+      "post": {
+        "operationId": "BookCoverHandler_Retry",
+        "summary": "Relancer le traitement d'une couverture échouée",
+        "description": "Relance uniquement la couverture la plus récente à l'état FAILED. La remise en attente, l'événement outbox et l'audit sont atomiques.",
+        "tags": [
+          "books_management"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Couverture remise en attente de traitement.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookCoverStatus"
+                },
+                "example": {
+                  "id": "cover-uuid",
+                  "status": "PENDING",
+                  "canRetry": false,
+                  "updatedAt": "2026-09-16T12:00:00Z"
+                }
+              }
+            },
+            "headers": {
+              "Location": {
+                "description": "URL pour lire l'état de la couverture relancée.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_request : identifiant de livre invalide",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "unauthorized : authentification requise",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden : accès interdit ou changement de mot de passe requis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "book_not_found / cover_not_found : livre inaccessible ou couverture absente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "covers_disabled : fonction désactivée ou session indisponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "cover_not_retryable : la couverture n'est pas en échec",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "internal_error : échec interne",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl — relancer une couverture",
+            "source": "curl --fail-with-body -sS -X POST \"${BASE_URL}/api/manage/books/${RESOURCE_ID}/cover/retry\" \\\n  -H \"Authorization: Bearer ${TOKEN}\""
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -15874,6 +16104,47 @@
             "minimum": 1,
             "maximum": 5242880
           }
+        }
+      },
+      "BookCoverStatus": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "canRetry",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "PROCESSING",
+              "READY",
+              "FAILED"
+            ]
+          },
+          "errorCode": {
+            "type": "string",
+            "description": "Code métier, présent si le traitement a échoué."
+          },
+          "canRetry": {
+            "type": "boolean"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "example": {
+          "id": "cover-uuid",
+          "status": "FAILED",
+          "errorCode": "decode_failed",
+          "canRetry": true,
+          "updatedAt": "2026-09-16T12:00:00Z"
         }
       }
     }

@@ -11,16 +11,22 @@ function setup(api) {
   if(!nodes.has(id))nodes.set(id,{handlers:{},elements:{},rows:[],closed:0,opened:0,
    addEventListener(event,fn){(this.handlers[event]||=[]).push(fn);},
    replaceChildren(){this.rows=[];},insertRow(){const row={cells:[]};this.rows.push(row);return row;},
-   reset(){for(const f of Object.values(this.elements))f.value='';},close(){this.closed++;},showModal(){this.opened++;}
+   reset(){for(const f of Object.values(this.elements))f.value='';},close(){this.closed++;this.open=false;for(const fn of this.handlers.close||[])fn();},showModal(){this.opened++;this.open=true;}
   });return nodes.get(id);
  };
  for(const name of ['id','version','title','auteur','editeur','price','volume','status','categorie','tags','coverUrl','libraryId'])get('#book-form').elements[name]={value:''};
+ get('#book-form').elements.cover={value:'',files:[],disabled:false};
  get('#book-search-form').elements.q={value:''};
- const window={DeftaDeleteConfirmation:{run:async({execute})=>h.confirmed?execute():false}};vm.runInNewContext(source,{window,document:{querySelector:get},URLSearchParams,Intl});
+ const window={
+  DeftaDeleteConfirmation:{run:async({execute})=>h.confirmed?execute():false},
+  DeftaHTTP:{request:async()=>{throw Object.assign(new Error('No cover'),{status:404});}}
+ };
+ const element=tag=>({tagName:tag.toUpperCase(),append(...children){this.children=children;}});
+ vm.runInNewContext(source,{window,document:{querySelector:get,createElement:element},URLSearchParams,Intl,clearTimeout,setTimeout});
  h.get=get;h.errorBox={};
  h.module=window.DeftaBooks.create({
   apiFetch:async(url,options)=>{h.calls.push({url,options});return api?api(url,options):page();},
-  textCell(row,value){const cell={textContent:value,replaceChildren(...buttons){this.buttons=buttons;}};row.cells.push(cell);return cell;},
+  textCell(row,value){const cell={textContent:value,append(...children){this.children=children;},replaceChildren(...buttons){this.buttons=buttons;}};row.cells.push(cell);return cell;},
   actionButton:(label,action,id)=>({label,action,id}),formatDate:value=>value,
   showError:(box,error)=>{box.textContent=error.message;box.hidden=false;},errorBox:h.errorBox,isRoot:()=>h.root,
   reloadInventory:async()=>{h.stocks++;},reloadTags:async()=>{h.tags++;},renderTags:()=>{}
@@ -61,6 +67,16 @@ test('editing keeps version and locks library field',async()=>{
 test('failed mutation keeps dialog open and does not refresh stock',async()=>{
  const h=setup(async()=>{throw new Error('Conflit de version');});h.module.init();await h.event('#book-form','submit');
  assert.equal(h.get('#book-dialog').closed,0);assert.equal(h.stocks,0);assert.equal(h.calls.length,1);assert.match(h.get('#book-form-error').textContent,/Conflit/);
+});
+test('book list and editor use the same cover fallback',async()=>{
+ const h=setup();h.module.init();await h.module.reload();
+ const thumbnail=h.get('#books-body').rows[0].cells[0].children[0];
+ assert.equal(thumbnail.src,'/static/img/book-cover-placeholder.svg');
+ assert.equal(thumbnail.alt,'Couverture par défaut');
+ await h.event('#books-body');
+ const preview=h.get('#book-cover-preview');
+ assert.equal(preview.src,thumbnail.src);
+ assert.equal(preview.alt,thumbnail.alt);
 });
 test('delete refreshes stock; cancelled or stale delete does nothing',async()=>{
  const h=setup();h.module.init();await h.module.reload();h.calls.length=0;h.confirmed=false;
