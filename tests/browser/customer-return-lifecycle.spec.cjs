@@ -122,17 +122,24 @@ test('refund and credit note restore stock and remain audited', async ({page, re
   await page.locator('#add-sale-button').click();
   const saleForm = page.locator('#sale-form');
   await saleForm.locator('[name=libraryId]').selectOption(library.id);
-  await saleForm.locator('[name=customerName]').fill(customer);
   const saleLine = page.locator('#sale-lines .sale-line');
   const bookOption = saleLine.locator('[name=bookId] option').filter({hasText: title});
   await expect(bookOption).toHaveCount(1);
   await saleLine.locator('[name=bookId]').selectOption(await bookOption.getAttribute('value'));
   await saleLine.locator('[name=quantity]').fill('2');
+  // Choosing a library reloads books and customers, then clears the customer
+  // field. Fill it after the book option confirms that reload has finished.
+  await saleForm.locator('[name=customerName]').fill(customer);
+  await expect(saleForm.locator('[name=customerName]')).toHaveValue(customer);
   const createdResponse = page.waitForResponse(response =>
     response.request().method() === 'POST' && new URL(response.url()).pathname === '/api/manage/sales');
   await saleForm.locator('button[type=submit]').click();
   const created = await createdResponse;
-  expect(created.status(), await created.text()).toBe(201);
+  const createdBody = await created.text();
+  expect(created.status(), createdBody).toBe(201);
+  const createdSale = JSON.parse(createdBody);
+  expect(createdSale.customerName).toBe(customer);
+  expect(createdSale.libraryId).toBe(library.id);
   await expect(saleForm).not.toBeVisible();
 
   // The automatic post-create refresh may be superseded by another dashboard
