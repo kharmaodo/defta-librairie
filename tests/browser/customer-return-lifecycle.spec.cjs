@@ -155,7 +155,9 @@ test('refund and credit note restore stock and remain audited', async ({page, re
   });
   await page.locator('#sale-filters button[type=submit]').click();
   const filteredSales = await filteredSalesResponse;
-  expect(filteredSales.status(), await filteredSales.text()).toBe(200);
+  const filteredBody = await filteredSales.text();
+  expect(filteredSales.status(), filteredBody).toBe(200);
+  expect(JSON.parse(filteredBody).results.some(item => item.id === createdSale.id)).toBe(true);
   await expect(sale).toHaveCount(1);
   page.once('dialog', dialog => dialog.accept());
   await sale.getByRole('button', {name: 'Confirmer'}).click();
