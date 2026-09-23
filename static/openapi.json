@@ -12781,16 +12781,6 @@
               }
             }
           },
-          "503": {
-            "description": "covers_disabled : fonction désactivée ou session indisponible",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
           "409": {
             "description": "cover_not_retryable : la couverture n'est pas en échec",
             "content": {
@@ -12810,6 +12800,16 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "covers_disabled : fonction désactivée ou session indisponible",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
           }
         },
         "x-codeSamples": [
@@ -12819,6 +12819,176 @@
             "source": "curl --fail-with-body -sS -X POST \"${BASE_URL}/api/manage/books/${RESOURCE_ID}/cover/retry\" \\\n  -H \"Authorization: Bearer ${TOKEN}\""
           }
         ]
+      }
+    },
+    "/api/books/{id}/cover": {
+      "get": {
+        "operationId": "BookCoverReadHandler_ServePublic",
+        "summary": "Lire publiquement une couverture active",
+        "tags": [
+          "books_management"
+        ],
+        "description": "Diffuse uniquement une variante de la couverture active READY depuis le stockage privé. OWNER_LIBRARY reste limité à sa librairie. Le master est disponible en JPEG ; les variantes large et thumb sont disponibles en JPEG ou WebP.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "variant",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "master",
+                "large",
+                "thumb"
+              ],
+              "default": "large"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "jpeg",
+                "webp"
+              ],
+              "default": "jpeg"
+            },
+            "description": "master accepte uniquement jpeg."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Variante active.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Cache privé de courte durée."
+              },
+              "ETag": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Validateur déterministe de la variante."
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "type": "string",
+                  "enum": [
+                    "nosniff"
+                  ]
+                }
+              }
+            },
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "La variante n’a pas changé depuis l’ETag fourni."
+          },
+          "400": {
+            "description": "invalid_request : identifiant ou représentation invalide.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "book_not_found ou cover_not_found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "covers_disabled, cover_storage_unavailable ou session_validation_failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl — miniature WebP",
+            "source": "curl --fail-with-body -sS \\\"${BASE_URL}/api/manage/books/${RESOURCE_ID}/cover?variant=thumb&format=webp\\\" \\\\\\n  -H \\\"Authorization: Bearer ${TOKEN}\\\" \\\\\\n  -H \\\"If-None-Match: ${ETAG}\\\""
+          }
+        ]
+      }
+    },
+    "/api/manage/book-submissions": {
+      "post": {
+        "operationId": "BookSubmissionHandler_Create",
+        "summary": "Soumettre un livre avec couverture à modérer",
+        "tags": [
+          "books_management"
+        ],
+        "description": "Crée une soumission PENDING_SCAN. Aucun livre n’est créé avant approbation.",
+        "responses": {
+          "202": {
+            "description": "Soumission en attente de modération.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingBookSubmission"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide."
+          },
+          "401": {
+            "description": "Authentification requise."
+          },
+          "403": {
+            "description": "Accès interdit."
+          },
+          "413": {
+            "description": "Couverture trop volumineuse."
+          },
+          "422": {
+            "description": "Couverture invalide."
+          },
+          "503": {
+            "description": "Couvertures indisponibles."
+          }
+        }
       }
     }
   },
@@ -16145,6 +16315,23 @@
           "errorCode": "decode_failed",
           "canRetry": true,
           "updatedAt": "2026-09-16T12:00:00Z"
+        }
+      },
+      "PendingBookSubmission": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "libraryId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
         }
       }
     }
