@@ -1,6 +1,7 @@
 (() => {
   "use strict";
   let isRoot = false;
+  let retryButton = null;
 
   function actionButton(label, decision, id) {
     const button = document.createElement("button");
@@ -29,14 +30,29 @@
   }
 
   async function retry(button) {
-    if (!window.confirm("Relancer la modération de cette soumission ?")) return;
+    const dialog = document.querySelector("#submission-retry-dialog");
+    const error = dialog.querySelector("[data-submission-retry-error]");
+    retryButton = button;
+    error.hidden = true;
+    error.textContent = "";
+    dialog.showModal();
+    dialog.querySelector("button[type=submit]").focus();
+  }
+
+  async function confirmRetry() {
+    const button = retryButton;
+    if (!button) return;
+    const dialog = document.querySelector("#submission-retry-dialog");
+    const error = dialog.querySelector("[data-submission-retry-error]");
     button.disabled = true;
     try {
       await window.DeftaHTTP.json(`/api/manage/book-submissions/${encodeURIComponent(button.dataset.submissionId)}/retry`, {method: "POST"});
+      retryButton = null;
+      dialog.close();
       await load();
-    } catch (error) {
-      const notice = document.querySelector("#book-submissions-panel [data-submission-notice]");
-      notice.textContent = error.message || "La relance n’a pas pu être enregistrée.";
+    } catch (failure) {
+      error.textContent = failure.message || "La relance n’a pas pu être enregistrée.";
+      error.hidden = false;
     } finally { button.disabled = false; }
   }
 
@@ -73,6 +89,10 @@
       if (button?.dataset.decision === "RETRY") retry(button);
       else if (button) decide(button);
     });
+    const retryDialog = document.querySelector("#submission-retry-dialog");
+    retryDialog.querySelectorAll("[data-submission-retry-cancel]").forEach((button) => button.addEventListener("click", () => { retryButton = null; retryDialog.close(); }));
+    retryDialog.addEventListener("cancel", () => { retryButton = null; });
+    retryDialog.querySelector("form").addEventListener("submit", (event) => { event.preventDefault(); confirmRetry(); });
     try {
       const user = await window.DeftaHTTP.json("/api/auth/me");
       isRoot = user.role === "SUPER_ADMIN_ROOT";
