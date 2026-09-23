@@ -93,7 +93,7 @@ func (s *MinIOStore) Delete(ctx context.Context, key string) error {
 
 func validObjectKey(key string) bool {
 	parts := strings.Split(key, "/")
-	if len(parts) != 4 || parts[0] != "sources" {
+	if len(parts) != 4 || (parts[0] != "sources" && parts[0] != "quarantine") {
 		return false
 	}
 	if !safeKeySegment.MatchString(parts[1]) || !safeKeySegment.MatchString(parts[2]) {
