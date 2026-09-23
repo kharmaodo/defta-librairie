@@ -14,6 +14,7 @@ import (
 
 type bookSubmissionCreator interface {
 	Submit(context.Context, *auth.Claims, models.BookInput, string, io.Reader) (services.PendingBookSubmission, error)
+	List(context.Context, *auth.Claims, string, int) ([]models.BookSubmission, error)
 }
 
 type BookSubmissionHandler struct {
@@ -90,3 +91,14 @@ func submissionBookInput(r *http.Request) (models.BookInput, error) {
 }
 
 var _ = errors.Is
+
+
+func (h *BookSubmissionHandler) List(w http.ResponseWriter, r *http.Request) {
+	if !h.enabled || h.service == nil { writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{"error":"covers_disabled"}); return }
+	limit := 30
+	if value := r.URL.Query().Get("limit"); value != "" { if parsed, err := strconv.Atoi(value); err == nil { limit = parsed } }
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	items, err := h.service.List(r.Context(), claims, r.URL.Query().Get("libraryId"), limit)
+	if err != nil { writeBookCoverError(w, err); return }
+	writeAuthJSON(w, http.StatusOK, map[string]interface{}{"results":items, "total":len(items)})
+}
