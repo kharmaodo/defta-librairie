@@ -1,0 +1,15 @@
+{
+  "modelVersion": "OwenElliott/image-safety-classifier-s",
+  "sha256": "replace-with-sha256-of-pinned-onnx-file",
+  "input": {
+    "name": "image",
+    "layout": "NCHW",
+    "width": 224,
+    "height": 224,
+    "mean": [0.0, 0.0, 0.0],
+    "std": [1.0, 1.0, 1.0]
+  },
+  "output": {
+    "labels": ["NSFL", "NSFW", "SFW"]
+  }
+}
