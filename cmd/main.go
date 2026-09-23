@@ -165,7 +165,7 @@ func main() {
 	// Routes de base
 	observability := middleware.NewHTTPObservability(slog.Default())
 	mux := http.NewServeMux()
-	registerPublicRoutes(mux, adminUIHandler)
+	registerPublicRoutes(mux, adminUIHandler, bookCoverReadHandler.ServePublic)
 	healthHandler := handlers.NewHealthHandler(database.DB)
 	mux.HandleFunc("GET /api/health/live", healthHandler.Live)
 	mux.HandleFunc("GET /api/health/ready", healthHandler.Ready)
@@ -342,11 +342,14 @@ func main() {
 	}
 }
 
-func registerPublicRoutes(mux *http.ServeMux, adminUIHandler *handlers.AdminUIHandler) {
+func registerPublicRoutes(mux *http.ServeMux, adminUIHandler *handlers.AdminUIHandler, publicCover http.HandlerFunc) {
 	mux.HandleFunc("GET /{$}", handlers.CatalogueHandler)
 	mux.HandleFunc("GET /login", adminUIHandler.Login)
 	mux.HandleFunc("GET /admin", adminUIHandler.Dashboard)
 	mux.HandleFunc("GET /api/books", handlers.APIBooksHandler)
+	if publicCover != nil {
+		mux.Handle("GET /api/books/{id}/cover", http.HandlerFunc(publicCover))
+	}
 }
 
 // Shared registration keeps the HTTP acceptance test on the application's routes.

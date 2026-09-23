@@ -12,7 +12,7 @@ import (
 
 func TestUnknownRoutesDoNotFallBackToCatalogue(t *testing.T) {
 	mux := http.NewServeMux()
-	registerPublicRoutes(mux, handlers.NewAdminUIHandler(&config.Config{}))
+	registerPublicRoutes(mux, handlers.NewAdminUIHandler(&config.Config{}), nil)
 
 	for _, target := range []string{"/unknown", "/api/unknown", "/api/auth/sessions/"} {
 		request := httptest.NewRequest(http.MethodDelete, target, nil)

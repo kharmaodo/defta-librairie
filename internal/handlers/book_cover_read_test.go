@@ -30,6 +30,16 @@ func (f *fakeBookCoverReader) Open(
 	return f.result, f.err
 }
 
+func (f *fakeBookCoverReader) OpenPublic(
+	_ context.Context,
+	bookID int,
+	variant string,
+	format string,
+) (services.ActiveBookCover, error) {
+	f.bookID, f.variant, f.format = bookID, variant, format
+	return f.result, f.err
+}
+
 func TestBookCoverReadStreamsPrivateRepresentation(t *testing.T) {
 	reader := &fakeBookCoverReader{result: services.ActiveBookCover{
 		Body:        io.NopCloser(bytes.NewBufferString("webp-cover")),
@@ -80,6 +90,25 @@ func TestBookCoverReadHonorsConditionalRequest(t *testing.T) {
 	}
 	if reader.variant != "large" || reader.format != "jpeg" {
 		t.Fatalf("unexpected defaults: %+v", reader)
+	}
+}
+
+func TestBookCoverReadStreamsPublicProcessedRepresentation(t *testing.T) {
+	reader := &fakeBookCoverReader{result: services.ActiveBookCover{
+		Body: io.NopCloser(bytes.NewBufferString("jpeg-cover")), ContentType: "image/jpeg", ETag: "\"cover-etag\"",
+	}}
+	handler := NewBookCoverReadHandler(reader, true)
+	request := httptest.NewRequest(http.MethodGet, "/api/books/42/cover", nil)
+	request.SetPathValue("id", "42")
+	response := httptest.NewRecorder()
+
+	handler.ServePublic(response, request)
+
+	if response.Code != http.StatusOK || response.Body.String() != "jpeg-cover" {
+		t.Fatalf("status=%d body=%q", response.Code, response.Body.String())
+	}
+	if response.Header().Get("Cache-Control") != "public, max-age=300" {
+		t.Fatalf("unexpected headers: %v", response.Header())
 	}
 }
 

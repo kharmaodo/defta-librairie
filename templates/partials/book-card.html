@@ -1,11 +1,7 @@
 {{define "book-card"}}
 <div class="book-card">
     <div class="card-cover">
-        {{if .CoverURL.Valid}}
-            <img src="{{.CoverURL.String}}" alt="{{.Title}}" loading="lazy">
-        {{else}}
-            <div class="no-cover">لا يوجد غلاف</div>
-        {{end}}
+        <img class="public-book-cover" src="/api/books/{{.ID}}/cover?variant=large&amp;format=jpeg" alt="{{.Title}}" loading="lazy" data-fallback="{{if .CoverURL.Valid}}{{.CoverURL.String}}{{else}}/static/img/book-cover-placeholder.svg{{end}}">
     </div>
     <div class="card-info">
         <h3 class="title">{{.Title}}</h3>

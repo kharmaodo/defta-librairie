@@ -1,4 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('img.public-book-cover').forEach((image) => {
+    image.addEventListener('error', () => {
+      const fallback = image.dataset.fallback;
+      if (fallback) image.src = fallback;
+    }, {once: true});
+  });
   const toggleButtons = document.querySelectorAll('.view-btn');
   const cardsView = document.getElementById('books-cards-view');
   const tableView = document.getElementById('books-table-view');

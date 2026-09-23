@@ -18,6 +18,10 @@ type bookCoverReader interface {
 	) (services.ActiveBookCover, error)
 }
 
+type publicBookCoverReader interface {
+	OpenPublic(ctx context.Context, bookID int, variant, format string) (services.ActiveBookCover, error)
+}
+
 type BookCoverReadHandler struct {
 	service bookCoverReader
 	enabled bool
@@ -31,6 +35,15 @@ func NewBookCoverReadHandler(
 }
 
 func (h *BookCoverReadHandler) Serve(w http.ResponseWriter, r *http.Request) {
+	h.serve(w, r, false)
+}
+
+// ServePublic serves only active processed variants for books in the public catalogue.
+func (h *BookCoverReadHandler) ServePublic(w http.ResponseWriter, r *http.Request) {
+	h.serve(w, r, true)
+}
+
+func (h *BookCoverReadHandler) serve(w http.ResponseWriter, r *http.Request, public bool) {
 	if !h.enabled || h.service == nil {
 		writeBookCoverError(w, services.ErrCoversDisabled)
 		return
@@ -54,8 +67,18 @@ func (h *BookCoverReadHandler) Serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	claims, _ := auth.ClaimsFromContext(r.Context())
-	cover, err := h.service.Open(r.Context(), claims, id, variant, format)
+	var cover services.ActiveBookCover
+	if public {
+		reader, ok := h.service.(publicBookCoverReader)
+		if !ok {
+			writeBookCoverError(w, services.ErrCoversDisabled)
+			return
+		}
+		cover, err = reader.OpenPublic(r.Context(), id, variant, format)
+	} else {
+		claims, _ := auth.ClaimsFromContext(r.Context())
+		cover, err = h.service.Open(r.Context(), claims, id, variant, format)
+	}
 	if err != nil {
 		writeBookCoverError(w, err)
 		return
@@ -63,7 +86,11 @@ func (h *BookCoverReadHandler) Serve(w http.ResponseWriter, r *http.Request) {
 	defer cover.Body.Close()
 
 	w.Header().Set("Content-Type", cover.ContentType)
-	w.Header().Set("Cache-Control", "private, max-age=300")
+	cacheControl := "private, max-age=300"
+	if public {
+		cacheControl = "public, max-age=300"
+	}
+	w.Header().Set("Cache-Control", cacheControl)
 	w.Header().Set("ETag", cover.ETag)
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	if r.Header.Get("If-None-Match") == cover.ETag {

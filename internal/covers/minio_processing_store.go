@@ -43,12 +43,22 @@ func (c *minioProcessingClient) Open(
 	bucketName string,
 	objectName string,
 ) (io.ReadCloser, error) {
-	return c.client.GetObject(
+	object, err := c.client.GetObject(
 		ctx,
 		bucketName,
 		objectName,
 		minio.GetObjectOptions{},
 	)
+	if err != nil {
+		return nil, err
+	}
+	// GetObject is lazy. Stat prevents a missing remote object being sent as
+	// an empty 200 response, which otherwise becomes a broken blob URL.
+	if _, err = object.Stat(); err != nil {
+		_ = object.Close()
+		return nil, err
+	}
+	return object, nil
 }
 
 func (c *minioProcessingClient) PutObject(
