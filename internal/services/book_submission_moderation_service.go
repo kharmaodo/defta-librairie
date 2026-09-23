@@ -100,7 +100,7 @@ func (s *BookSubmissionModerationService) fail(ctx context.Context, submissionID
 		err = s.repository.FailModeration(ctx, submissionID, code, auditID, s.now().UTC().Format(time.RFC3339Nano))
 	}
 	if err != nil {
-		return errors.Join(ErrBookSubmissionModerationFailed, fmt.Errorf("moderate book submission: %w", cause), err)
+		return errors.Join(fmt.Errorf("moderate book submission: %w", cause), err)
 	}
 	return fmt.Errorf("%w: %w", ErrBookSubmissionModerationFailed, cause)
 }
