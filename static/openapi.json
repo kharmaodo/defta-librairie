@@ -13009,7 +13009,14 @@
           "403": {
             "description": "Interdit"
           }
-        }
+        },
+        "operationId": "listBookSubmissions",
+        "x-codeSamples": [
+          {
+            "lang": "curl",
+            "source": "curl --fail-with-body -sS 'http://localhost:8080/api/manage/book-submissions?limit=30' \\\n  -H \"Authorization: Bearer $TOKEN\""
+          }
+        ]
       }
     }
   },
