@@ -7,6 +7,7 @@ import (
 	"defta-librairie/internal/auth"
 	"defta-librairie/internal/covers"
 	"defta-librairie/internal/migrations"
+	"defta-librairie/internal/moderation"
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"errors"
@@ -23,6 +24,12 @@ type coverMemoryStore struct {
 	puts    int
 	deletes int
 	lastKey string
+}
+
+type safeCoverModerator struct{}
+
+func (safeCoverModerator) Moderate(context.Context, string, []byte) (moderation.Result, error) {
+	return moderation.Result{Class: "SAFE", Score: 0.99, ModelVersion: "test"}, nil
 }
 
 func (s *coverMemoryStore) Put(_ context.Context, key string, body io.Reader, _ int64, _ string) error {
@@ -91,7 +98,7 @@ func TestBookCoverUploadPersistsOutboxAndEnforcesLibraryScope(t *testing.T) {
 		t.Fatalf("new uploader: %v", err)
 	}
 	service := NewBookCoverService(
-		true, bookService, repositories.NewCoverRepository(db), sourceUploader,
+		true, bookService, repositories.NewCoverRepository(db), sourceUploader, safeCoverModerator{},
 	)
 	ids := []string{"event-1", "audit-1", "event-2", "audit-2"}
 	service.newID = func() (string, error) {
