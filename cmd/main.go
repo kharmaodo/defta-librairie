@@ -291,6 +291,7 @@ func main() {
 	coverPublisherDone := make(chan struct{})
 	submissionPublisherDone := make(chan struct{})
 	submissionWorkerDone := make(chan struct{})
+	approvedCoverPromotionDone := make(chan struct{})
 	coverWorkerDone := make(chan struct{})
 	coverCleanupDone := make(chan struct{})
 	if cfg.CoversEnabled {
@@ -307,6 +308,10 @@ func main() {
 			runBookSubmissionWorker(signalContext, cfg, database.DB, slog.Default())
 		}()
 		go func() {
+			defer close(approvedCoverPromotionDone)
+			runApprovedCoverPromotionWorker(signalContext, cfg, database.DB, slog.Default())
+		}()
+		go func() {
 			defer close(coverWorkerDone)
 			runBookCoverWorker(signalContext, cfg, database.DB, slog.Default())
 		}()
@@ -318,6 +323,7 @@ func main() {
 		close(coverPublisherDone)
 		close(submissionPublisherDone)
 		close(submissionWorkerDone)
+		close(approvedCoverPromotionDone)
 		close(coverWorkerDone)
 		close(coverCleanupDone)
 	}
@@ -339,7 +345,7 @@ func main() {
 	stop()
 	coverShutdownTimer := time.NewTimer(5 * time.Second)
 	defer coverShutdownTimer.Stop()
-	for coverPublisherDone != nil || submissionPublisherDone != nil || submissionWorkerDone != nil || coverWorkerDone != nil || coverCleanupDone != nil {
+	for coverPublisherDone != nil || submissionPublisherDone != nil || submissionWorkerDone != nil || approvedCoverPromotionDone != nil || coverWorkerDone != nil || coverCleanupDone != nil {
 		select {
 		case <-coverPublisherDone:
 			coverPublisherDone = nil
@@ -347,6 +353,8 @@ func main() {
 			submissionPublisherDone = nil
 		case <-submissionWorkerDone:
 			submissionWorkerDone = nil
+		case <-approvedCoverPromotionDone:
+			approvedCoverPromotionDone = nil
 		case <-coverWorkerDone:
 			coverWorkerDone = nil
 		case <-coverCleanupDone:
@@ -360,6 +368,9 @@ func main() {
 			}
 			if submissionWorkerDone != nil {
 				slog.Warn("submission_worker_shutdown_timeout")
+			}
+			if approvedCoverPromotionDone != nil {
+				slog.Warn("approved_cover_promotion_shutdown_timeout")
 			}
 			if coverWorkerDone != nil {
 				slog.Warn("cover_worker_shutdown_timeout")
