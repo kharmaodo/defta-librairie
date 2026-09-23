@@ -341,3 +341,50 @@ func (r *BookSubmissionRepository) RecordOutboxFailure(ctx context.Context, even
 	}
 	return nil
 }
+
+
+type ApprovedSubmissionForPromotion struct {
+	ID                string
+	BookID            int
+	LibraryID         string
+	ActorUserID       string
+	SourceObjectKey   string
+	SourceContentType string
+	SourceFormat      string
+	SourceWidth       int
+	SourceHeight      int
+	SourceSize        int64
+}
+
+func (r *BookSubmissionRepository) ApprovedWithoutCover(ctx context.Context, limit int) ([]ApprovedSubmissionForPromotion, error) {
+	if limit < 1 || limit > 100 {
+		return nil, ErrInvalidBookSubmission
+	}
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT s.id, s.created_book_id, s.library_id, s.actor_user_id,
+		       s.source_object_key, s.source_content_type, s.source_format,
+		       s.source_width, s.source_height, s.source_size
+		FROM book_submissions s
+		LEFT JOIN book_covers c ON c.book_id=s.created_book_id
+		WHERE s.moderation_status='APPROVED'
+		  AND s.created_book_id IS NOT NULL
+		  AND c.id IS NULL
+		ORDER BY s.updated_at, s.id
+		LIMIT ?
+	`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list approved submissions without cover: %w", err)
+	}
+	defer rows.Close()
+	result := make([]ApprovedSubmissionForPromotion, 0)
+	for rows.Next() {
+		var item ApprovedSubmissionForPromotion
+		if err = rows.Scan(&item.ID, &item.BookID, &item.LibraryID, &item.ActorUserID,
+			&item.SourceObjectKey, &item.SourceContentType, &item.SourceFormat,
+			&item.SourceWidth, &item.SourceHeight, &item.SourceSize); err != nil {
+			return nil, fmt.Errorf("scan approved submission without cover: %w", err)
+		}
+		result = append(result, item)
+	}
+	return result, rows.Err()
+}
