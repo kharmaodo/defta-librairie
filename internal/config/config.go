@@ -42,6 +42,8 @@ type Config struct {
 	CoverWorkerMaxDeliver     int
 	NATSSubmissionStream      string
 	NATSSubmissionSubject     string
+	NATSSubmissionConsumer    string
+	NSFWModerationEndpoint    string
 }
 
 func Load() (*Config, error) {
@@ -80,6 +82,8 @@ func Load() (*Config, error) {
 		CoverWorkerMaxDeliver:     int(getEnvPositiveInt64("COVER_WORKER_MAX_DELIVER", 5)),
 		NATSSubmissionStream:      getEnv("NATS_SUBMISSION_STREAM", "BOOK_SUBMISSIONS"),
 		NATSSubmissionSubject:     getEnv("NATS_SUBMISSION_SUBJECT", "book.submissions.moderate.v1"),
+		NATSSubmissionConsumer:    getEnv("NATS_SUBMISSION_CONSUMER", "book-submission-worker-v1"),
+		NSFWModerationEndpoint:    getEnv("NSFW_MODERATION_ENDPOINT", "http://nsfw-moderator:8090"),
 	}
 
 	return cfg, nil
