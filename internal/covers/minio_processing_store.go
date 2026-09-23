@@ -210,6 +210,37 @@ func (s *MinIOProcessingStore) PutVariant(
 	return nil
 }
 
+
+func (s *MinIOProcessingStore) CopySource(
+	ctx context.Context,
+	fromKey string,
+	toKey string,
+	size int64,
+	contentType string,
+) error {
+	if ctx == nil || size < 1 || !validObjectKey(fromKey) || !validObjectKey(toKey) ||
+		(contentType != "image/jpeg" && contentType != "image/png") {
+		return ErrInvalidObjectKey
+	}
+	reader, err := s.OpenSource(ctx, fromKey)
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+	if _, err = s.client.PutObject(
+		ctx, s.bucket, toKey, io.LimitReader(reader, size), size,
+		minio.PutObjectOptions{
+			ContentType: contentType,
+			UserMetadata: map[string]string{
+				"defta-kind": "book-cover-source",
+			},
+		},
+	); err != nil {
+		return fmt.Errorf("%w: copy approved cover source: %v", ErrStoreUnavailable, err)
+	}
+	return nil
+}
+
 func (s *MinIOProcessingStore) DeleteObject(
 	ctx context.Context,
 	key string,
