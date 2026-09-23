@@ -49,7 +49,7 @@ def load_model() -> tuple[ort.InferenceSession, dict[str, Any]]:
         runtime = ort.InferenceSession(str(MODEL_PATH), providers=["CPUExecutionProvider"])
         if input_spec["name"] not in {item.name for item in runtime.get_inputs()}:
             raise fail("declared input is absent")
-        if output_spec["name"] not in {item.name for item in runtime.get_outputs()}:
+        if output_spec.get("name") and output_spec["name"] not in {item.name for item in runtime.get_outputs()}:
             raise fail("declared output is absent")
         return runtime, loaded
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
@@ -102,8 +102,18 @@ async def moderate(request: Request) -> dict[str, Any]:
             tensor = input_tensor(image, manifest["input"])
     except (UnidentifiedImageError, OSError, ValueError) as error:
         raise HTTPException(status_code=400, detail="invalid_image") from error
-    values = session.run([manifest["output"]["name"]], {manifest["input"]["name"]: tensor})[0]
+    output_name = manifest["output"].get("name")
+    values = session.run([output_name] if output_name else None, {manifest["input"]["name"]: tensor})[0]
     probabilities = np.asarray(values, dtype=np.float32).reshape(-1)
+    labels = manifest["output"].get("labels")
+    if labels:
+        if len(labels) != probabilities.size or not all(isinstance(label, str) for label in labels):
+            raise HTTPException(status_code=500, detail="invalid_model_output")
+        scores = dict(zip(labels, probabilities.tolist()))
+        unsafe_score = max(float(scores.get("NSFW", 0)), float(scores.get("NSFL", 0)))
+        confidence = max(float(value) for value in probabilities)
+        decision = "UNSAFE" if unsafe_score >= 0.75 else "SAFE" if scores.get("SFW", 0) >= 0.75 else "REVIEW"
+        return {"class": decision, "score": unsafe_score, "modelVersion": manifest["modelVersion"]}
     index = manifest["output"]["nsfwIndex"]
     if not isinstance(index, int) or index < 0 or index >= probabilities.size:
         raise HTTPException(status_code=500, detail="invalid_model_output")
