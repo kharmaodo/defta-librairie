@@ -92,6 +92,7 @@ func main() {
 	bookHandler := handlers.NewBookManagementHandler(bookService)
 	bookCoverHandler := handlers.NewBookCoverHandler(nil, false, cfg.CoverMaxBytes)
 	bookCoverReadHandler := handlers.NewBookCoverReadHandler(nil, false)
+	bookSubmissionHandler := handlers.NewBookSubmissionHandler(nil, false, cfg.CoverMaxBytes)
 	if cfg.CoversEnabled {
 		coverStore, coverErr := covers.NewMinIOStore(
 			cfg.MinIOEndpoint, cfg.MinIOAccessKey, cfg.MinIOSecretKey,
@@ -113,6 +114,12 @@ func main() {
 			true, bookService, coverRepository, coverUploader,
 		)
 		bookCoverHandler = handlers.NewBookCoverHandler(coverService, true, cfg.CoverMaxBytes)
+		bookSubmissionHandler = handlers.NewBookSubmissionHandler(
+			services.NewBookSubmissionService(
+				true, bookService, repositories.NewBookSubmissionRepository(database.DB), coverUploader,
+			),
+			true, cfg.CoverMaxBytes,
+		)
 
 		coverReader, coverErr := covers.NewMinIOProcessingStore(
 			cfg.MinIOEndpoint, cfg.MinIOAccessKey, cfg.MinIOSecretKey,
@@ -209,6 +216,7 @@ func main() {
 	mux.Handle("GET /api/manage/exports/{kind}", bookManagers(http.HandlerFunc(exportHandler.Download)))
 	mux.Handle("GET /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.List)))
 	mux.Handle("POST /api/manage/books", bookManagers(http.HandlerFunc(bookHandler.Create)))
+	mux.Handle("POST /api/manage/book-submissions", bookManagers(http.HandlerFunc(bookSubmissionHandler.Create)))
 	mux.Handle("GET /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Get)))
 	mux.Handle("GET /api/manage/books/{id}/history", bookManagers(http.HandlerFunc(bookHandler.History)))
 	mux.Handle("PUT /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Update)))
