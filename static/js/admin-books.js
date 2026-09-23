@@ -267,6 +267,17 @@
           if (file && (!["image/jpeg", "image/png"].includes(file.type) || file.size > 5 * 1024 * 1024 || !file.size)) {
             throw new Error("Choisissez une image JPEG ou PNG de 5 Mo maximum.");
           }
+          if (!id && file) {
+            const submission = new FormData();
+            const payload = bookPayload(form);
+            Object.entries(payload).forEach(([key, value]) => submission.set(key, String(value)));
+            submission.set("cover", file);
+            const pending = await apiFetch("/api/manage/book-submissions", {method: "POST", body: submission});
+            form.elements.cover.value = "";
+            formError.textContent = `Soumission ${pending.id} reçue : le livre sera créé après validation de la couverture.`;
+            formError.hidden = false;
+            return;
+          }
           const saved = await apiFetch(id ? `/api/manage/books/${id}` : "/api/manage/books", {
             method: id ? "PUT" : "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(bookPayload(form))
           });
