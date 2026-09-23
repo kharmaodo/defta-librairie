@@ -278,3 +278,66 @@ func (r *BookSubmissionRepository) FailModeration(ctx context.Context, id, decis
 	}
 	return nil
 }
+
+
+type PendingSubmissionOutboxEvent struct {
+	EventID string
+	Payload string
+}
+
+func (r *BookSubmissionRepository) PendingOutbox(ctx context.Context, now string, limit int) ([]PendingSubmissionOutboxEvent, error) {
+	if limit < 1 || limit > 100 {
+		return nil, ErrInvalidBookSubmission
+	}
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT event_id, payload
+		FROM book_submission_outbox
+		WHERE published_at IS NULL AND available_at <= ?
+		ORDER BY created_at, event_id
+		LIMIT ?
+	`, now, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list pending submission outbox: %w", err)
+	}
+	defer rows.Close()
+	events := make([]PendingSubmissionOutboxEvent, 0)
+	for rows.Next() {
+		var event PendingSubmissionOutboxEvent
+		if err = rows.Scan(&event.EventID, &event.Payload); err != nil {
+			return nil, fmt.Errorf("scan pending submission outbox: %w", err)
+		}
+		events = append(events, event)
+	}
+	return events, rows.Err()
+}
+
+func (r *BookSubmissionRepository) MarkOutboxPublished(ctx context.Context, eventID, now string) error {
+	result, err := r.db.ExecContext(ctx, `
+		UPDATE book_submission_outbox
+		SET published_at=?, last_error=NULL
+		WHERE event_id=? AND published_at IS NULL
+	`, now, eventID)
+	if err != nil {
+		return fmt.Errorf("mark submission outbox published: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil || rows != 1 {
+		return ErrBookSubmissionNotFound
+	}
+	return nil
+}
+
+func (r *BookSubmissionRepository) RecordOutboxFailure(ctx context.Context, eventID, message, now string) error {
+	if message == "" {
+		message = "publish_failed"
+	}
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE book_submission_outbox
+		SET attempts=attempts+1, last_error=?, available_at=?
+		WHERE event_id=? AND published_at IS NULL
+	`, message, now, eventID)
+	if err != nil {
+		return fmt.Errorf("record submission outbox failure: %w", err)
+	}
+	return nil
+}
