@@ -739,6 +739,15 @@
     </form>
   </dialog>
 
+  <dialog id="submission-retry-dialog" class="modal narrow" aria-labelledby="submission-retry-title" aria-describedby="submission-retry-message">
+    <form id="submission-retry-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Modération</p><h2 id="submission-retry-title">Relancer la vérification</h2></div><button class="icon-button" type="button" data-submission-retry-cancel aria-label="Fermer la relance">×</button></div>
+      <p id="submission-retry-message" class="form-note">La soumission sera remise dans la file de modération. Aucun livre ne sera créé sans nouvelle décision positive.</p>
+      <p class="alert" data-submission-retry-error role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-submission-retry-cancel>Annuler</button><button class="button primary" type="submit">Relancer la vérification</button></div>
+    </form>
+  </dialog>
+
   <section id="book-submissions-panel" class="panel"><div class="panel-heading"><div><p class="eyebrow">Modération</p><h2>Soumissions de couvertures</h2></div><button class="button ghost" type="button">Actualiser</button></div><p data-submission-notice class="hint"></p><div class="table-wrap"><table><thead><tr><th scope="col">Titre</th><th scope="col">État</th><th scope="col">Score</th><th scope="col">Décision</th><th scope="col">Livre créé</th><th scope="col">Actions</th></tr></thead><tbody></tbody></table></div></section>
 
   <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
