@@ -146,7 +146,7 @@
       const form = document.querySelector("#book-form");
       resetCoverState();
       form.reset();
-      form.elements.cover.disabled = false;
+      form.elements.cover.disabled = Boolean(book);
       form.elements.id.value = book ? book.id : "";
       form.elements.version.value = book ? book.version : "";
       form.elements.title.value = book ? book.title : "";
@@ -167,7 +167,9 @@
       document.querySelector("#book-form-title").textContent = book ? "Modifier le livre" : "Nouveau livre";
       document.querySelector("#book-form-error").hidden = true;
       dialog.showModal();
-      if (book) refreshCoverStatus(book.id);
+      if (book) {
+        coverStatus().textContent = "Le remplacement de couverture est temporairement bloqué : il doit passer par la modération.";
+      }
     }
 
     function bookPayload(form) {
