@@ -6,10 +6,23 @@
     "layout": "NCHW",
     "width": 224,
     "height": 224,
-    "mean": [0.0, 0.0, 0.0],
-    "std": [1.0, 1.0, 1.0]
+    "mean": [
+      0,
+      0,
+      0
+    ],
+    "std": [
+      1,
+      1,
+      1
+    ],
+    "pixelRange": "0_255"
   },
   "output": {
-    "labels": ["NSFL", "NSFW", "SFW"]
+    "labels": [
+      "NSFL",
+      "NSFW",
+      "SFW"
+    ]
   }
 }
