@@ -13044,10 +13044,7 @@
         },
         "x-codeSamples": [{
           "lang": "Shell", "label": "curl",
-          "source": "curl --fail-with-body -sS -X POST \"${BASE_URL}/api/manage/book-submissions/${SUBMISSION_ID}/decision\" \\
-  -H \"Authorization: Bearer ${TOKEN}\" \\
-  -H \"Content-Type: application/json\" \\
-  --data '{\"decision\":\"APPROVE\"}'"
+          "source": "curl --fail-with-body -sS -X POST \"${BASE_URL}/api/manage/book-submissions/${SUBMISSION_ID}/decision\" \\\n  -H \"Authorization: Bearer ${TOKEN}\" \\\n  -H \"Content-Type: application/json\" \\\n  --data '{\"decision\":\"APPROVE\"}'"
         }]
       }
     }
