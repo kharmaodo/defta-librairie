@@ -24,10 +24,10 @@ type BookSubmissionService struct {
 }
 
 type PendingBookSubmission struct {
-	ID string
-	LibraryID string
-	Status string
-	ExpiresAt string
+	ID        string `json:"id"`
+	LibraryID string `json:"libraryId"`
+	Status    string `json:"status"`
+	ExpiresAt string `json:"expiresAt"`
 }
 
 func NewBookSubmissionService(enabled bool, books *BookService, repository *repositories.BookSubmissionRepository, uploader *covers.SourceUploader) *BookSubmissionService {
