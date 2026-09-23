@@ -28,6 +28,18 @@
     } finally { button.disabled = false; }
   }
 
+  async function retry(button) {
+    if (!window.confirm("Relancer la modération de cette soumission ?")) return;
+    button.disabled = true;
+    try {
+      await window.DeftaHTTP.json(`/api/manage/book-submissions/${encodeURIComponent(button.dataset.submissionId)}/retry`, {method: "POST"});
+      await load();
+    } catch (error) {
+      const notice = document.querySelector("#book-submissions-panel [data-submission-notice]");
+      notice.textContent = error.message || "La relance n’a pas pu être enregistrée.";
+    } finally { button.disabled = false; }
+  }
+
   async function load() {
     const box = document.querySelector("#book-submissions-panel");
     if (!box) return;
@@ -44,6 +56,9 @@
         const actions = row.insertCell();
         if (isRoot && item.moderationStatus === "REVIEW_REQUIRED") {
           actions.append(actionButton("Approuver", "APPROVE", item.id), actionButton("Refuser", "REJECT", item.id));
+        } else if (isRoot && item.moderationStatus === "FAILED") {
+          const retryButton = actionButton("Relancer", "RETRY", item.id);
+          actions.append(retryButton);
         } else actions.textContent = "—";
       });
       notice.textContent = data.results.length ? "" : "Aucune soumission récente.";
@@ -55,7 +70,8 @@
     panel.querySelector("button").addEventListener("click", load);
     panel.querySelector("tbody").addEventListener("click", (event) => {
       const button = event.target.closest("button[data-decision]");
-      if (button) decide(button);
+      if (button?.dataset.decision === "RETRY") retry(button);
+      else if (button) decide(button);
     });
     try {
       const user = await window.DeftaHTTP.json("/api/auth/me");
