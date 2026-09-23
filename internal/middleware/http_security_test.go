@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -18,6 +19,9 @@ func TestSecureHTTPAddsHeaders(t *testing.T) {
 		if response.Header().Get(header) == "" {
 			t.Fatalf("missing %s", header)
 		}
+	}
+	if !strings.Contains(response.Header().Get("Content-Security-Policy"), "img-src 'self' data: blob:") {
+		t.Fatalf("CSP does not allow authenticated image previews: %q", response.Header().Get("Content-Security-Policy"))
 	}
 	if response.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("expected no-store, got %q", response.Header().Get("Cache-Control"))
