@@ -388,3 +388,16 @@ func (r *BookSubmissionRepository) ApprovedWithoutCover(ctx context.Context, lim
 	}
 	return result, rows.Err()
 }
+
+
+func (r *BookSubmissionRepository) List(ctx context.Context, libraryID string, limit int) ([]models.BookSubmission, error) {
+	if limit < 1 || limit > 100 { return nil, ErrInvalidBookSubmission }
+	query := `SELECT id, library_id, title, auteur, editeur, price, volume, status, tags, categorie, cover_url, source_object_key, source_content_type, source_format, source_width, source_height, source_size, moderation_status, moderation_score, COALESCE(moderation_model_version,''), COALESCE(decision_code,''), created_book_id, expires_at, created_at, updated_at FROM book_submissions`
+	args := []interface{}{}
+	if libraryID != "" { query += " WHERE library_id=?"; args = append(args, libraryID) }
+	query += " ORDER BY created_at DESC LIMIT ?"; args = append(args, limit)
+	rows, err := r.db.QueryContext(ctx, query, args...); if err != nil { return nil, fmt.Errorf("list book submissions: %w", err) }; defer rows.Close()
+	items := []models.BookSubmission{}
+	for rows.Next() { var item models.BookSubmission; if err=rows.Scan(&item.ID,&item.LibraryID,&item.Title,&item.Auteur,&item.Editeur,&item.Price,&item.Volume,&item.Status,&item.Tags,&item.Categorie,&item.CoverURL,&item.SourceObjectKey,&item.SourceContentType,&item.SourceFormat,&item.SourceWidth,&item.SourceHeight,&item.SourceSize,&item.ModerationStatus,&item.ModerationScore,&item.ModerationModelVersion,&item.DecisionCode,&item.CreatedBookID,&item.ExpiresAt,&item.CreatedAt,&item.UpdatedAt); err != nil { return nil, fmt.Errorf("scan book submission: %w",err) }; items=append(items,item) }
+	return items, rows.Err()
+}
