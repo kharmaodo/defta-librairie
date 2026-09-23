@@ -128,3 +128,32 @@ func TestSourceObjectKeyRejectsUnsafeSegments(t *testing.T) {
 		}
 	}
 }
+
+
+func TestSourceUploaderStoresSubmissionInQuarantine(t *testing.T) {
+	store := &memoryStore{}
+	uploader, _ := NewSourceUploader(
+		store,
+		NewValidator(1024*1024, 100),
+		func() (string, error) { return "source-id", nil },
+	)
+	source, err := uploader.UploadSubmission(
+		context.Background(), "library-id", "submission-id", "image/png",
+		bytes.NewReader(encodedImage(t, "png", 4, 5)),
+	)
+	if err != nil {
+		t.Fatalf("upload submission: %v", err)
+	}
+	if source.ObjectKey != "quarantine/library-id/submission-id/source-id.png" {
+		t.Fatalf("object key=%q", source.ObjectKey)
+	}
+	if store.key != source.ObjectKey {
+		t.Fatalf("stored key=%q", store.key)
+	}
+}
+
+func TestQuarantineObjectKeyRejectsUnsafeSegments(t *testing.T) {
+	if _, err := QuarantineObjectKey("library", "../submission", "source", "jpg"); !errors.Is(err, ErrInvalidObjectKey) {
+		t.Fatalf("error=%v", err)
+	}
+}
