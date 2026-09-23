@@ -42,6 +42,8 @@ def load_model() -> tuple[ort.InferenceSession, dict[str, Any]]:
             raise fail("model sha256 mismatch")
         if input_spec["layout"] not in {"NCHW", "NHWC"}:
             raise fail("unsupported input layout")
+        if input_spec.get("pixelRange", "0_1") not in {"0_1", "0_255"}:
+            raise fail("unsupported input pixel range")
         if not isinstance(input_spec["width"], int) or not isinstance(input_spec["height"], int):
             raise fail("invalid input dimensions")
         if len(input_spec["mean"]) != 3 or len(input_spec["std"]) != 3:
@@ -76,7 +78,9 @@ def ready() -> dict[str, str]:
 
 def input_tensor(image: Image.Image, spec: dict[str, Any]) -> np.ndarray:
     resized = image.convert("RGB").resize((spec["width"], spec["height"]), Image.Resampling.BILINEAR)
-    pixels = np.asarray(resized, dtype=np.float32) / 255.0
+    pixels = np.asarray(resized, dtype=np.float32)
+    if spec.get("pixelRange", "0_1") == "0_1":
+        pixels /= 255.0
     mean = np.asarray(spec["mean"], dtype=np.float32)
     std = np.asarray(spec["std"], dtype=np.float32)
     if np.any(std == 0):
