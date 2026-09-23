@@ -1,0 +1,16 @@
+{
+  "modelVersion": "open-nsfw-onnx-1.0",
+  "sha256": "replace-with-the-model-sha256",
+  "input": {
+    "name": "input",
+    "layout": "NCHW",
+    "width": 224,
+    "height": 224,
+    "mean": [0.0, 0.0, 0.0],
+    "std": [1.0, 1.0, 1.0]
+  },
+  "output": {
+    "name": "prob",
+    "nsfwIndex": 1
+  }
+}
