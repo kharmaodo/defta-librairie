@@ -110,6 +110,15 @@ func (h *BookCoverHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	writeAuthJSON(w, http.StatusAccepted, pending)
 }
 
+// ModerationRequired rejects the legacy direct-replacement endpoint. Existing
+// book covers must not bypass the quarantine and NSFW decision workflow.
+func (h *BookCoverHandler) ModerationRequired(w http.ResponseWriter, r *http.Request) {
+	writeAuthJSON(w, http.StatusConflict, map[string]string{
+		"error": "cover_moderation_required",
+		"message": "Existing book cover replacements require moderation",
+	})
+}
+
 func (h *BookCoverHandler) Status(w http.ResponseWriter, r *http.Request) {
 	if !h.enabled || h.statusService == nil {
 		writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{
