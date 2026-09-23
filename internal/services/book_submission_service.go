@@ -93,3 +93,12 @@ func (s *BookSubmissionService) discardSubmissionSource(ctx context.Context, sou
 	}
 	return fmt.Errorf("%w: %v", ErrCoverPersistence, cause)
 }
+
+
+func (s *BookSubmissionService) List(ctx context.Context, claims *auth.Claims, requestedLibrary string, limit int) ([]models.BookSubmission, error) {
+	if !s.enabled || s.repository == nil { return nil, ErrCoversDisabled }
+	libraryID, err := resolveBookScope(claims, requestedLibrary, false)
+	if err != nil { return nil, err }
+	if err = s.books.ensureOwnerLibraryActive(ctx, claims, libraryID); err != nil { return nil, err }
+	return s.repository.List(ctx, libraryID, limit)
+}
