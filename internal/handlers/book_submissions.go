@@ -17,6 +17,7 @@ type bookSubmissionCreator interface {
 	Submit(context.Context, *auth.Claims, models.BookInput, string, io.Reader) (services.PendingBookSubmission, error)
 	List(context.Context, *auth.Claims, string, int) ([]models.BookSubmission, error)
 	DecideReview(context.Context, *auth.Claims, string, string) (services.ManualBookSubmissionDecision, error)
+	RetryFailed(context.Context, *auth.Claims, string) error
 }
 
 type BookSubmissionHandler struct {
@@ -128,12 +129,19 @@ func (h *BookSubmissionHandler) DecideReview(w http.ResponseWriter, r *http.Requ
 	writeAuthJSON(w, http.StatusOK, decision)
 }
 
+func (h *BookSubmissionHandler) RetryFailed(w http.ResponseWriter, r *http.Request) {
+	if !h.enabled || h.service == nil { writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{"error":"covers_disabled"}); return }
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	if err := h.service.RetryFailed(r.Context(), claims, r.PathValue("id")); err != nil { writeBookSubmissionError(w, err); return }
+	writeAuthJSON(w, http.StatusAccepted, map[string]string{"id":r.PathValue("id"), "moderationStatus":"PENDING_SCAN", "decisionCode":"RETRY_REQUESTED"})
+}
+
 func writeBookSubmissionError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, repositories.ErrBookSubmissionNotFound):
 		writeAuthJSON(w, http.StatusNotFound, map[string]string{"error": "book_submission_not_found", "message": "Book submission not found"})
 	case errors.Is(err, repositories.ErrBookSubmissionState):
-		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "book_submission_not_reviewable", "message": "Book submission is not awaiting review"})
+		writeAuthJSON(w, http.StatusConflict, map[string]string{"error": "book_submission_not_actionable", "message": "Book submission is not in the expected state"})
 	case errors.Is(err, services.ErrBookForbidden):
 		writeAuthJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "Insufficient permissions"})
 	case errors.Is(err, services.ErrInvalidBook):

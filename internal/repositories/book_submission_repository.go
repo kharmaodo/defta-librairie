@@ -392,6 +392,32 @@ func (r *BookSubmissionRepository) FailModeration(ctx context.Context, id, decis
 	return nil
 }
 
+// RetryFailed returns a technical failure to the moderation queue. Only a
+// FAILED submission whose quarantined source has not expired can be retried.
+func (r *BookSubmissionRepository) RetryFailed(ctx context.Context, submissionID, reviewerUserID, eventID, payload, auditID, now string) error {
+	if submissionID == "" || reviewerUserID == "" || eventID == "" || payload == "" || auditID == "" || now == "" {
+		return ErrInvalidBookSubmission
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil { return fmt.Errorf("begin retry book submission: %w", err) }
+	defer tx.Rollback()
+	var libraryID string
+	err = tx.QueryRowContext(ctx, `SELECT library_id FROM book_submissions WHERE id=? AND moderation_status='FAILED' AND expires_at>?`, submissionID, now).Scan(&libraryID)
+	if errors.Is(err, sql.ErrNoRows) {
+		var exists int
+		if checkErr := tx.QueryRowContext(ctx, `SELECT 1 FROM book_submissions WHERE id=?`, submissionID).Scan(&exists); errors.Is(checkErr, sql.ErrNoRows) { return ErrBookSubmissionNotFound }
+		return ErrBookSubmissionState
+	}
+	if err != nil { return fmt.Errorf("read retryable book submission: %w", err) }
+	result, err := tx.ExecContext(ctx, `UPDATE book_submissions SET moderation_status='PENDING_SCAN', decision_code='RETRY_REQUESTED', updated_at=? WHERE id=? AND moderation_status='FAILED'`, now, submissionID)
+	if err != nil { return fmt.Errorf("requeue book submission: %w", err) }
+	if rows, rowErr := result.RowsAffected(); rowErr != nil || rows != 1 { return ErrBookSubmissionState }
+	if _, err = tx.ExecContext(ctx, `INSERT INTO book_submission_outbox(event_id, submission_id, library_id, event_type, schema_version, payload, attempts, available_at, created_at) VALUES (?, ?, ?, 'book.submissions.moderate.v1', 1, ?, 0, ?, ?)`, eventID, submissionID, libraryID, payload, now, now); err != nil { return fmt.Errorf("queue book submission retry: %w", err) }
+	if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at) VALUES (?, ?, 'RETRY_BOOK_SUBMISSION_MODERATION', 'BOOK_SUBMISSION', ?, ?, 1, ?)`, auditID, reviewerUserID, submissionID, `{"reason":"manual_retry"}`, now); err != nil { return fmt.Errorf("audit book submission retry: %w", err) }
+	if err = tx.Commit(); err != nil { return fmt.Errorf("commit book submission retry: %w", err) }
+	return nil
+}
+
 
 type PendingSubmissionOutboxEvent struct {
 	EventID string

@@ -204,3 +204,18 @@ func TestBookSubmissionCreatePendingRejectsIncompleteSubmission(t *testing.T) {
 		t.Fatalf("error=%v", err)
 	}
 }
+
+func TestBookSubmissionRetryFailedRequeuesExactlyOnce(t *testing.T) {
+	db := openBookSubmissionTestDB(t)
+	repository := NewBookSubmissionRepository(db)
+	submission := PendingBookSubmission{ID: "retry-1", LibraryID: "library-1", ActorUserID: "owner-1", Book: models.BookInput{Title: "Livre", Price: 1, Volume: 0, Status: "AVAILABLE"}, SourceObjectKey: "quarantine/library-1/retry-1/source.jpg", SourceContentType: "image/jpeg", SourceFormat: "jpeg", SourceWidth: 1, SourceHeight: 1, SourceSize: 1, ExpiresAt: "2026-10-01T10:00:00Z"}
+	if err := repository.CreatePending(context.Background(), submission, "event-initial", `{"submissionId":"retry-1"}`, "audit-initial", "2026-09-23T10:00:00Z"); err != nil { t.Fatal(err) }
+	if _, err := db.Exec(`UPDATE book_submissions SET moderation_status='FAILED', decision_code='MODERATOR_UNAVAILABLE' WHERE id='retry-1'`); err != nil { t.Fatal(err) }
+	if err := repository.RetryFailed(context.Background(), "retry-1", "root-1", "event-retry", `{"submissionId":"retry-1"}`, "audit-retry", "2026-09-23T10:01:00Z"); err != nil { t.Fatal(err) }
+	if err := repository.RetryFailed(context.Background(), "retry-1", "root-1", "event-retry-2", `{"submissionId":"retry-1"}`, "audit-retry-2", "2026-09-23T10:02:00Z"); !errors.Is(err, ErrBookSubmissionState) { t.Fatalf("second retry: %v", err) }
+	var status, code string; var events, audits int
+	_ = db.QueryRow(`SELECT moderation_status, decision_code FROM book_submissions WHERE id='retry-1'`).Scan(&status, &code)
+	_ = db.QueryRow(`SELECT COUNT(*) FROM book_submission_outbox WHERE submission_id='retry-1'`).Scan(&events)
+	_ = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE action='RETRY_BOOK_SUBMISSION_MODERATION'`).Scan(&audits)
+	if status != "PENDING_SCAN" || code != "RETRY_REQUESTED" || events != 2 || audits != 1 { t.Fatalf("status=%s code=%s events=%d audits=%d", status, code, events, audits) }
+}
