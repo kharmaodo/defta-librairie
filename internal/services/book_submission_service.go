@@ -30,6 +30,13 @@ type PendingBookSubmission struct {
 	ExpiresAt string `json:"expiresAt"`
 }
 
+type ManualBookSubmissionDecision struct {
+	ID            string `json:"id"`
+	Status        string `json:"moderationStatus"`
+	DecisionCode  string `json:"decisionCode"`
+	CreatedBookID *int   `json:"createdBookId,omitempty"`
+}
+
 func NewBookSubmissionService(enabled bool, books *BookService, repository *repositories.BookSubmissionRepository, uploader *covers.SourceUploader) *BookSubmissionService {
 	return &BookSubmissionService{enabled: enabled, books: books, repository: repository, uploader: uploader, newID: identity.NewID, now: time.Now}
 }
@@ -101,4 +108,44 @@ func (s *BookSubmissionService) List(ctx context.Context, claims *auth.Claims, r
 	if err != nil { return nil, err }
 	if err = s.books.ensureOwnerLibraryActive(ctx, claims, libraryID); err != nil { return nil, err }
 	return s.repository.List(ctx, libraryID, limit)
+}
+
+// DecideReview is deliberately restricted to the root account.  Owners can
+// submit and consult their own covers, but cannot override the moderation
+// policy for an ambiguous image.
+func (s *BookSubmissionService) DecideReview(ctx context.Context, claims *auth.Claims, submissionID, decision string) (ManualBookSubmissionDecision, error) {
+	if !s.enabled || s.repository == nil || s.newID == nil || claims == nil || claims.Role != models.RoleSuperAdminRoot {
+		return ManualBookSubmissionDecision{}, ErrBookForbidden
+	}
+	var value repositories.ManualReviewDecision
+	switch decision {
+	case string(repositories.ManualReviewApprove):
+		value = repositories.ManualReviewApprove
+	case string(repositories.ManualReviewReject):
+		value = repositories.ManualReviewReject
+	default:
+		return ManualBookSubmissionDecision{}, ErrInvalidBook
+	}
+	decisionAuditID, err := s.newID()
+	if err != nil {
+		return ManualBookSubmissionDecision{}, err
+	}
+	bookAuditID := ""
+	if value == repositories.ManualReviewApprove {
+		bookAuditID, err = s.newID()
+		if err != nil {
+			return ManualBookSubmissionDecision{}, err
+		}
+	}
+	bookID, err := s.repository.DecideReview(ctx, submissionID, claims.Subject, value,
+		decisionAuditID, bookAuditID, s.now().UTC().Format(time.RFC3339Nano))
+	if err != nil {
+		return ManualBookSubmissionDecision{}, err
+	}
+	result := ManualBookSubmissionDecision{ID: submissionID, DecisionCode: "MANUAL_REJECTED", Status: "REJECTED"}
+	if value == repositories.ManualReviewApprove {
+		result.Status, result.DecisionCode = "APPROVED", "MANUAL_APPROVED"
+		result.CreatedBookID = &bookID
+	}
+	return result, nil
 }

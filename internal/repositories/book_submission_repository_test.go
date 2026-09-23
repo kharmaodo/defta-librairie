@@ -39,6 +39,10 @@ func openBookSubmissionTestDB(t *testing.T) *sql.DB {
 			source_height INTEGER NOT NULL,
 			source_size INTEGER NOT NULL,
 			moderation_status TEXT NOT NULL,
+			moderation_score REAL,
+			moderation_model_version TEXT,
+			decision_code TEXT,
+			created_book_id INTEGER,
 			expires_at TEXT NOT NULL,
 			created_at TEXT NOT NULL,
 			updated_at TEXT NOT NULL
@@ -64,10 +68,81 @@ func openBookSubmissionTestDB(t *testing.T) *sql.DB {
 			success INTEGER NOT NULL,
 			created_at TEXT NOT NULL
 		);
+		CREATE TABLE defta (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT NOT NULL, auteur TEXT, editeur TEXT, price REAL NOT NULL,
+			volume INTEGER NOT NULL, status TEXT, tags TEXT, categorie TEXT, coverUrl TEXT,
+			library_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+			version INTEGER NOT NULL
+		);
+		CREATE TABLE library_settings (library_id TEXT PRIMARY KEY, default_low_stock_threshold INTEGER NOT NULL);
+		CREATE TABLE book_inventory (
+			book_id INTEGER PRIMARY KEY, library_id TEXT NOT NULL, quantity INTEGER NOT NULL,
+			low_stock_threshold INTEGER NOT NULL, version INTEGER NOT NULL, updated_at TEXT NOT NULL
+		);
 	`); err != nil {
 		t.Fatalf("create schema: %v", err)
 	}
 	return db
+}
+
+func TestBookSubmissionManualReviewApproveCreatesOneBookAndAuditsReviewer(t *testing.T) {
+	db := openBookSubmissionTestDB(t)
+	if _, err := db.Exec(`
+		INSERT INTO book_submissions(
+			id, library_id, actor_user_id, title, auteur, editeur, price, volume, status,
+			tags, categorie, cover_url, source_object_key, source_content_type, source_format,
+			source_width, source_height, source_size, moderation_status, expires_at, created_at, updated_at
+		) VALUES ('review-1','library-1','owner-1','Livre ambigu','Auteur','Editeur',2500,3,'AVAILABLE',
+			'tag','Essai','','quarantine/library-1/review-1/source.jpg','image/jpeg','jpeg',800,1200,2048,
+			'REVIEW_REQUIRED','2026-10-01T10:00:00Z','2026-09-23T10:00:00Z','2026-09-23T10:00:00Z')
+	`); err != nil {
+		t.Fatalf("seed review: %v", err)
+	}
+	repository := NewBookSubmissionRepository(db)
+	bookID, err := repository.DecideReview(context.Background(), "review-1", "root-1", ManualReviewApprove,
+		"audit-decision-1", "audit-book-1", "2026-09-23T10:01:00Z")
+	if err != nil || bookID < 1 {
+		t.Fatalf("approve review: id=%d err=%v", bookID, err)
+	}
+	if _, err = repository.DecideReview(context.Background(), "review-1", "root-1", ManualReviewApprove,
+		"audit-decision-2", "audit-book-2", "2026-09-23T10:02:00Z"); !errors.Is(err, ErrBookSubmissionState) {
+		t.Fatalf("second approval error=%v", err)
+	}
+	var status, code string
+	var createdID int
+	if err = db.QueryRow(`SELECT moderation_status, decision_code, created_book_id FROM book_submissions WHERE id='review-1'`).Scan(&status, &code, &createdID); err != nil {
+		t.Fatalf("read decision: %v", err)
+	}
+	if status != "APPROVED" || code != "MANUAL_APPROVED" || createdID != bookID {
+		t.Fatalf("status=%s code=%s book=%d", status, code, createdID)
+	}
+	var books, audit int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM defta`).Scan(&books)
+	_ = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE actor_user_id='root-1' AND action='MANUALLY_DECIDE_BOOK_SUBMISSION_MODERATION'`).Scan(&audit)
+	if books != 1 || audit != 1 {
+		t.Fatalf("books=%d audit=%d", books, audit)
+	}
+}
+
+func TestBookSubmissionManualReviewRejectDoesNotCreateBook(t *testing.T) {
+	db := openBookSubmissionTestDB(t)
+	if _, err := db.Exec(`
+		INSERT INTO book_submissions(
+			id, library_id, actor_user_id, title, auteur, editeur, price, volume, status,
+			tags, categorie, cover_url, source_object_key, source_content_type, source_format,
+			source_width, source_height, source_size, moderation_status, expires_at, created_at, updated_at
+		) VALUES ('review-2','library-1','owner-1','Livre ambigu','Auteur','Editeur',2500,3,'AVAILABLE',
+			'tag','Essai','','quarantine/library-1/review-2/source.jpg','image/jpeg','jpeg',800,1200,2048,
+			'REVIEW_REQUIRED','2026-10-01T10:00:00Z','2026-09-23T10:00:00Z','2026-09-23T10:00:00Z')
+	`); err != nil { t.Fatalf("seed review: %v", err) }
+	if _, err := NewBookSubmissionRepository(db).DecideReview(context.Background(), "review-2", "root-1", ManualReviewReject,
+		"audit-decision-2", "", "2026-09-23T10:01:00Z"); err != nil { t.Fatalf("reject review: %v", err) }
+	var status string
+	var books int
+	_ = db.QueryRow(`SELECT moderation_status FROM book_submissions WHERE id='review-2'`).Scan(&status)
+	_ = db.QueryRow(`SELECT COUNT(*) FROM defta`).Scan(&books)
+	if status != "REJECTED" || books != 0 { t.Fatalf("status=%s books=%d", status, books) }
 }
 
 func TestBookSubmissionCreatePendingIsAtomic(t *testing.T) {

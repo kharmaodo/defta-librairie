@@ -13018,6 +13018,38 @@
           }
         ]
       }
+    },
+    "/api/manage/book-submissions/{id}/decision": {
+      "post": {
+        "operationId": "BookSubmissionHandler_DecideReview",
+        "summary": "Décider manuellement une soumission ambiguë",
+        "tags": ["books_management"],
+        "description": "Réservé à SUPER_ADMIN_ROOT. La décision APPROVE crée le livre une seule fois ; REJECT ne crée aucun livre.",
+        "parameters": [{
+          "name": "id", "in": "path", "required": true,
+          "schema": {"type": "string"}
+        }],
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {"schema": {"type": "object", "required": ["decision"], "properties": {"decision": {"type": "string", "enum": ["APPROVE", "REJECT"]}}}}}
+        },
+        "responses": {
+          "200": {"description": "Décision enregistrée."},
+          "400": {"description": "Décision invalide."},
+          "401": {"description": "Authentification requise."},
+          "403": {"description": "Réservé à SUPER_ADMIN_ROOT."},
+          "404": {"description": "Soumission introuvable."},
+          "409": {"description": "La soumission n’est plus en revue."},
+          "503": {"description": "Couvertures indisponibles."}
+        },
+        "x-codeSamples": [{
+          "lang": "Shell", "label": "curl",
+          "source": "curl --fail-with-body -sS -X POST \"${BASE_URL}/api/manage/book-submissions/${SUBMISSION_ID}/decision\" \\
+  -H \"Authorization: Bearer ${TOKEN}\" \\
+  -H \"Content-Type: application/json\" \\
+  --data '{\"decision\":\"APPROVE\"}'"
+        }]
+      }
     }
   },
   "components": {
