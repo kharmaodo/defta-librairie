@@ -92,6 +92,14 @@ func TestBookCoverUploadRejectsDisabledFeatureBeforeParsing(t *testing.T) {
 	}
 }
 
+func TestBookCoverReplacementRequiresModeration(t *testing.T) {
+	response := httptest.NewRecorder()
+	NewBookCoverHandler(nil, true, 1024).ModerationRequired(response, httptest.NewRequest(http.MethodPost, "/api/manage/books/42/cover", nil))
+	if response.Code != http.StatusConflict || !bytes.Contains(response.Body.Bytes(), []byte("cover_moderation_required")) {
+		t.Fatalf("status=%d body=%s", response.Code, response.Body.String())
+	}
+}
+
 func TestBookCoverUploadRejectsOversizedFile(t *testing.T) {
 	handler := NewBookCoverHandler(&fakeBookCoverUploader{}, true, 4)
 	request := coverRequest(t, []byte("too large"), "image/jpeg")
