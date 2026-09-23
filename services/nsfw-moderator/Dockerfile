@@ -7,7 +7,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN useradd --system --uid 10001 --create-home moderator
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install --require-hashes -r requirements.txt
+RUN pip install -r requirements.txt
 COPY app.py .
 USER 10001:10001
 EXPOSE 8090
