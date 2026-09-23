@@ -14,6 +14,7 @@ import (
 	"defta-librairie/internal/handlers"
 	"defta-librairie/internal/identity"
 	"defta-librairie/internal/middleware"
+	"defta-librairie/internal/moderation"
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"defta-librairie/internal/services"
@@ -110,9 +111,9 @@ func main() {
 			log.Fatalf("Initialisation upload couvertures impossible : %v", coverErr)
 		}
 		coverRepository := repositories.NewCoverRepository(database.DB)
-		coverService := services.NewBookCoverService(
-			true, bookService, coverRepository, coverUploader,
-		)
+		coverModerator, coverErr := moderation.NewHTTPClient(cfg.NSFWModerationEndpoint)
+		if coverErr != nil { log.Fatalf("Configuration modération couvertures invalide : %v", coverErr) }
+		coverService := services.NewBookCoverService(true, bookService, coverRepository, coverUploader, coverModerator)
 		bookCoverHandler = handlers.NewBookCoverHandler(coverService, true, cfg.CoverMaxBytes)
 		bookSubmissionHandler = handlers.NewBookSubmissionHandler(
 			services.NewBookSubmissionService(
@@ -226,9 +227,7 @@ func main() {
 	mux.Handle("DELETE /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Delete)))
 	mux.Handle("GET /api/manage/books/{id}/cover/status", bookManagers(http.HandlerFunc(bookCoverHandler.Status)))
 	mux.Handle("POST /api/manage/books/{id}/cover/retry", bookManagers(http.HandlerFunc(bookCoverHandler.Retry)))
-	// Direct replacement is intentionally closed until it uses the same NSFW
-	// moderation workflow as new-book submissions.
-	mux.Handle("POST /api/manage/books/{id}/cover", bookManagers(http.HandlerFunc(bookCoverHandler.ModerationRequired)))
+	mux.Handle("POST /api/manage/books/{id}/cover", bookManagers(http.HandlerFunc(bookCoverHandler.Upload)))
 	mux.Handle("GET /api/manage/books/{id}/cover", bookManagers(http.HandlerFunc(bookCoverReadHandler.Serve)))
 	mux.Handle("GET /api/manage/inventory", bookManagers(http.HandlerFunc(inventoryHandler.List)))
 	mux.Handle("GET /api/manage/books/{id}/inventory", bookManagers(http.HandlerFunc(inventoryHandler.Get)))

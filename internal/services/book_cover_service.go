@@ -1,10 +1,12 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"defta-librairie/internal/auth"
 	"defta-librairie/internal/covers"
 	"defta-librairie/internal/identity"
+	"defta-librairie/internal/moderation"
 	"defta-librairie/internal/repositories"
 	"encoding/json"
 	"errors"
@@ -16,6 +18,8 @@ import (
 var (
 	ErrCoversDisabled   = errors.New("book cover uploads are disabled")
 	ErrCoverPersistence = errors.New("book cover metadata could not be saved")
+	ErrCoverModerationRejected = errors.New("book cover rejected by moderation")
+	ErrCoverModerationUnavailable = errors.New("book cover moderation unavailable")
 )
 
 type BookCoverService struct {
@@ -25,6 +29,7 @@ type BookCoverService struct {
 	uploader *covers.SourceUploader
 	newID    covers.IDGenerator
 	now      func() time.Time
+	moderator moderation.Client
 }
 
 type PendingBookCover struct {
@@ -44,11 +49,14 @@ func NewBookCoverService(
 	books *BookService,
 	repository *repositories.CoverRepository,
 	uploader *covers.SourceUploader,
+	moderators ...moderation.Client,
 ) *BookCoverService {
-	return &BookCoverService{
+	service := &BookCoverService{
 		enabled: enabled, books: books, covers: repository, uploader: uploader,
 		newID: identity.NewID, now: time.Now,
 	}
+	if len(moderators) > 0 { service.moderator = moderators[0] }
+	return service
 }
 
 func (s *BookCoverService) Upload(
@@ -68,8 +76,14 @@ func (s *BookCoverService) Upload(
 	if err != nil {
 		return PendingBookCover{}, err
 	}
+	if s.moderator == nil { return PendingBookCover{}, ErrCoverModerationUnavailable }
+	image, err := io.ReadAll(body)
+	if err != nil { return PendingBookCover{}, ErrCoverModerationUnavailable }
+	decision, err := s.moderator.Moderate(ctx, declaredContentType, image)
+	if err != nil { return PendingBookCover{}, ErrCoverModerationUnavailable }
+	if decision.Class != "SAFE" { return PendingBookCover{}, ErrCoverModerationRejected }
 
-	source, err := s.uploader.Upload(ctx, book.LibraryID, bookID, declaredContentType, body)
+	source, err := s.uploader.Upload(ctx, book.LibraryID, bookID, declaredContentType, bytes.NewReader(image))
 	if err != nil {
 		return PendingBookCover{}, err
 	}

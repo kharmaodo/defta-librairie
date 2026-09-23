@@ -97,6 +97,7 @@ func TestCoverUploadOutboxJetStreamIntegration(t *testing.T) {
 		bookService,
 		repositories.NewCoverRepository(db),
 		uploader,
+		safeCoverModerator{},
 	)
 	pending, err := coverService.Upload(
 		ctx,
