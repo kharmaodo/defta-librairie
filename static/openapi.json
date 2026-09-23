@@ -12996,6 +12996,20 @@
             "source": "curl -X POST /api/manage/book-submissions"
           }
         ]
+      },
+      "get": {
+        "summary": "Lister les soumissions de couvertures",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Non authentifié"
+          },
+          "403": {
+            "description": "Interdit"
+          }
+        }
       }
     }
   },
