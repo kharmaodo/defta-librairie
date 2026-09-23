@@ -12988,7 +12988,14 @@
           "503": {
             "description": "Couvertures indisponibles."
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl -X POST /api/manage/book-submissions"
+          }
+        ]
       }
     }
   },
