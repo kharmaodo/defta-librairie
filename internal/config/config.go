@@ -40,6 +40,8 @@ type Config struct {
 	NATSCoversSubject         string
 	NATSCoversConsumer        string
 	CoverWorkerMaxDeliver     int
+	NATSSubmissionStream      string
+	NATSSubmissionSubject     string
 }
 
 func Load() (*Config, error) {
@@ -76,6 +78,8 @@ func Load() (*Config, error) {
 		NATSCoversSubject:         getEnv("NATS_COVERS_SUBJECT", "book.covers.process.v1"),
 		NATSCoversConsumer:        getEnv("NATS_COVERS_CONSUMER", "cover-worker-v1"),
 		CoverWorkerMaxDeliver:     int(getEnvPositiveInt64("COVER_WORKER_MAX_DELIVER", 5)),
+		NATSSubmissionStream:      getEnv("NATS_SUBMISSION_STREAM", "BOOK_SUBMISSIONS"),
+		NATSSubmissionSubject:     getEnv("NATS_SUBMISSION_SUBJECT", "book.submissions.moderate.v1"),
 	}
 
 	return cfg, nil
