@@ -29,8 +29,7 @@
                 {{range .Books}}
                     <article class="book-card">
                         <div class="card-cover">
-                            {{if .CoverURL.Valid}}<img src="{{.CoverURL.String}}" alt="غلاف {{.Title}}" loading="lazy">
-                            {{else}}<div class="cover-placeholder" aria-label="لا يوجد غلاف"><span aria-hidden="true">د</span><small>مكتبة دفتا</small></div>{{end}}
+                            <img class="public-book-cover" src="/api/books/{{.ID}}/cover?variant=large&amp;format=jpeg" alt="غلاف {{.Title}}" loading="lazy" data-fallback="{{if .CoverURL.Valid}}{{.CoverURL.String}}{{else}}/static/img/book-cover-placeholder.svg{{end}}">
                         </div>
                         <div class="card-info">
                             {{if .Categorie.Valid}}<span class="category">{{.Categorie.String}}</span>{{end}}
