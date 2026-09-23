@@ -34,6 +34,10 @@ func NewHTTPClient(endpoint string) (*HTTPClient, error) {
 	return &HTTPClient{endpoint: endpoint, client: &http.Client{Timeout: 10 * time.Second}}, nil
 }
 
+func validClass(value string) bool {
+	return value == "SAFE" || value == "REVIEW" || value == "UNSAFE"
+}
+
 func (c *HTTPClient) Moderate(ctx context.Context, contentType string, image []byte) (Result, error) {
 	if c == nil || c.client == nil || len(image) == 0 || (contentType != "image/jpeg" && contentType != "image/png") {
 		return Result{}, fmt.Errorf("invalid moderation request")
@@ -55,7 +59,7 @@ func (c *HTTPClient) Moderate(ctx context.Context, contentType string, image []b
 	if err = json.NewDecoder(io.LimitReader(response.Body, 64*1024)).Decode(&result); err != nil {
 		return Result{}, fmt.Errorf("decode moderation response: %w", err)
 	}
-	if result.Class == "" || result.Score < 0 || result.Score > 1 || result.ModelVersion == "" {
+	if !validClass(result.Class) || result.Score < 0 || result.Score > 1 || result.ModelVersion == "" {
 		return Result{}, fmt.Errorf("invalid moderation response")
 	}
 	return result, nil
