@@ -114,6 +114,15 @@ type ModerationSubmission struct {
 	SourceSize        int64
 }
 
+// ManualReviewDecision is a terminal decision made by an authorized reviewer
+// after the model has returned an ambiguous result.
+type ManualReviewDecision string
+
+const (
+	ManualReviewApprove ManualReviewDecision = "APPROVE"
+	ManualReviewReject  ManualReviewDecision = "REJECT"
+)
+
 func (r *BookSubmissionRepository) ClaimForModeration(ctx context.Context, id, now string) (ModerationSubmission, error) {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -235,6 +244,110 @@ func (r *BookSubmissionRepository) CompleteModeration(
 	}
 	if err = tx.Commit(); err != nil {
 		return 0, fmt.Errorf("commit moderation decision: %w", err)
+	}
+	return createdBookID, nil
+}
+
+// DecideReview records a human decision on a REVIEW_REQUIRED submission.  The
+// compare-and-set state check makes the operation idempotent from the caller's
+// perspective: a second decision cannot create a second book.
+func (r *BookSubmissionRepository) DecideReview(
+	ctx context.Context, submissionID, reviewerUserID string, decision ManualReviewDecision,
+	decisionAuditID, bookAuditID, now string,
+) (int, error) {
+	if submissionID == "" || reviewerUserID == "" || decisionAuditID == "" || now == "" ||
+		(decision != ManualReviewApprove && decision != ManualReviewReject) {
+		return 0, ErrInvalidBookSubmission
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("begin manual book submission decision: %w", err)
+	}
+	defer tx.Rollback()
+
+	var submission ModerationSubmission
+	err = tx.QueryRowContext(ctx, `
+		SELECT id, library_id, actor_user_id, title, auteur, editeur, price, volume,
+		       status, tags, categorie, cover_url, source_object_key,
+		       source_content_type, source_size
+		FROM book_submissions
+		WHERE id=? AND moderation_status='REVIEW_REQUIRED'
+	`, submissionID).Scan(
+		&submission.ID, &submission.LibraryID, &submission.ActorUserID,
+		&submission.Book.Title, &submission.Book.Auteur, &submission.Book.Editeur,
+		&submission.Book.Price, &submission.Book.Volume, &submission.Book.Status,
+		&submission.Book.Tags, &submission.Book.Categorie, &submission.Book.CoverURL,
+		&submission.SourceObjectKey, &submission.SourceContentType, &submission.SourceSize,
+	)
+	if errors.Is(err, sql.ErrNoRows) {
+		var exists int
+		if checkErr := tx.QueryRowContext(ctx, `SELECT 1 FROM book_submissions WHERE id=?`, submissionID).Scan(&exists); errors.Is(checkErr, sql.ErrNoRows) {
+			return 0, ErrBookSubmissionNotFound
+		}
+		return 0, ErrBookSubmissionState
+	}
+	if err != nil {
+		return 0, fmt.Errorf("read review-required submission: %w", err)
+	}
+
+	status, code, createdBookID := "REJECTED", "MANUAL_REJECTED", 0
+	if decision == ManualReviewApprove {
+		if bookAuditID == "" {
+			return 0, ErrInvalidBookSubmission
+		}
+		result, err := tx.ExecContext(ctx, `
+			INSERT INTO defta(title, auteur, editeur, price, volume, status, tags, categorie, coverUrl,
+			                  library_id, created_at, updated_at, version)
+			VALUES (?, NULLIF(?, ''), NULLIF(?, ''), ?, ?, NULLIF(?, ''), NULLIF(?, ''),
+			        NULLIF(?, ''), NULLIF(?, ''), ?, ?, ?, 1)
+		`, submission.Book.Title, submission.Book.Auteur, submission.Book.Editeur,
+			submission.Book.Price, submission.Book.Volume, submission.Book.Status,
+			submission.Book.Tags, submission.Book.Categorie, submission.Book.CoverURL,
+			submission.LibraryID, now, now)
+		if err != nil {
+			return 0, fmt.Errorf("create manually approved book: %w", err)
+		}
+		id, err := result.LastInsertId()
+		if err != nil {
+			return 0, fmt.Errorf("read manually approved book id: %w", err)
+		}
+		createdBookID = int(id)
+		if _, err = tx.ExecContext(ctx, `
+			INSERT INTO book_inventory(book_id, library_id, quantity, low_stock_threshold, version, updated_at)
+			VALUES (?, ?, 0, COALESCE((SELECT default_low_stock_threshold FROM library_settings WHERE library_id=?),5), 1, ?)
+		`, createdBookID, submission.LibraryID, submission.LibraryID, now); err != nil {
+			return 0, fmt.Errorf("initialize manually approved book inventory: %w", err)
+		}
+		if _, err = tx.ExecContext(ctx, `
+			INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+			VALUES (?, ?, 'CREATE_BOOK', 'BOOK', ?, ?, 1, ?)
+		`, bookAuditID, reviewerUserID, createdBookID, `{"origin":"manually_approved_book_submission"}`, now); err != nil {
+			return 0, fmt.Errorf("audit manually approved book: %w", err)
+		}
+		status, code = "APPROVED", "MANUAL_APPROVED"
+	}
+
+	result, err := tx.ExecContext(ctx, `
+		UPDATE book_submissions
+		SET moderation_status=?, decision_code=?, created_book_id=NULLIF(?, 0), updated_at=?
+		WHERE id=? AND moderation_status='REVIEW_REQUIRED'
+	`, status, code, createdBookID, now, submissionID)
+	if err != nil {
+		return 0, fmt.Errorf("record manual decision: %w", err)
+	}
+	rows, err := result.RowsAffected()
+	if err != nil || rows != 1 {
+		return 0, ErrBookSubmissionState
+	}
+	if _, err = tx.ExecContext(ctx, `
+		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
+		VALUES (?, ?, 'MANUALLY_DECIDE_BOOK_SUBMISSION_MODERATION', 'BOOK_SUBMISSION', ?, ?, 1, ?)
+	`, decisionAuditID, reviewerUserID, submissionID,
+		fmt.Sprintf(`{"decision":%q,"decisionCode":%q}`, decision, code), now); err != nil {
+		return 0, fmt.Errorf("audit manual moderation decision: %w", err)
+	}
+	if err = tx.Commit(); err != nil {
+		return 0, fmt.Errorf("commit manual moderation decision: %w", err)
 	}
 	return createdBookID, nil
 }
