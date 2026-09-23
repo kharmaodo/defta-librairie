@@ -209,6 +209,14 @@ func writeBookCoverError(w http.ResponseWriter, err error) {
 		writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{
 			"error": "covers_disabled", "message": err.Error(),
 		})
+	case errors.Is(err, services.ErrCoverModerationRejected):
+		writeAuthJSON(w, http.StatusUnprocessableEntity, map[string]string{
+			"error": "cover_moderation_rejected", "message": "Book cover was not approved by moderation",
+		})
+	case errors.Is(err, services.ErrCoverModerationUnavailable):
+		writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"error": "cover_moderation_unavailable", "message": "Book cover moderation is unavailable",
+		})
 	case errors.Is(err, covers.ErrStoreUnavailable),
 		errors.Is(err, services.ErrCoverPersistence):
 		writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{
