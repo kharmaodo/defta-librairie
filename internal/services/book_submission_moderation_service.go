@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-var ErrInvalidModerationWorker = errors.New("invalid book submission moderation worker")
+var (
+	ErrInvalidModerationWorker = errors.New("invalid book submission moderation worker")
+	ErrBookSubmissionModerationFailed = errors.New("book submission moderation failed")
+)
 
 type submissionSourceReader interface {
 	OpenSource(ctx context.Context, key string) (io.ReadCloser, error)
@@ -97,9 +100,9 @@ func (s *BookSubmissionModerationService) fail(ctx context.Context, submissionID
 		err = s.repository.FailModeration(ctx, submissionID, code, auditID, s.now().UTC().Format(time.RFC3339Nano))
 	}
 	if err != nil {
-		return errors.Join(fmt.Errorf("moderate book submission: %w", cause), err)
+		return errors.Join(ErrBookSubmissionModerationFailed, fmt.Errorf("moderate book submission: %w", cause), err)
 	}
-	return fmt.Errorf("moderate book submission: %w", cause)
+	return fmt.Errorf("%w: %w", ErrBookSubmissionModerationFailed, cause)
 }
 
 var _ submissionSourceReader = (*covers.MinIOProcessingStore)(nil)
