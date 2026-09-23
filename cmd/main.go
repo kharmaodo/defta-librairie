@@ -226,7 +226,9 @@ func main() {
 	mux.Handle("DELETE /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Delete)))
 	mux.Handle("GET /api/manage/books/{id}/cover/status", bookManagers(http.HandlerFunc(bookCoverHandler.Status)))
 	mux.Handle("POST /api/manage/books/{id}/cover/retry", bookManagers(http.HandlerFunc(bookCoverHandler.Retry)))
-	mux.Handle("POST /api/manage/books/{id}/cover", bookManagers(http.HandlerFunc(bookCoverHandler.Upload)))
+	// Direct replacement is intentionally closed until it uses the same NSFW
+	// moderation workflow as new-book submissions.
+	mux.Handle("POST /api/manage/books/{id}/cover", bookManagers(http.HandlerFunc(bookCoverHandler.ModerationRequired)))
 	mux.Handle("GET /api/manage/books/{id}/cover", bookManagers(http.HandlerFunc(bookCoverReadHandler.Serve)))
 	mux.Handle("GET /api/manage/inventory", bookManagers(http.HandlerFunc(inventoryHandler.List)))
 	mux.Handle("GET /api/manage/books/{id}/inventory", bookManagers(http.HandlerFunc(inventoryHandler.Get)))
