@@ -149,3 +149,12 @@ func (s *BookSubmissionService) DecideReview(ctx context.Context, claims *auth.C
 	}
 	return result, nil
 }
+
+func (s *BookSubmissionService) RetryFailed(ctx context.Context, claims *auth.Claims, submissionID string) error {
+	if !s.enabled || s.repository == nil || s.newID == nil || claims == nil || claims.Role != models.RoleSuperAdminRoot { return ErrBookForbidden }
+	eventID, err := s.newID(); if err != nil { return err }
+	auditID, err := s.newID(); if err != nil { return err }
+	payload, err := json.Marshal(map[string]interface{}{"schemaVersion": 1, "eventId": eventID, "submissionId": submissionID, "reason": "manual_retry"})
+	if err != nil { return err }
+	return s.repository.RetryFailed(ctx, submissionID, claims.Subject, eventID, string(payload), auditID, s.now().UTC().Format(time.RFC3339Nano))
+}
