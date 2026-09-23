@@ -80,6 +80,37 @@ func (u *SourceUploader) Upload(
 	}, nil
 }
 
+// UploadSubmission validates and stores a source that is not yet associated
+// with a book. Its quarantine key cannot be confused with a book cover key.
+func (u *SourceUploader) UploadSubmission(
+	ctx context.Context,
+	libraryID string,
+	submissionID string,
+	declaredContentType string,
+	body io.Reader,
+) (StoredSource, error) {
+	image, err := u.validator.Validate(body, declaredContentType)
+	if err != nil {
+		return StoredSource{}, err
+	}
+	sourceID, err := u.newID()
+	if err != nil {
+		return StoredSource{}, fmt.Errorf("generate submission source id: %w", err)
+	}
+	key, err := QuarantineObjectKey(libraryID, submissionID, sourceID, image.Extension)
+	if err != nil {
+		return StoredSource{}, err
+	}
+	if err = u.store.Put(ctx, key, bytes.NewReader(image.Data), int64(len(image.Data)), image.ContentType); err != nil {
+		return StoredSource{}, fmt.Errorf("%w: %v", ErrStoreUnavailable, err)
+	}
+	return StoredSource{
+		CoverID: sourceID, ObjectKey: key, ContentType: image.ContentType,
+		Format: image.Format, Width: image.Width, Height: image.Height,
+		Size: int64(len(image.Data)),
+	}, nil
+}
+
 func (u *SourceUploader) Discard(ctx context.Context, source StoredSource) error {
 	if source.ObjectKey == "" {
 		return ErrInvalidObjectKey
@@ -97,4 +128,14 @@ func SourceObjectKey(libraryID string, bookID int, coverID, extension string) (s
 		return "", ErrInvalidObjectKey
 	}
 	return "sources/" + libraryID + "/" + strconv.Itoa(bookID) + "/" + coverID + "." + extension, nil
+}
+
+func QuarantineObjectKey(libraryID, submissionID, sourceID, extension string) (string, error) {
+	if !safeKeySegment.MatchString(libraryID) ||
+		!safeKeySegment.MatchString(submissionID) ||
+		!safeKeySegment.MatchString(sourceID) ||
+		(extension != "jpg" && extension != "png") {
+		return "", ErrInvalidObjectKey
+	}
+	return "quarantine/" + libraryID + "/" + submissionID + "/" + sourceID + "." + extension, nil
 }
