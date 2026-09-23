@@ -90,6 +90,23 @@ func (r *CoverRepository) CreatePending(
 	return nil
 }
 
+// FindBookLibraryID resolves the scope of a non-deleted book before serving a
+// public, processed cover. The source object itself is never exposed.
+func (r *CoverRepository) FindBookLibraryID(ctx context.Context, bookID int) (string, error) {
+	var libraryID string
+	err := r.db.QueryRowContext(ctx, `
+		SELECT library_id FROM defta
+		WHERE id=? AND deleted_at IS NULL
+	`, bookID).Scan(&libraryID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrCoverBookNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("find cover book library: %w", err)
+	}
+	return libraryID, nil
+}
+
 type ActiveCoverVariant struct {
 	CoverID     string
 	ObjectKey   string

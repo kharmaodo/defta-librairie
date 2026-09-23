@@ -57,11 +57,11 @@ func (s *BookCoverReadService) OpenPublic(ctx context.Context, bookID int, varia
 	if s.repository == nil || s.reader == nil {
 		return ActiveBookCover{}, ErrCoversDisabled
 	}
-	book, err := s.repository.Find(ctx, bookID, "")
+	libraryID, err := s.repository.FindBookLibraryID(ctx, bookID)
 	if err != nil {
 		return ActiveBookCover{}, err
 	}
-	return s.openVariant(ctx, bookID, book.LibraryID, variant, format)
+	return s.openVariant(ctx, bookID, libraryID, variant, format)
 }
 
 func (s *BookCoverReadService) openVariant(ctx context.Context, bookID int, libraryID, variant, format string) (ActiveBookCover, error) {
