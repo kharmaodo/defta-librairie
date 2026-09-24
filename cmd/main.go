@@ -89,7 +89,10 @@ func main() {
 	authHandler := handlers.NewAuthHandler(loginService, sessionService, passwordService, cfg.AuthCookieSecure)
 	ownerService := services.NewOwnerService(repositories.NewOwnerRepository(database.DB))
 	ownerHandler := handlers.NewOwnerHandler(ownerService)
-	bookService := services.NewBookService(repositories.NewBookRepository(database.DB))
+	bookService := services.NewBookService(
+		repositories.NewBookRepository(database.DB),
+		repositories.NewBookTaxonomyRepository(database.DB),
+	)
 	bookHandler := handlers.NewBookManagementHandler(bookService)
 	bookCoverHandler := handlers.NewBookCoverHandler(nil, false, cfg.CoverMaxBytes)
 	bookCoverReadHandler := handlers.NewBookCoverReadHandler(nil, false)
