@@ -265,3 +265,96 @@ func assertBookTaxonomy(t *testing.T, db *sql.DB, bookID, publisherID int, categ
 		}
 	}
 }
+
+
+func TestBookServiceCreatesAndUpdatesRelationalTags(t *testing.T) {
+	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "book-tags.db")+"?_foreign_keys=on")
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err = migrations.Run(context.Background(), db); err != nil {
+		t.Fatalf("apply migrations: %v", err)
+	}
+	if _, err = db.Exec(`
+		INSERT INTO users(id, username, password_hash, role, status, created_at, updated_at) VALUES
+		('owner', 'owner', 'hash', 'OWNER_LIBRARY', 'ACTIVE', 'now', 'now');
+		INSERT INTO libraries(id, name, owner_user_id, status, created_at, updated_at) VALUES
+		('library', 'Library', 'owner', 'ACTIVE', 'now', 'now'),
+		('other-library', 'Other', 'owner', 'ACTIVE', 'now', 'now');
+		INSERT INTO library_tags(id, library_id, name, normalized_name, created_at, updated_at) VALUES
+		('tag-fiqh', 'library', 'Fiqh', 'fiqh', 'now', 'now'),
+		('tag-arabic', 'library', 'Arabic', 'arabic', 'now', 'now'),
+		('tag-other', 'other-library', 'Other', 'other', 'now', 'now');
+	`); err != nil {
+		t.Fatalf("seed tags: %v", err)
+	}
+
+	service := NewBookServiceWithRelations(
+		repositories.NewBookRepository(db),
+		repositories.NewBookTaxonomyRepository(db),
+		repositories.NewBookTagRepository(db),
+	)
+	owner := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library"}
+	owner.Subject = "owner"
+	book, err := service.Create(context.Background(), owner, models.BookInput{
+		Title:  "Livre indexé",
+		Price:  1500,
+		TagIDs: []string{"tag-fiqh", "tag-arabic"},
+	})
+	if err != nil {
+		t.Fatalf("create tagged book: %v", err)
+	}
+	assertBookTags(t, db, book.ID, "tag-arabic", "tag-fiqh")
+
+	book, err = service.Update(context.Background(), owner, book.ID, models.BookInput{
+		Title:  "Livre réindexé",
+		Price:  1800,
+		Version: book.Version,
+		TagIDs: []string{"tag-arabic"},
+	})
+	if err != nil {
+		t.Fatalf("update tagged book: %v", err)
+	}
+	if len(book.TagIDs) != 1 || book.TagIDs[0] != "tag-arabic" {
+		t.Fatalf("updated tag response=%+v", book.TagIDs)
+	}
+	assertBookTags(t, db, book.ID, "tag-arabic")
+
+	if _, err = service.Update(context.Background(), owner, book.ID, models.BookInput{
+		Title:  "Livre invalide",
+		Price:  book.Price,
+		Version: book.Version,
+		TagIDs: []string{"tag-other"},
+	}); !errors.Is(err, ErrInvalidBook) {
+		t.Fatalf("cross-library tag must be rejected, got %v", err)
+	}
+}
+
+func assertBookTags(t *testing.T, db *sql.DB, bookID int, expectedTagIDs ...string) {
+	t.Helper()
+	rows, err := db.Query(`SELECT tag_id FROM book_tags WHERE book_id=? ORDER BY tag_id`, bookID)
+	if err != nil {
+		t.Fatalf("list book tags: %v", err)
+	}
+	defer rows.Close()
+	actual := make([]string, 0, len(expectedTagIDs))
+	for rows.Next() {
+		var tagID string
+		if err = rows.Scan(&tagID); err != nil {
+			t.Fatalf("scan book tag: %v", err)
+		}
+		actual = append(actual, tagID)
+	}
+	if err = rows.Err(); err != nil {
+		t.Fatalf("iterate book tags: %v", err)
+	}
+	if len(actual) != len(expectedTagIDs) {
+		t.Fatalf("tag count=%v, want %v", actual, expectedTagIDs)
+	}
+	for index, tagID := range expectedTagIDs {
+		if actual[index] != tagID {
+			t.Fatalf("tags=%v, want %v", actual, expectedTagIDs)
+		}
+	}
+}
