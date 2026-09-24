@@ -86,8 +86,12 @@ func TestSearchBooksUsesFTS5AndKeepsTotal(t *testing.T) {
 			tags TEXT,
 			categorie TEXT,
 			coverUrl TEXT,
+			publisher_id INTEGER,
 			deleted_at TEXT
 		);
+		CREATE TABLE publishers (id INTEGER PRIMARY KEY, ar TEXT, fr TEXT, en TEXT);
+		CREATE TABLE categories (id INTEGER PRIMARY KEY, ar TEXT, fr TEXT, en TEXT);
+		CREATE TABLE book_categories (book_id INTEGER, category_id INTEGER, is_primary INTEGER);
 		CREATE VIRTUAL TABLE defta_fts USING fts5(
 			title, editeur, auteur, tags, categorie,
 			content='defta', content_rowid='id'
