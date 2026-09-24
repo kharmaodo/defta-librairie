@@ -21,6 +21,7 @@ var (
 type BookService struct {
 	repository         *repositories.BookRepository
 	taxonomyRepository *repositories.BookTaxonomyRepository
+	tagRepository      *repositories.BookTagRepository
 	now                func() time.Time
 }
 
@@ -29,6 +30,16 @@ func NewBookService(repository *repositories.BookRepository, taxonomyRepositorie
 	if len(taxonomyRepositories) > 0 {
 		service.taxonomyRepository = taxonomyRepositories[0]
 	}
+	return service
+}
+
+func NewBookServiceWithRelations(
+	repository *repositories.BookRepository,
+	taxonomyRepository *repositories.BookTaxonomyRepository,
+	tagRepository *repositories.BookTagRepository,
+) *BookService {
+	service := NewBookService(repository, taxonomyRepository)
+	service.tagRepository = tagRepository
 	return service
 }
 
@@ -103,6 +114,9 @@ func (s *BookService) Create(ctx context.Context, claims *auth.Claims, input mod
 	if err = s.validateTaxonomy(ctx, input); err != nil {
 		return models.Book{}, err
 	}
+	if err = s.validateTags(ctx, libraryID, input); err != nil {
+		return models.Book{}, err
+	}
 	active, err := s.repository.LibraryActive(ctx, libraryID)
 	if err != nil {
 		return models.Book{}, err
@@ -142,6 +156,9 @@ func (s *BookService) Update(ctx context.Context, claims *auth.Claims, id int, i
 		return models.Book{}, err
 	}
 	if err = s.validateTaxonomy(ctx, input); err != nil {
+		return models.Book{}, err
+	}
+	if err = s.validateTags(ctx, input.LibraryID, input); err != nil {
 		return models.Book{}, err
 	}
 	auditID, err := identity.NewID()
@@ -220,6 +237,22 @@ func commercialSnapshotJSON(price float64, status, tags string, version int) (st
 		return "", err
 	}
 	return string(payload), nil
+}
+
+func (s *BookService) validateTags(ctx context.Context, libraryID string, input models.BookInput) error {
+	if input.TagIDs == nil {
+		return nil
+	}
+	if s.tagRepository == nil {
+		return ErrInvalidBook
+	}
+	if err := s.tagRepository.ValidateSelection(ctx, libraryID, input.TagIDs); err != nil {
+		if errors.Is(err, repositories.ErrInvalidBookTags) {
+			return ErrInvalidBook
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *BookService) validateTaxonomy(ctx context.Context, input models.BookInput) error {
