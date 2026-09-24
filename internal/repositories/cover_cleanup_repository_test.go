@@ -34,6 +34,16 @@ func openCoverCleanupTestDB(t *testing.T) *sql.DB {
 			created_at TEXT NOT NULL
 		);
 
+		CREATE TABLE book_submissions (
+			id TEXT PRIMARY KEY,
+			library_id TEXT NOT NULL,
+			source_object_key TEXT NOT NULL,
+			moderation_status TEXT NOT NULL,
+			expires_at TEXT NOT NULL,
+			decision_code TEXT,
+			updated_at TEXT NOT NULL
+		);
+
 		CREATE TABLE book_covers (
 			id TEXT PRIMARY KEY,
 			book_id TEXT NOT NULL,
