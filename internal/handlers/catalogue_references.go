@@ -46,7 +46,7 @@ func (h *CatalogueReferenceHandler) create(w http.ResponseWriter, r *http.Reques
  var value models.CatalogueReference
  if decodeOwnerJSON(w,r,&value)!=nil { writeAuthJSON(w,http.StatusBadRequest,map[string]string{"error":"invalid_catalogue_reference","message":"Invalid catalogue reference"}); return }
  claims,_:=auth.ClaimsFromContext(r.Context())
- if err:=h.service.Create(r.Context(),claims,kind,value);err!=nil { writeAuthJSON(w,http.StatusForbidden,map[string]string{"error":"forbidden","message":"Insufficient permissions"});return }
+ if err:=h.service.Create(r.Context(),claims,kind,value);err!=nil { h.setActiveError(w,err); return }
  w.WriteHeader(http.StatusCreated)
 }
 
