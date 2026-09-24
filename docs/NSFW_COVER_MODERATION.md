@@ -65,7 +65,7 @@ La table d'outbox existante ou une outbox dédiée assure la publication fiable 
 - Bucket de quarantaine distinct du bucket de variantes.
 - Accès MinIO limité au worker concerné.
 - URL de lecture de quarantaine jamais exposée au navigateur.
-- Suppression de la source après rejet ou expiration.
+- La source de quarantaine n’est exposée par aucune route HTTP. Sa purge différée et rejouable après rejet ou expiration reste l’US de clôture explicitement suivie dans `FEATURE_NSFW_COVER_MODERATION.md`.
 - Journal d'audit sans image ni contenu sensible : identifiant, acteur, décision, version du modèle, motif générique et horodatage.
 - Limites de taille, décodage réel de l'image et plafond de pixels conservés avant l'inférence.
 - Idempotence par identifiant de soumission et hash de source.

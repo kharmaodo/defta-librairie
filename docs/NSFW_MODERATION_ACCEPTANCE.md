@@ -13,7 +13,11 @@ COVERS_ENABLED=true
 NATS_SUBMISSION_STREAM=BOOK_SUBMISSIONS
 NATS_SUBMISSION_SUBJECT=book.submissions.moderate.v1
 NATS_SUBMISSION_CONSUMER=book-submission-worker-v1
-NSFW_MODERATION_ENDPOINT=http://nsfw-moderator:8090
+# Application Go démarrée sur l'hôte
+NSFW_MODERATION_ENDPOINT=http://127.0.0.1:8090
+
+# Application Go dans le même réseau Docker que le modérateur
+# NSFW_MODERATION_ENDPOINT=http://nsfw-moderator:8090
 ```
 
 Monter le modèle ONNX et son manifeste dans le conteneur `nsfw-moderator`,
@@ -21,7 +25,7 @@ puis vérifier :
 
 ```bash
 curl --fail-with-body http://localhost:8090/health/ready
-go run -tags fts5 ./cmd/main.go
+go run -tags fts5 ./cmd
 ```
 
 ## Cas approuvé
