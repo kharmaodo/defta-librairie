@@ -141,3 +141,122 @@ func TestRootMustChooseLibraryWhenCreatingBook(t *testing.T) {
 		t.Fatalf("expected ErrInvalidBook, got %v", err)
 	}
 }
+
+
+func TestBookServiceCreatesAndUpdatesTaxonomyRelations(t *testing.T) {
+	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "book-taxonomy.db")+"?_foreign_keys=on")
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err = migrations.Run(context.Background(), db); err != nil {
+		t.Fatalf("apply migrations: %v", err)
+	}
+	if _, err = db.Exec(`
+		INSERT INTO users(id, username, password_hash, role, status, created_at, updated_at)
+		VALUES ('owner', 'owner', 'hash', 'OWNER_LIBRARY', 'ACTIVE', 'now', 'now');
+		INSERT INTO libraries(id, name, owner_user_id, status, created_at, updated_at)
+		VALUES ('library', 'Library', 'owner', 'ACTIVE', 'now', 'now');
+	`); err != nil {
+		t.Fatalf("seed owner and library: %v", err)
+	}
+
+	var firstCategoryID, secondCategoryID, publisherID int
+	if err = db.QueryRow(`SELECT id FROM categories WHERE code='fiqh'`).Scan(&firstCategoryID); err != nil {
+		t.Fatalf("read first category: %v", err)
+	}
+	if err = db.QueryRow(`SELECT id FROM categories WHERE code='nahw'`).Scan(&secondCategoryID); err != nil {
+		t.Fatalf("read second category: %v", err)
+	}
+	if err = db.QueryRow(`SELECT id FROM publishers WHERE code='dar-al-fikr'`).Scan(&publisherID); err != nil {
+		t.Fatalf("read publisher: %v", err)
+	}
+
+	service := NewBookService(
+		repositories.NewBookRepository(db),
+		repositories.NewBookTaxonomyRepository(db),
+	)
+	owner := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library"}
+	owner.Subject = "owner"
+	book, err := service.Create(context.Background(), owner, models.BookInput{
+		Title:             "Livre classé",
+		Price:             2500,
+		CategoryIDs:       []int{firstCategoryID, secondCategoryID},
+		PrimaryCategoryID: &firstCategoryID,
+		PublisherID:       &publisherID,
+	})
+	if err != nil {
+		t.Fatalf("create classified book: %v", err)
+	}
+	assertBookTaxonomy(t, db, book.ID, publisherID, firstCategoryID, secondCategoryID)
+
+	book, err = service.Update(context.Background(), owner, book.ID, models.BookInput{
+		Title:             "Livre reclassé",
+		Price:             3000,
+		LibraryID:         "library",
+		Version:           book.Version,
+		CategoryIDs:       []int{secondCategoryID},
+		PrimaryCategoryID: &secondCategoryID,
+		PublisherID:       &publisherID,
+	})
+	if err != nil {
+		t.Fatalf("update classified book: %v", err)
+	}
+	assertBookTaxonomy(t, db, book.ID, publisherID, secondCategoryID)
+
+	if _, err = db.Exec(`UPDATE categories SET active=0 WHERE id=?`, firstCategoryID); err != nil {
+		t.Fatalf("disable category: %v", err)
+	}
+	if _, err = service.Update(context.Background(), owner, book.ID, models.BookInput{
+		Title:             "Invalid classification",
+		Price:             book.Price,
+		LibraryID:         "library",
+		Version:           book.Version,
+		CategoryIDs:       []int{firstCategoryID},
+		PrimaryCategoryID: &firstCategoryID,
+	}); !errors.Is(err, ErrInvalidBook) {
+		t.Fatalf("disabled category must be rejected, got %v", err)
+	}
+}
+
+func assertBookTaxonomy(t *testing.T, db *sql.DB, bookID, publisherID int, categoryIDs ...int) {
+	t.Helper()
+	var actualPublisherID int
+	if err := db.QueryRow(`SELECT publisher_id FROM defta WHERE id=?`, bookID).Scan(&actualPublisherID); err != nil {
+		t.Fatalf("read book publisher: %v", err)
+	}
+	if actualPublisherID != publisherID {
+		t.Fatalf("publisher id=%d, want %d", actualPublisherID, publisherID)
+	}
+	rows, err := db.Query(`SELECT category_id FROM book_categories WHERE book_id=? ORDER BY category_id`, bookID)
+	if err != nil {
+		t.Fatalf("list book categories: %v", err)
+	}
+	defer rows.Close()
+	actual := make([]int, 0, len(categoryIDs))
+	for rows.Next() {
+		var categoryID int
+		if err = rows.Scan(&categoryID); err != nil {
+			t.Fatalf("scan category: %v", err)
+		}
+		actual = append(actual, categoryID)
+	}
+	if err = rows.Err(); err != nil {
+		t.Fatalf("iterate categories: %v", err)
+	}
+	if len(actual) != len(categoryIDs) {
+		t.Fatalf("category count=%v, want %v", actual, categoryIDs)
+	}
+	for _, expected := range categoryIDs {
+		found := false
+		for _, categoryID := range actual {
+			if categoryID == expected {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("categories=%v, missing %d", actual, expected)
+		}
+	}
+}
