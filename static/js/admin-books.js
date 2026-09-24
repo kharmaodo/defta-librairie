@@ -200,14 +200,24 @@
       const [categories, publishers, tags] = await Promise.all([
         apiFetch("/api/manage/categories"),
         apiFetch("/api/manage/publishers"),
-        apiFetch(`/api/manage/tags${tagQuery}`)
+        isRoot() && !libraryId ? Promise.resolve([]) : apiFetch(`/api/manage/tags${tagQuery}`)
       ]);
       replaceReferenceOptions(form.elements.categoryIds, categories, book?.categoryIds || [], "");
-      replaceReferenceOptions(form.elements.primaryCategoryId, categories,
-        book?.primaryCategoryId ? [book.primaryCategoryId] : [], "Non renseignée");
+      syncPrimaryCategories(book?.primaryCategoryId);
       replaceReferenceOptions(form.elements.publisherId, publishers,
         book?.publisherId ? [book.publisherId] : [], "Non renseigné");
       replaceReferenceOptions(form.elements.tagIds, tags, book?.tagIds || [], "");
+    }
+
+    function syncPrimaryCategories(selectedPrimaryID) {
+      const form = document.querySelector("#book-form");
+      const selectedCategoryIDs = new Set(selectedValues(form.elements.categoryIds));
+      const categories = [...form.elements.categoryIds.options]
+        .filter(option => selectedCategoryIDs.has(option.value))
+        .map(option => ({id: option.value, name: option.textContent}));
+      const current = selectedPrimaryID || form.elements.primaryCategoryId.value;
+      replaceReferenceOptions(form.elements.primaryCategoryId, categories,
+        current ? [current] : [], "Non renseignée");
     }
 
     function bookPayload(form) {
@@ -285,10 +295,14 @@
         try { await reloadBooks(); }
         catch (error) { showError(errorBox, error); }
       });
+      document.querySelector("#book-form [name=categoryIds]").addEventListener("change", () => syncPrimaryCategories());
+
       document.querySelector("#book-form [name=libraryId]").addEventListener("change", async (event) => {
         if (!isRoot()) return;
         document.querySelector("#tag-library").value = event.currentTarget.value;
-        try { await reloadTags(); } catch (error) { showError(errorBox, error); }
+        try {
+          await Promise.all([reloadTags(), loadBookTaxonomy()]);
+        } catch (error) { showError(errorBox, error); }
       });
       document.querySelector("#books-previous").addEventListener("click", async () => {
         state.bookOffset = Math.max(0, state.bookOffset - state.bookLimit);
