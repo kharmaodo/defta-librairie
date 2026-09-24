@@ -144,10 +144,15 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
 		}
 
 		rows, err = DB.Query(`
-            SELECT id, title, auteur, editeur, price, volume,
-                   status, tags, categorie, coverUrl
-            FROM defta
-            WHERE deleted_at IS NULL
+            SELECT d.id, d.title, d.auteur,
+                   COALESCE(NULLIF(p.ar, ''), NULLIF(p.fr, ''), NULLIF(p.en, ''), d.editeur),
+                   d.price, d.volume, d.status, d.tags,
+                   COALESCE(NULLIF(c.ar, ''), NULLIF(c.fr, ''), NULLIF(c.en, ''), d.categorie), d.coverUrl
+            FROM defta d
+            LEFT JOIN publishers p ON p.id=d.publisher_id
+            LEFT JOIN book_categories bc ON bc.book_id=d.id AND bc.is_primary=1
+            LEFT JOIN categories c ON c.id=bc.category_id
+            WHERE d.deleted_at IS NULL
             ORDER BY id DESC
             LIMIT ? OFFSET ?
         `, limit, offset)
@@ -178,11 +183,16 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
 
 		rows, err = DB.Query(`
             SELECT
-                d.id, d.title, d.auteur, d.editeur, d.price, d.volume,
-                d.status, d.tags, d.categorie, d.coverUrl,
+                d.id, d.title, d.auteur,
+                COALESCE(NULLIF(p.ar, ''), NULLIF(p.fr, ''), NULLIF(p.en, ''), d.editeur),
+                d.price, d.volume, d.status, d.tags,
+                COALESCE(NULLIF(c.ar, ''), NULLIF(c.fr, ''), NULLIF(c.en, ''), d.categorie), d.coverUrl,
                 rank
             FROM defta_fts fts
             JOIN defta d ON fts.rowid = d.id
+            LEFT JOIN publishers p ON p.id=d.publisher_id
+            LEFT JOIN book_categories bc ON bc.book_id=d.id AND bc.is_primary=1
+            LEFT JOIN categories c ON c.id=bc.category_id
             WHERE defta_fts MATCH ? AND d.deleted_at IS NULL
             ORDER BY fts.rank
             LIMIT ? OFFSET ?
@@ -217,13 +227,18 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
 
 	rows, err = DB.Query(`
         SELECT
-            id, title, auteur, editeur, price, volume,
-            status, tags, categorie, coverUrl
-        FROM defta
-        WHERE deleted_at IS NULL
-          AND (title LIKE ?
-           OR auteur LIKE ?
-           OR editeur LIKE ?)
+            d.id, d.title, d.auteur,
+            COALESCE(NULLIF(p.ar, ''), NULLIF(p.fr, ''), NULLIF(p.en, ''), d.editeur),
+            d.price, d.volume, d.status, d.tags,
+            COALESCE(NULLIF(c.ar, ''), NULLIF(c.fr, ''), NULLIF(c.en, ''), d.categorie), d.coverUrl
+        FROM defta d
+        LEFT JOIN publishers p ON p.id=d.publisher_id
+        LEFT JOIN book_categories bc ON bc.book_id=d.id AND bc.is_primary=1
+        LEFT JOIN categories c ON c.id=bc.category_id
+        WHERE d.deleted_at IS NULL
+          AND (d.title LIKE ?
+           OR d.auteur LIKE ?
+           OR d.editeur LIKE ?)
         ORDER BY id DESC
         LIMIT ? OFFSET ?
     `, likePattern, likePattern, likePattern, limit, offset)
