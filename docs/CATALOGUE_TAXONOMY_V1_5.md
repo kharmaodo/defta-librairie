@@ -9,7 +9,9 @@ La release introduit un catalogue multilingue arabe, français et anglais.
 - Un livre représente une **édition commercialisée** et possède un éditeur principal.
 
 Les catégories et éditeurs sont désactivables, jamais supprimés lorsqu’ils sont
-déjà liés à un livre.
+déjà liés à un livre. Seul `SUPER_ADMIN_ROOT` peut les créer, modifier ou
+désactiver ; `OWNER_LIBRARY` dispose d’un accès en lecture seule et les
+sélectionne dans les formulaires de livres.
 
 ## Modèle cible
 
