@@ -19,6 +19,21 @@ func (sf StringField) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+func (sf *StringField) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		sf.String = ""
+		sf.Valid = false
+		return nil
+	}
+	var value string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	sf.String = value
+	sf.Valid = true
+	return nil
+}
+
 // IntField pour les champs entiers nullable
 type IntField struct {
 	sql.NullInt64
@@ -29,6 +44,21 @@ func (ifld IntField) MarshalJSON() ([]byte, error) {
 		return json.Marshal(ifld.Int64)
 	}
 	return json.Marshal(nil)
+}
+
+func (ifld *IntField) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		ifld.Int64 = 0
+		ifld.Valid = false
+		return nil
+	}
+	var value int64
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	ifld.Int64 = value
+	ifld.Valid = true
+	return nil
 }
 
 type Book struct {
