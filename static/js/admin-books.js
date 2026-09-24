@@ -166,8 +166,48 @@
       }
       document.querySelector("#book-form-title").textContent = book ? "Modifier le livre" : "Nouveau livre";
       document.querySelector("#book-form-error").hidden = true;
+      loadBookTaxonomy(book).catch(error => showError(document.querySelector("#book-form-error"), error));
       dialog.showModal();
       if (book) refreshCoverStatus(book.id);
+    }
+
+    function selectedValues(select) {
+      return [...select.selectedOptions].map(option => option.value).filter(Boolean);
+    }
+
+    function replaceReferenceOptions(select, values, selected, placeholder) {
+      const selectedSet = new Set((selected || []).map(String));
+      select.replaceChildren();
+      if (placeholder) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = placeholder;
+        select.append(option);
+      }
+      values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = String(value.id);
+        option.textContent = value.name || value.code;
+        option.selected = selectedSet.has(option.value);
+        select.append(option);
+      });
+    }
+
+    async function loadBookTaxonomy(book) {
+      const form = document.querySelector("#book-form");
+      const libraryId = form.elements.libraryId.value;
+      const tagQuery = libraryId ? `?libraryId=${encodeURIComponent(libraryId)}` : "";
+      const [categories, publishers, tags] = await Promise.all([
+        apiFetch("/api/manage/categories"),
+        apiFetch("/api/manage/publishers"),
+        apiFetch(`/api/manage/tags${tagQuery}`)
+      ]);
+      replaceReferenceOptions(form.elements.categoryIds, categories, book?.categoryIds || [], "");
+      replaceReferenceOptions(form.elements.primaryCategoryId, categories,
+        book?.primaryCategoryId ? [book.primaryCategoryId] : [], "Non renseignée");
+      replaceReferenceOptions(form.elements.publisherId, publishers,
+        book?.publisherId ? [book.publisherId] : [], "Non renseigné");
+      replaceReferenceOptions(form.elements.tagIds, tags, book?.tagIds || [], "");
     }
 
     function bookPayload(form) {
@@ -180,8 +220,13 @@
         status: form.elements.status.value,
         tags: form.elements.tags.value,
         categorie: form.elements.categorie.value,
-        coverUrl: form.elements.coverUrl.value
+        coverUrl: form.elements.coverUrl.value,
+        tagIds: selectedValues(form.elements.tagIds)
       };
+      const categoryIds = selectedValues(form.elements.categoryIds).map(Number);
+      if (categoryIds.length) payload.categoryIds = categoryIds;
+      if (form.elements.primaryCategoryId.value) payload.primaryCategoryId = Number(form.elements.primaryCategoryId.value);
+      if (form.elements.publisherId.value) payload.publisherId = Number(form.elements.publisherId.value);
       if (isRoot() && form.elements.libraryId.value) payload.libraryId = form.elements.libraryId.value;
       if (form.elements.id.value) payload.version = Number(form.elements.version.value);
       return payload;
