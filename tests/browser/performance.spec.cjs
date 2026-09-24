@@ -29,8 +29,7 @@ test('initial dashboard coalesces concurrent profile reads', async ({page}) => {
       stylesheets: resources.filter(path => path === '/static/css/admin.css').length,
     };
   });
-  // v1.3 adds one shared deletion-confirmation module instead of duplicating
-  // the destructive-action logic in each business module.
-  expect(assets.adminScripts).toBeLessThanOrEqual(23);
+  // v1.4 adds the isolated book-submission moderation module.
+  expect(assets.adminScripts).toBeLessThanOrEqual(24);
   expect(assets.stylesheets).toBe(1);
 });
