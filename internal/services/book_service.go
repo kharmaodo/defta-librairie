@@ -90,6 +90,38 @@ func (s *BookService) Search(ctx context.Context, claims *auth.Claims, requested
 	return s.repository.Search(ctx, libraryID, query, offset, limit)
 }
 
+func (s *BookService) SearchByTag(ctx context.Context, claims *auth.Claims, requestedLibrary, tagID, query string, offset, limit int) ([]models.Book, int, error) {
+	libraryID, err := resolveBookScope(claims, strings.TrimSpace(requestedLibrary), false)
+	if err != nil {
+		return nil, 0, err
+	}
+	if err = s.ensureOwnerLibraryActive(ctx, claims, libraryID); err != nil {
+		return nil, 0, err
+	}
+	if strings.TrimSpace(tagID) == "" || len([]rune(strings.TrimSpace(query))) > 200 {
+		return nil, 0, ErrInvalidBook
+	}
+	if s.tagRepository == nil {
+		return nil, 0, ErrInvalidBook
+	}
+	if err = s.tagRepository.ValidateSelection(ctx, libraryID, []string{tagID}); err != nil {
+		if errors.Is(err, repositories.ErrInvalidBookTags) {
+			return nil, 0, ErrInvalidBook
+		}
+		return nil, 0, err
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	if limit < 1 {
+		limit = 30
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.repository.SearchByTag(ctx, libraryID, tagID, query, offset, limit)
+}
+
 func (s *BookService) Find(ctx context.Context, claims *auth.Claims, id int) (models.Book, error) {
 	libraryID, err := resolveBookScope(claims, "", false)
 	if err != nil {
