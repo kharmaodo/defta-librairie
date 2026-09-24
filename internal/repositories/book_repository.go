@@ -49,6 +49,9 @@ func (r *BookRepository) List(ctx context.Context, libraryID string, offset, lim
 		if scanErr != nil {
 			return nil, 0, fmt.Errorf("scan managed book: %w", scanErr)
 		}
+		if taxonomyErr := r.loadBookCategories(ctx, &book); taxonomyErr != nil {
+			return nil, 0, taxonomyErr
+		}
 		books = append(books, book)
 	}
 	return books, total, rows.Err()
@@ -76,7 +79,10 @@ func (r *BookRepository) Search(ctx context.Context, libraryID, query string, of
 				if scanErr != nil {
 					return nil, 0, fmt.Errorf("scan managed FTS book: %w", scanErr)
 				}
-				books = append(books, book)
+				if taxonomyErr := r.loadBookCategories(ctx, &book); taxonomyErr != nil {
+			return nil, 0, taxonomyErr
+		}
+		books = append(books, book)
 			}
 			return books, total, rows.Err()
 		}
@@ -109,9 +115,36 @@ func (r *BookRepository) searchLike(ctx context.Context, libraryID, query string
 		if scanErr != nil {
 			return nil, 0, fmt.Errorf("scan managed LIKE book: %w", scanErr)
 		}
+		if taxonomyErr := r.loadBookCategories(ctx, &book); taxonomyErr != nil {
+			return nil, 0, taxonomyErr
+		}
 		books = append(books, book)
 	}
 	return books, total, rows.Err()
+}
+
+func (r *BookRepository) loadBookCategories(ctx context.Context, book *models.Book) error {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT category_id FROM book_categories
+		WHERE book_id=?
+		ORDER BY is_primary DESC, category_id
+	`, book.ID)
+	if err != nil {
+		return fmt.Errorf("list book categories: %w", err)
+	}
+	defer rows.Close()
+	book.CategoryIDs = make([]int, 0)
+	for rows.Next() {
+		var categoryID int
+		if err = rows.Scan(&categoryID); err != nil {
+			return fmt.Errorf("scan book category: %w", err)
+		}
+		book.CategoryIDs = append(book.CategoryIDs, categoryID)
+	}
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("iterate book categories: %w", err)
+	}
+	return nil
 }
 
 func (r *BookRepository) Find(ctx context.Context, id int, libraryID string) (models.Book, error) {
@@ -127,6 +160,9 @@ func (r *BookRepository) Find(ctx context.Context, id int, libraryID string) (mo
 	}
 	if err != nil {
 		return models.Book{}, fmt.Errorf("find managed book: %w", err)
+	}
+	if err = r.loadBookCategories(ctx, &book); err != nil {
+		return models.Book{}, err
 	}
 	return book, nil
 }
