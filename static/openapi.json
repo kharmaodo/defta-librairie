@@ -13023,53 +13023,499 @@
       "post": {
         "operationId": "BookSubmissionHandler_DecideReview",
         "summary": "Décider manuellement une soumission ambiguë",
-        "tags": ["books_management"],
+        "tags": [
+          "books_management"
+        ],
         "description": "Réservé à SUPER_ADMIN_ROOT. La décision APPROVE crée le livre une seule fois ; REJECT ne crée aucun livre.",
-        "parameters": [{
-          "name": "id", "in": "path", "required": true,
-          "schema": {"type": "string"}
-        }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": {"application/json": {"schema": {"type": "object", "required": ["decision"], "properties": {"decision": {"type": "string", "enum": ["APPROVE", "REJECT"]}}}}}
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "decision"
+                ],
+                "properties": {
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "APPROVE",
+                      "REJECT"
+                    ]
+                  }
+                }
+              }
+            }
+          }
         },
         "responses": {
-          "200": {"description": "Décision enregistrée."},
-          "400": {"description": "Décision invalide."},
-          "401": {"description": "Authentification requise."},
-          "403": {"description": "Réservé à SUPER_ADMIN_ROOT."},
-          "404": {"description": "Soumission introuvable."},
-          "409": {"description": "La soumission n’est plus en revue."},
-          "503": {"description": "Couvertures indisponibles."}
+          "200": {
+            "description": "Décision enregistrée."
+          },
+          "400": {
+            "description": "Décision invalide."
+          },
+          "401": {
+            "description": "Authentification requise."
+          },
+          "403": {
+            "description": "Réservé à SUPER_ADMIN_ROOT."
+          },
+          "404": {
+            "description": "Soumission introuvable."
+          },
+          "409": {
+            "description": "La soumission n’est plus en revue."
+          },
+          "503": {
+            "description": "Couvertures indisponibles."
+          }
         },
-        "x-codeSamples": [{
-          "lang": "Shell", "label": "curl",
-          "source": "curl --fail-with-body -sS -X POST \"${BASE_URL}/api/manage/book-submissions/${SUBMISSION_ID}/decision\" \\\n  -H \"Authorization: Bearer ${TOKEN}\" \\\n  -H \"Content-Type: application/json\" \\\n  --data '{\"decision\":\"APPROVE\"}'"
-        }]
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl --fail-with-body -sS -X POST \"${BASE_URL}/api/manage/book-submissions/${SUBMISSION_ID}/decision\" \\\n  -H \"Authorization: Bearer ${TOKEN}\" \\\n  -H \"Content-Type: application/json\" \\\n  --data '{\"decision\":\"APPROVE\"}'"
+          }
+        ]
       }
     },
     "/api/manage/book-submissions/{id}/retry": {
       "post": {
         "operationId": "BookSubmissionHandler_RetryFailed",
         "summary": "Relancer une soumission en échec",
-        "tags": ["books_management"],
+        "tags": [
+          "books_management"
+        ],
         "description": "Réservé à SUPER_ADMIN_ROOT. Seules les soumissions FAILED non expirées sont remises en file.",
-        "parameters": [{
-          "name": "id", "in": "path", "required": true,
-          "schema": {"type": "string"}
-        }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
-          "202": {"description": "Soumission remise en file."},
-          "401": {"description": "Authentification requise."},
-          "403": {"description": "Réservé à SUPER_ADMIN_ROOT."},
-          "404": {"description": "Soumission introuvable."},
-          "409": {"description": "La soumission n’est pas relançable."},
-          "503": {"description": "Couvertures indisponibles."}
+          "202": {
+            "description": "Soumission remise en file."
+          },
+          "401": {
+            "description": "Authentification requise."
+          },
+          "403": {
+            "description": "Réservé à SUPER_ADMIN_ROOT."
+          },
+          "404": {
+            "description": "Soumission introuvable."
+          },
+          "409": {
+            "description": "La soumission n’est pas relançable."
+          },
+          "503": {
+            "description": "Couvertures indisponibles."
+          }
         },
-        "x-codeSamples": [{
-          "lang": "Shell", "label": "curl",
-          "source": "curl --fail-with-body -sS -X POST \"${BASE_URL}/api/manage/book-submissions/${SUBMISSION_ID}/retry\" \\\n  -H \"Authorization: Bearer ${TOKEN}\""
-        }]
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl --fail-with-body -sS -X POST \"${BASE_URL}/api/manage/book-submissions/${SUBMISSION_ID}/retry\" \\\n  -H \"Authorization: Bearer ${TOKEN}\""
+          }
+        ]
+      }
+    },
+    "/api/manage/categories": {
+      "get": {
+        "operationId": "listCategorys",
+        "summary": "List categories",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "curl",
+            "source": "curl -X GET http://localhost:8080/api/manage/categories"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createCategory",
+        "summary": "Create Category",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "curl",
+            "source": "curl -X POST http://localhost:8080/api/manage/categories"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogueReferenceInput"
+              },
+              "example": {
+                "code": "example",
+                "name": "Example",
+                "ar": "مثال",
+                "fr": "Exemple",
+                "en": "Example"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/manage/categories/{id}": {
+      "put": {
+        "operationId": "updateCategory",
+        "summary": "Update Category",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "curl",
+            "source": "curl -X PUT http://localhost:8080/api/manage/categories/{id}"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogueReferenceInput"
+              },
+              "example": {
+                "code": "example",
+                "name": "Example",
+                "ar": "مثال",
+                "fr": "Exemple",
+                "en": "Example"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/api/manage/categories/{id}/disable": {
+      "post": {
+        "operationId": "disableCategory",
+        "summary": "Disable Category",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "curl",
+            "source": "curl -X POST http://localhost:8080/api/manage/categories/{id}/disable"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/api/manage/publishers": {
+      "get": {
+        "operationId": "listPublishers",
+        "summary": "List publishers",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "curl",
+            "source": "curl -X GET http://localhost:8080/api/manage/publishers"
+          }
+        ]
+      },
+      "post": {
+        "operationId": "createPublisher",
+        "summary": "Create Publisher",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "curl",
+            "source": "curl -X POST http://localhost:8080/api/manage/publishers"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogueReferenceInput"
+              },
+              "example": {
+                "code": "example",
+                "name": "Example",
+                "ar": "مثال",
+                "fr": "Exemple",
+                "en": "Example"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/manage/publishers/{id}": {
+      "put": {
+        "operationId": "updatePublisher",
+        "summary": "Update Publisher",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "curl",
+            "source": "curl -X PUT http://localhost:8080/api/manage/publishers/{id}"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogueReferenceInput"
+              },
+              "example": {
+                "code": "example",
+                "name": "Example",
+                "ar": "مثال",
+                "fr": "Exemple",
+                "en": "Example"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
+      }
+    },
+    "/api/manage/publishers/{id}/disable": {
+      "post": {
+        "operationId": "disablePublisher",
+        "summary": "Disable Publisher",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "201": {
+            "description": "Created"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "curl",
+            "source": "curl -X POST http://localhost:8080/api/manage/publishers/{id}/disable"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
       }
     }
   },
@@ -16411,6 +16857,68 @@
             "type": "string"
           },
           "expiresAt": {
+            "type": "string"
+          }
+        }
+      },
+      "CatalogueReference": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "name",
+          "ar",
+          "fr",
+          "en",
+          "active"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ar": {
+            "type": "string"
+          },
+          "fr": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CatalogueReferenceInput": {
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "ar",
+          "fr",
+          "en"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ar": {
+            "type": "string"
+          },
+          "fr": {
+            "type": "string"
+          },
+          "en": {
             "type": "string"
           }
         }
