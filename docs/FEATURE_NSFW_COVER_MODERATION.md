@@ -21,7 +21,7 @@ référence d’avancement des user stories et de leur recette.
 | Reprendre une indisponibilité du modèle | Une soumission `FAILED` est relançable sans doublon. | Réalisé | `POST /api/manage/book-submissions/{id}/retry`. |
 | Remplacer la couverture d’un livre existant | L’image est modérée avant stockage ; un refus conserve la couverture précédente. | Réalisé | `422 cover_moderation_rejected`. |
 | Afficher une couverture sûre | Les routes publique et admin ne servent qu’une variante `READY` active ; sinon l’interface utilise l’image par défaut. | Réalisé | `GET /api/books/{id}/cover` et `GET /api/manage/books/{id}/cover`. |
-| Purger la quarantaine | Les sources rejetées ou expirées sont supprimées avec reprise vérifiable. | À réaliser | Worker dédié, file de nettoyage et tests de reprise. |
+| Purger la quarantaine | Les sources rejetées ou expirées sont supprimées avec reprise vérifiable. | Réalisé | File SQLite de nettoyage, baux, relance MinIO et test d’idempotence. |
 
 ## Politique appliquée
 
@@ -55,13 +55,19 @@ l’endpoint est `http://nsfw-moderator:8090`.
 Le modèle et son manifeste restent hors du dépôt, par exemple sous
 `/opt/models/nsfw`, et sont montés en lecture seule dans le conteneur.
 
-## Critères de clôture
+## Clôture fonctionnelle
 
-La fonctionnalité sera clôturée lorsque l’US de purge sera réalisée et que la
-recette complète confirmera :
+La fonctionnalité est réalisée. La purge s’appuie sur la file SQLite de
+nettoyage existante : baux, reprise avec temporisation et idempotence MinIO.
+Une soumission `PENDING_SCAN` ou `SCANNING` expirée devient
+`FAILED / SOURCE_EXPIRED`, ce qui empêche une création tardive.
 
-1. la suppression différée et rejouable d’une source rejetée ou expirée ;
-2. l’absence de toute route HTTP vers la quarantaine ;
-3. la non-régression des parcours approuvé, refusé, ambigu et indisponible ;
-4. les contrôles `go test -tags fts5 ./...`,
-   `./scripts/check-delivery.sh` et Playwright verts.
+La recette de clôture à conserver avant chaque publication est :
+
+1. vérification de la suppression différée et rejouable d’une source rejetée ou expirée ;
+2. vérification qu’aucune route HTTP ne donne accès à la quarantaine ;
+3. non-régression des parcours approuvé, refusé, ambigu et indisponible ;
+4. `go test -tags fts5 ./...`, `./scripts/check-delivery.sh` et Playwright verts.
+
+Les tests de rapprochement couvrent le rejet immédiat, l’expiration, la
+conservation d’un échec encore relançable et l’idempotence de la file.
