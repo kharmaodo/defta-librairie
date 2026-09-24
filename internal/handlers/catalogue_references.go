@@ -61,3 +61,19 @@ func (h *CatalogueReferenceHandler) setActive(w http.ResponseWriter,r *http.Requ
   writeAuthJSON(w,status,map[string]string{"error":code,"message":"Catalogue reference operation failed"});return
  };w.WriteHeader(http.StatusNoContent)
 }
+
+
+func (h *CatalogueReferenceHandler) UpdateCategory(w http.ResponseWriter,r *http.Request){h.update(w,r,"category")}
+func (h *CatalogueReferenceHandler) UpdatePublisher(w http.ResponseWriter,r *http.Request){h.update(w,r,"publisher")}
+func (h *CatalogueReferenceHandler) update(w http.ResponseWriter,r *http.Request,kind string){
+ var value models.CatalogueReference
+ if decodeOwnerJSON(w,r,&value)!=nil{writeAuthJSON(w,http.StatusBadRequest,map[string]string{"error":"invalid_catalogue_reference","message":"Invalid catalogue reference"});return}
+ claims,_:=auth.ClaimsFromContext(r.Context())
+ if err:=h.service.Update(r.Context(),claims,kind,r.PathValue("id"),value);err!=nil{h.setActiveError(w,err);return}
+ w.WriteHeader(http.StatusNoContent)
+}
+func (h *CatalogueReferenceHandler) setActiveError(w http.ResponseWriter,err error){
+ status:=http.StatusInternalServerError;code:="internal_error"
+ if errors.Is(err,services.ErrBookForbidden){status=http.StatusForbidden;code="forbidden"} else if errors.Is(err,services.ErrInvalidCatalogueReference){status=http.StatusBadRequest;code="invalid_catalogue_reference"} else if errors.Is(err,repositories.ErrCatalogueReferenceNotFound){status=http.StatusNotFound;code="catalogue_reference_not_found"} else if errors.Is(err,repositories.ErrCatalogueReferenceConflict){status=http.StatusConflict;code="catalogue_reference_conflict"}
+ writeAuthJSON(w,status,map[string]string{"error":code,"message":"Catalogue reference operation failed"})
+}
