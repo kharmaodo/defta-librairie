@@ -31,3 +31,13 @@ func (r *CatalogueReferenceRepository) List(ctx context.Context, kind string) ([
  for rows.Next(){var v models.CatalogueReference; if err=rows.Scan(&v.ID,&v.Code,&v.Name,&v.Arabic,&v.French,&v.English,&v.Active,&v.CreatedAt,&v.UpdatedAt);err!=nil{return nil,err};result=append(result,v)}
  return result,rows.Err()
 }
+
+
+func (r *CatalogueReferenceRepository) Create(ctx context.Context, kind string, value models.CatalogueReference, actorID, auditID string) error {
+	table, name, err := referenceTable(kind); if err != nil { return err }
+	tx, err := r.db.BeginTx(ctx, nil); if err != nil { return err }; defer tx.Rollback()
+	_, err = tx.ExecContext(ctx, fmt.Sprintf("INSERT INTO %s(code, %s, ar, fr, en, active, created_at, updated_at) VALUES(?, ?, ?, ?, ?, 1, ?, ?)", table, name), value.Code, value.Name, value.Arabic, value.French, value.English, value.CreatedAt, value.UpdatedAt)
+	if isUniqueViolation(err) { return ErrCatalogueReferenceConflict }; if err != nil { return err }
+	if _, err = tx.ExecContext(ctx, "INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?)", auditID, actorID, "CREATE_"+kind, "CATALOGUE_REFERENCE", value.Code, value.Name, value.CreatedAt); err != nil { return err }
+	return tx.Commit()
+}
