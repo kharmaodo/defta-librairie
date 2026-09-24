@@ -92,6 +92,7 @@ func (r *CoverCleanupRepository) Reconcile(
 		nowText, nowText,
 		nowText, nowText,
 		nowText, nowText,
+		nowText, nowText, nowText,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("reconcile cover cleanup jobs: %w", err)
