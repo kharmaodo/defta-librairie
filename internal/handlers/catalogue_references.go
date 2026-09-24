@@ -3,6 +3,7 @@ package handlers
 import (
 	"defta-librairie/internal/auth"
 	"defta-librairie/internal/services"
+	"defta-librairie/internal/models"
 	"errors"
 	"net/http"
 )
@@ -35,4 +36,15 @@ func (h *CatalogueReferenceHandler) list(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	writeAuthJSON(w, http.StatusOK, map[string]interface{}{"results": items, "total": len(items)})
+}
+
+
+func (h *CatalogueReferenceHandler) CreateCategory(w http.ResponseWriter, r *http.Request) { h.create(w,r,"category") }
+func (h *CatalogueReferenceHandler) CreatePublisher(w http.ResponseWriter, r *http.Request) { h.create(w,r,"publisher") }
+func (h *CatalogueReferenceHandler) create(w http.ResponseWriter, r *http.Request, kind string) {
+ var value models.CatalogueReference
+ if decodeOwnerJSON(w,r,&value)!=nil { writeAuthJSON(w,http.StatusBadRequest,map[string]string{"error":"invalid_catalogue_reference","message":"Invalid catalogue reference"}); return }
+ claims,_:=auth.ClaimsFromContext(r.Context())
+ if err:=h.service.Create(r.Context(),claims,kind,value);err!=nil { writeAuthJSON(w,http.StatusForbidden,map[string]string{"error":"forbidden","message":"Insufficient permissions"});return }
+ w.WriteHeader(http.StatusCreated)
 }
