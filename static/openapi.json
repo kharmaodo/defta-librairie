@@ -13269,7 +13269,18 @@
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
       }
     },
     "/api/manage/categories/{id}/disable": {
@@ -13302,6 +13313,17 @@
           {
             "lang": "curl",
             "source": "curl -X POST http://localhost:8080/api/manage/categories/{id}/disable"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
           }
         ]
       }
@@ -13437,7 +13459,18 @@
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ]
       }
     },
     "/api/manage/publishers/{id}/disable": {
@@ -13470,6 +13503,17 @@
           {
             "lang": "curl",
             "source": "curl -X POST http://localhost:8080/api/manage/publishers/{id}/disable"
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
           }
         ]
       }
