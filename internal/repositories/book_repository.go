@@ -6,6 +6,7 @@ import (
 	"defta-librairie/internal/models"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var (
@@ -94,6 +95,45 @@ func (r *BookRepository) Search(ctx context.Context, libraryID, query string, of
 		}
 	}
 	return r.searchLike(ctx, libraryID, query, offset, limit)
+}
+
+func (r *BookRepository) SearchByTag(ctx context.Context, libraryID, tagID, query string, offset, limit int) ([]models.Book, int, error) {
+	where := " WHERE d.deleted_at IS NULL AND bt.tag_id=?"
+	args := []interface{}{tagID}
+	if libraryID != "" {
+		where += " AND d.library_id=?"
+		args = append(args, libraryID)
+	}
+	if query = strings.TrimSpace(query); query != "" {
+		pattern := "%" + query + "%"
+		where += " AND (d.title LIKE ? OR d.auteur LIKE ? OR d.editeur LIKE ? OR d.tags LIKE ? OR d.categorie LIKE ?)"
+		args = append(args, pattern, pattern, pattern, pattern, pattern)
+	}
+	var total int
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM defta d JOIN book_tags bt ON bt.book_id=d.id"+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count tagged books: %w", err)
+	}
+	queryArgs := append(append([]interface{}{}, args...), limit, offset)
+	rows, err := r.db.QueryContext(ctx, taggedBookSelect+where+" ORDER BY d.id DESC LIMIT ? OFFSET ?", queryArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("search tagged books: %w", err)
+	}
+	defer rows.Close()
+	books := make([]models.Book, 0)
+	for rows.Next() {
+		book, scanErr := scanManagedBook(rows)
+		if scanErr != nil {
+			return nil, 0, fmt.Errorf("scan tagged book: %w", scanErr)
+		}
+		if err = r.loadBookCategories(ctx, &book); err != nil {
+			return nil, 0, err
+		}
+		if err = r.loadBookTags(ctx, &book); err != nil {
+			return nil, 0, err
+		}
+		books = append(books, book)
+	}
+	return books, total, rows.Err()
 }
 
 func (r *BookRepository) searchLike(ctx context.Context, libraryID, query string, offset, limit int) ([]models.Book, int, error) {
@@ -409,6 +449,13 @@ const bookSelect = `
 	       (SELECT category_id FROM book_categories WHERE book_id=defta.id AND is_primary=1), coverUrl,
 	       library_id, COALESCE(created_at, ''), COALESCE(updated_at, ''), version
 	FROM defta`
+
+const taggedBookSelect = `
+	SELECT d.id, d.title, d.auteur, d.editeur, COALESCE(d.price, 0), COALESCE(d.volume, 0),
+	       d.status, d.tags, d.categorie, d.publisher_id,
+	       (SELECT category_id FROM book_categories WHERE book_id=d.id AND is_primary=1), d.coverUrl,
+	       d.library_id, COALESCE(d.created_at, ''), COALESCE(d.updated_at, ''), d.version
+	FROM defta d JOIN book_tags bt ON bt.book_id=d.id`
 
 const managedBookSearchSelect = `
 	SELECT d.id, d.title, d.auteur, d.editeur, COALESCE(d.price, 0), COALESCE(d.volume, 0),
