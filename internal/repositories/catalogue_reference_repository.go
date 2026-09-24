@@ -51,3 +51,13 @@ func (r *CatalogueReferenceRepository) SetActive(ctx context.Context, kind strin
  if _,err=tx.ExecContext(ctx,"INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at) VALUES(?,?,?,?,?,?,1,?)",auditID,actorID,"SET_"+kind+"_ACTIVE","CATALOGUE_REFERENCE",fmt.Sprint(id),fmt.Sprint(active),now);err!=nil{return err}
  return tx.Commit()
 }
+
+
+func (r *CatalogueReferenceRepository) Update(ctx context.Context, kind string, id int64, value models.CatalogueReference, actorID, auditID string) error {
+ table,name,err:=referenceTable(kind);if err!=nil{return err}
+ tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return err};defer tx.Rollback()
+ result,err:=tx.ExecContext(ctx,fmt.Sprintf("UPDATE %s SET code=?, %s=?, ar=?, fr=?, en=?, updated_at=? WHERE id=?",table,name),value.Code,value.Name,value.Arabic,value.French,value.English,value.UpdatedAt,id)
+ if isUniqueViolation(err){return ErrCatalogueReferenceConflict};if err!=nil{return err};n,err:=result.RowsAffected();if err!=nil{return err};if n!=1{return ErrCatalogueReferenceNotFound}
+ if _,err=tx.ExecContext(ctx,"INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at) VALUES(?,?,?,?,?,?,1,?)",auditID,actorID,"UPDATE_"+kind,"CATALOGUE_REFERENCE",fmt.Sprint(id),value.Name,value.UpdatedAt);err!=nil{return err}
+ return tx.Commit()
+}
