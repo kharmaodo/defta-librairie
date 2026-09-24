@@ -52,6 +52,9 @@ func (r *BookRepository) List(ctx context.Context, libraryID string, offset, lim
 		if taxonomyErr := r.loadBookCategories(ctx, &book); taxonomyErr != nil {
 			return nil, 0, taxonomyErr
 		}
+		if tagErr := r.loadBookTags(ctx, &book); tagErr != nil {
+			return nil, 0, tagErr
+		}
 		books = append(books, book)
 	}
 	return books, total, rows.Err()
@@ -81,6 +84,9 @@ func (r *BookRepository) Search(ctx context.Context, libraryID, query string, of
 				}
 				if taxonomyErr := r.loadBookCategories(ctx, &book); taxonomyErr != nil {
 			return nil, 0, taxonomyErr
+		}
+		if tagErr := r.loadBookTags(ctx, &book); tagErr != nil {
+			return nil, 0, tagErr
 		}
 		books = append(books, book)
 			}
@@ -118,6 +124,9 @@ func (r *BookRepository) searchLike(ctx context.Context, libraryID, query string
 		if taxonomyErr := r.loadBookCategories(ctx, &book); taxonomyErr != nil {
 			return nil, 0, taxonomyErr
 		}
+		if tagErr := r.loadBookTags(ctx, &book); tagErr != nil {
+			return nil, 0, tagErr
+		}
 		books = append(books, book)
 	}
 	return books, total, rows.Err()
@@ -147,6 +156,30 @@ func (r *BookRepository) loadBookCategories(ctx context.Context, book *models.Bo
 	return nil
 }
 
+func (r *BookRepository) loadBookTags(ctx context.Context, book *models.Book) error {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT tag_id FROM book_tags
+		WHERE book_id=?
+		ORDER BY tag_id
+	`, book.ID)
+	if err != nil {
+		return fmt.Errorf("list book tags: %w", err)
+	}
+	defer rows.Close()
+	book.TagIDs = make([]string, 0)
+	for rows.Next() {
+		var tagID string
+		if err = rows.Scan(&tagID); err != nil {
+			return fmt.Errorf("scan book tag: %w", err)
+		}
+		book.TagIDs = append(book.TagIDs, tagID)
+	}
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("iterate book tags: %w", err)
+	}
+	return nil
+}
+
 func (r *BookRepository) Find(ctx context.Context, id int, libraryID string) (models.Book, error) {
 	query := bookSelect + ` WHERE id=? AND deleted_at IS NULL`
 	args := []interface{}{id}
@@ -162,6 +195,9 @@ func (r *BookRepository) Find(ctx context.Context, id int, libraryID string) (mo
 		return models.Book{}, fmt.Errorf("find managed book: %w", err)
 	}
 	if err = r.loadBookCategories(ctx, &book); err != nil {
+		return models.Book{}, err
+	}
+	if err = r.loadBookTags(ctx, &book); err != nil {
 		return models.Book{}, err
 	}
 	return book, nil
@@ -210,6 +246,11 @@ func (r *BookRepository) Create(ctx context.Context, book models.BookInput, acto
 			return models.Book{}, fmt.Errorf("set book categories: %w", err)
 		}
 	}
+	if book.TagIDs != nil {
+		if err = replaceBookTags(ctx, tx, id, book.TagIDs, now); err != nil {
+			return models.Book{}, fmt.Errorf("set book tags: %w", err)
+		}
+	}
 	if _, err = tx.ExecContext(ctx, `
 		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
 		VALUES (?, ?, 'CREATE_BOOK', 'BOOK', ?, ?, 1, ?)
@@ -250,6 +291,11 @@ func (r *BookRepository) Update(ctx context.Context, id int, book models.BookInp
 	if book.CategoryIDs != nil {
 		if err = replaceBookCategories(ctx, tx, int64(id), book.CategoryIDs, book.PrimaryCategoryID, now); err != nil {
 			return models.Book{}, fmt.Errorf("replace book categories: %w", err)
+		}
+	}
+	if book.TagIDs != nil {
+		if err = replaceBookTags(ctx, tx, int64(id), book.TagIDs, now); err != nil {
+			return models.Book{}, fmt.Errorf("replace book tags: %w", err)
 		}
 	}
 	if _, err = tx.ExecContext(ctx, `
@@ -303,6 +349,21 @@ func replaceBookCategories(ctx context.Context, tx *sql.Tx, bookID int64, catego
 			primary = 1
 		}
 		if _, err := tx.ExecContext(ctx, "INSERT INTO book_categories(book_id, category_id, is_primary, created_at) VALUES (?, ?, ?, ?)", bookID, categoryID, primary, now); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func replaceBookTags(ctx context.Context, tx *sql.Tx, bookID int64, tagIDs []string, now string) error {
+	if _, err := tx.ExecContext(ctx, "DELETE FROM book_tags WHERE book_id=?", bookID); err != nil {
+		return err
+	}
+	for _, tagID := range tagIDs {
+		if _, err := tx.ExecContext(ctx,
+			"INSERT INTO book_tags(book_id, tag_id, created_at) VALUES (?, ?, ?)",
+			bookID, tagID, now,
+		); err != nil {
 			return err
 		}
 	}
