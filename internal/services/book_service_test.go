@@ -188,6 +188,11 @@ func TestBookServiceCreatesAndUpdatesTaxonomyRelations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create classified book: %v", err)
 	}
+	if !book.PublisherID.Valid || int(book.PublisherID.Int64) != publisherID ||
+		!book.PrimaryCategoryID.Valid || int(book.PrimaryCategoryID.Int64) != firstCategoryID ||
+		len(book.CategoryIDs) != 2 {
+		t.Fatalf("created taxonomy response: %+v", book)
+	}
 	assertBookTaxonomy(t, db, book.ID, publisherID, firstCategoryID, secondCategoryID)
 
 	book, err = service.Update(context.Background(), owner, book.ID, models.BookInput{
