@@ -100,6 +100,38 @@ func TestBookManagementHTTPPersistsTaxonomyRelations(t *testing.T) {
 		t.Fatalf("updated book taxonomy=%+v", updated)
 	}
 
+	getRequest := taxonomyBookRequest(t, http.MethodGet, "/api/manage/books/1", models.BookInput{}, claims)
+	getRequest.SetPathValue("id", "1")
+	getResponse := httptest.NewRecorder()
+	handler.Get(getResponse, getRequest)
+	if getResponse.Code != http.StatusOK {
+		t.Fatalf("get status=%d body=%s", getResponse.Code, getResponse.Body.String())
+	}
+	var fetched models.Book
+	if err = json.NewDecoder(getResponse.Body).Decode(&fetched); err != nil {
+		t.Fatalf("decode fetched book: %v", err)
+	}
+	if !fetched.PublisherID.Valid || int(fetched.PublisherID.Int64) != publisherID ||
+		len(fetched.CategoryIDs) != 1 || fetched.CategoryIDs[0] != nahwID {
+		t.Fatalf("fetched book taxonomy=%+v", fetched)
+	}
+
+	listResponse := httptest.NewRecorder()
+	handler.List(listResponse, taxonomyBookRequest(t, http.MethodGet, "/api/manage/books", models.BookInput{}, claims))
+	if listResponse.Code != http.StatusOK {
+		t.Fatalf("list status=%d body=%s", listResponse.Code, listResponse.Body.String())
+	}
+	var listed struct {
+		Results []models.Book `json:"results"`
+	}
+	if err = json.NewDecoder(listResponse.Body).Decode(&listed); err != nil {
+		t.Fatalf("decode listed books: %v", err)
+	}
+	if len(listed.Results) != 1 || len(listed.Results[0].CategoryIDs) != 1 ||
+		listed.Results[0].CategoryIDs[0] != nahwID {
+		t.Fatalf("listed book taxonomy=%+v", listed.Results)
+	}
+
 	if _, err = db.Exec(`UPDATE categories SET active=0 WHERE id=?`, fiqhID); err != nil {
 		t.Fatalf("disable category: %v", err)
 	}
