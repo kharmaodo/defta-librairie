@@ -4,7 +4,10 @@ import (
  "context"
  "database/sql"
  "fmt"
+	"strings"
 )
+
+var ErrInvalidBookTaxonomy = errors.New("invalid book taxonomy")
 
 type BookTaxonomyRepository struct{ db *sql.DB }
 func NewBookTaxonomyRepository(db *sql.DB)*BookTaxonomyRepository{return &BookTaxonomyRepository{db:db}}
@@ -20,4 +23,62 @@ func (r *BookTaxonomyRepository) Categories(ctx context.Context,bookID int)([]in
 }
 func (r *BookTaxonomyRepository) SetPublisher(ctx context.Context,bookID int,publisherID *int)error{
  var value interface{}=nil;if publisherID!=nil{value=*publisherID};result,err:=r.db.ExecContext(ctx,"UPDATE defta SET publisher_id=? WHERE id=?",value,bookID);if err!=nil{return err};n,err:=result.RowsAffected();if err!=nil{return err};if n!=1{return fmt.Errorf("book not found")};return nil
+}
+
+
+func (r *BookTaxonomyRepository) ValidateSelection(ctx context.Context, categoryIDs []int, primaryID, publisherID *int) error {
+	if primaryID != nil && *primaryID < 1 {
+		return ErrInvalidBookTaxonomy
+	}
+	if publisherID != nil && *publisherID < 1 {
+		return ErrInvalidBookTaxonomy
+	}
+
+	seen := make(map[int]struct{}, len(categoryIDs))
+	for _, categoryID := range categoryIDs {
+		if categoryID < 1 {
+			return ErrInvalidBookTaxonomy
+		}
+		if _, exists := seen[categoryID]; exists {
+			return ErrInvalidBookTaxonomy
+		}
+		seen[categoryID] = struct{}{}
+	}
+	if len(categoryIDs) == 0 && primaryID != nil {
+		return ErrInvalidBookTaxonomy
+	}
+	if len(categoryIDs) > 0 {
+		if primaryID == nil {
+			return ErrInvalidBookTaxonomy
+		}
+		if _, exists := seen[*primaryID]; !exists {
+			return ErrInvalidBookTaxonomy
+		}
+		placeholders := strings.TrimRight(strings.Repeat("?,", len(categoryIDs)), ",")
+		args := make([]interface{}, len(categoryIDs))
+		for index, categoryID := range categoryIDs {
+			args[index] = categoryID
+		}
+		var activeCount int
+		if err := r.db.QueryRowContext(ctx,
+			"SELECT COUNT(*) FROM categories WHERE active=1 AND id IN ("+placeholders+")", args...,
+		).Scan(&activeCount); err != nil {
+			return fmt.Errorf("validate categories: %w", err)
+		}
+		if activeCount != len(categoryIDs) {
+			return ErrInvalidBookTaxonomy
+		}
+	}
+	if publisherID != nil {
+		var activeCount int
+		if err := r.db.QueryRowContext(ctx,
+			"SELECT COUNT(*) FROM publishers WHERE active=1 AND id=?", *publisherID,
+		).Scan(&activeCount); err != nil {
+			return fmt.Errorf("validate publisher: %w", err)
+		}
+		if activeCount != 1 {
+			return ErrInvalidBookTaxonomy
+		}
+	}
+	return nil
 }
