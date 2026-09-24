@@ -13,7 +13,9 @@ test('book cover upload, failure, retry and authenticated preview in the form', 
         <input name="id"><input name="version"><input name="title">
         <input name="auteur"><input name="editeur"><input name="price">
         <input name="volume"><input name="status"><input name="categorie">
-        <input name="tags"><input name="coverUrl"><input name="libraryId">
+        <input name="tags"><select name="publisherId"></select>
+        <select name="categoryIds" multiple></select><select name="primaryCategoryId"></select>
+        <select name="tagIds" multiple></select><input name="coverUrl"><input name="libraryId">
         <input name="cover" type="file" accept="image/jpeg,image/png">
         <p id="book-cover-status" role="status"></p>
         <button id="book-cover-retry" type="button" hidden>Relancer le traitement</button>
@@ -30,7 +32,8 @@ test('book cover upload, failure, retry and authenticated preview in the form', 
     const book = {
       id: 42, version: 1, title: 'Livre Exact', auteur: 'Auteur', editeur: '',
       price: 10, volume: 0, status: 'AVAILABLE', categorie: '', tags: '',
-      coverUrl: '', libraryId: 'library-1'
+      coverUrl: '', libraryId: 'library-1', publisherId: 1,
+      categoryIds: [2], primaryCategoryId: 2, tagIds: ['tag-1']
     };
     window.coverScenario = {state: 'ABSENT', uploads: 0, retries: 0, previewReads: 0};
     window.DeftaHTTP = {
@@ -43,6 +46,9 @@ test('book cover upload, failure, retry and authenticated preview in the form', 
     const apiFetch = async (path, options = {}) => {
       const state = window.coverScenario;
       if (path.startsWith('/api/manage/books?')) return {results: [book], total: 1, offset: 0, limit: 10};
+      if (path === '/api/manage/categories') return [{id: 2, name: 'Fiqh'}];
+      if (path === '/api/manage/publishers') return [{id: 1, name: 'Dar al Fikr'}];
+      if (path === '/api/manage/tags') return [{id: 'tag-1', name: 'Fiqh'}];
       if (path.endsWith('/cover/status')) {
         if (state.state === 'ABSENT') throw Object.assign(new Error('Absent'), {status: 404});
         return {status: state.state, canRetry: state.state === 'FAILED'};
@@ -90,6 +96,10 @@ test('book cover upload, failure, retry and authenticated preview in the form', 
 
   await page.locator('#books-body').getByRole('button', {name: 'Modifier'}).click();
   await expect(page.locator('#book-cover-status')).toHaveText('Aucune couverture');
+  await expect(page.locator('#book-form [name=publisherId]')).toHaveValue('1');
+  await expect(page.locator('#book-form [name=primaryCategoryId]')).toHaveValue('2');
+  await expect(page.locator('#book-form [name=categoryIds] option:checked')).toHaveCount(1);
+  await expect(page.locator('#book-form [name=tagIds] option:checked')).toHaveCount(1);
   await expect(page.locator('#book-cover-preview')).toHaveAttribute('alt', 'Couverture par défaut');
   await expect(page.locator('#books-body .book-cover-thumb')).toHaveAttribute('alt', 'Couverture par défaut');
   const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLttAAAAABJRU5ErkJggg==', 'base64');
