@@ -13207,7 +13207,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CatalogueReference"
+                "$ref": "#/components/schemas/CatalogueReferenceInput"
               },
               "example": {
                 "code": "example",
@@ -13258,7 +13258,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CatalogueReference"
+                "$ref": "#/components/schemas/CatalogueReferenceInput"
               },
               "example": {
                 "code": "example",
@@ -13397,7 +13397,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CatalogueReference"
+                "$ref": "#/components/schemas/CatalogueReferenceInput"
               },
               "example": {
                 "code": "example",
@@ -13448,7 +13448,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CatalogueReference"
+                "$ref": "#/components/schemas/CatalogueReferenceInput"
               },
               "example": {
                 "code": "example",
@@ -16893,6 +16893,33 @@
           },
           "active": {
             "type": "boolean"
+          }
+        }
+      },
+      "CatalogueReferenceInput": {
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "ar",
+          "fr",
+          "en"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ar": {
+            "type": "string"
+          },
+          "fr": {
+            "type": "string"
+          },
+          "en": {
+            "type": "string"
           }
         }
       }
