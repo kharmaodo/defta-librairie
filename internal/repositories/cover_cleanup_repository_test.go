@@ -276,3 +276,50 @@ func TestCoverCleanupReconcileIsIdempotentAndPreservesActiveVariants(t *testing.
 		t.Fatalf("active variant cleanup jobs=%d want=0", activeVariants)
 	}
 }
+
+
+func TestCoverCleanupReconcileQueuesRejectedAndExpiredSubmissions(t *testing.T) {
+	db := openCoverCleanupTestDB(t)
+	now := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC)
+	expired := now.Add(-time.Hour).Format(time.RFC3339Nano)
+	future := now.Add(time.Hour).Format(time.RFC3339Nano)
+	if _, err := db.Exec(`
+		INSERT INTO book_submissions(
+			id, library_id, source_object_key, moderation_status, expires_at, updated_at
+		) VALUES
+			('rejected', 'library-1', 'quarantine/library-1/rejected.jpg', 'REJECTED', ?, ?),
+			('review-expired', 'library-1', 'quarantine/library-1/review.jpg', 'REVIEW_REQUIRED', ?, ?),
+			('pending-expired', 'library-1', 'quarantine/library-1/pending.jpg', 'PENDING_SCAN', ?, ?),
+			('failed-retryable', 'library-1', 'quarantine/library-1/retry.jpg', 'FAILED', ?, ?)
+	`, future, now.Format(time.RFC3339Nano), expired, now.Format(time.RFC3339Nano),
+		expired, now.Format(time.RFC3339Nano), future, now.Format(time.RFC3339Nano)); err != nil {
+		t.Fatalf("insert submissions: %v", err)
+	}
+
+	repository := NewCoverCleanupRepository(db)
+	inserted, err := repository.Reconcile(context.Background(), now, now.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+	if inserted != 3 {
+		t.Fatalf("inserted=%d want=3", inserted)
+	}
+	var status, code string
+	if err = db.QueryRow(`SELECT moderation_status, decision_code FROM book_submissions WHERE id='pending-expired'`).Scan(&status, &code); err != nil {
+		t.Fatalf("read expired submission: %v", err)
+	}
+	if status != "FAILED" || code != "SOURCE_EXPIRED" {
+		t.Fatalf("expired submission status=%q code=%q", status, code)
+	}
+	var jobs int
+	if err = db.QueryRow(`SELECT COUNT(*) FROM cover_object_cleanup_jobs WHERE cover_id LIKE 'submission:%'`).Scan(&jobs); err != nil {
+		t.Fatalf("count submission jobs: %v", err)
+	}
+	if jobs != 3 {
+		t.Fatalf("submission jobs=%d want=3", jobs)
+	}
+	inserted, err = repository.Reconcile(context.Background(), now, now.Add(-24*time.Hour))
+	if err != nil || inserted != 0 {
+		t.Fatalf("second reconcile inserted=%d err=%v", inserted, err)
+	}
+}
