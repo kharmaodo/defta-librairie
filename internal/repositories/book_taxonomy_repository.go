@@ -2,8 +2,9 @@ package repositories
 
 import (
  "context"
- "database/sql"
- "fmt"
+	"database/sql"
+	"errors"
+	"fmt"
 	"strings"
 )
 
