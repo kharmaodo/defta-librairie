@@ -2651,13 +2651,22 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "tagId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filtre les livres associés à ce tag de la librairie. Compatible avec q."
           }
         ],
         "x-codeSamples": [
           {
             "lang": "Shell",
             "label": "curl (adapter les identifiants)",
-            "source": "curl --fail-with-body -sS -X GET \"${BASE_URL}/api/manage/books\" \\\n  -H \"Authorization: Bearer ${TOKEN}\""
+            "source": "curl --fail-with-body -sS -X GET \"${BASE_URL}/api/manage/books?tagId=${TAG_ID}&q=fiqh\" \\\n  -H \"Authorization: Bearer ${TOKEN}\""
           }
         ]
       },
@@ -13760,6 +13769,13 @@
             "type": "integer",
             "nullable": true,
             "description": "Identifiant de la catégorie principale"
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Identifiants des tags associés au livre"
           }
         },
         "required": [
@@ -13830,6 +13846,13 @@
             "type": "integer",
             "minimum": 1,
             "description": "Catégorie principale, présente dans categoryIds"
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags de la librairie à associer atomiquement au livre"
           }
         },
         "required": [
@@ -13846,7 +13869,10 @@
             2,
             3
           ],
-          "primaryCategoryId": 2
+          "primaryCategoryId": 2,
+          "tagIds": [
+            "TAG_ID"
+          ]
         }
       },
       "BookInventory": {

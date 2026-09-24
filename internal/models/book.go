@@ -70,6 +70,7 @@ type Book struct {
 	Volume    int             `json:"volume"`
 	Status    StringField     `json:"status"`
 	Tags      StringField     `json:"tags"`
+	TagIDs    []string        `json:"tagIds,omitempty"`
 	Categorie StringField     `json:"categorie"`
 	PublisherID IntField      `json:"publisherId"`
 	CategoryIDs []int         `json:"categoryIds,omitempty"`
@@ -90,6 +91,7 @@ type BookInput struct {
 	Volume    int     `json:"volume"`
 	Status    string  `json:"status"`
 	Tags      string  `json:"tags"`
+	TagIDs    []string `json:"tagIds,omitempty"`
 	Categorie string  `json:"categorie"`
 	PublisherID *int   `json:"publisherId,omitempty"`
 	CategoryIDs []int  `json:"categoryIds,omitempty"`

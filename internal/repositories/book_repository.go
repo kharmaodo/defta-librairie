@@ -6,6 +6,7 @@ import (
 	"defta-librairie/internal/models"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 var (
@@ -52,6 +53,9 @@ func (r *BookRepository) List(ctx context.Context, libraryID string, offset, lim
 		if taxonomyErr := r.loadBookCategories(ctx, &book); taxonomyErr != nil {
 			return nil, 0, taxonomyErr
 		}
+		if tagErr := r.loadBookTags(ctx, &book); tagErr != nil {
+			return nil, 0, tagErr
+		}
 		books = append(books, book)
 	}
 	return books, total, rows.Err()
@@ -82,12 +86,54 @@ func (r *BookRepository) Search(ctx context.Context, libraryID, query string, of
 				if taxonomyErr := r.loadBookCategories(ctx, &book); taxonomyErr != nil {
 			return nil, 0, taxonomyErr
 		}
+		if tagErr := r.loadBookTags(ctx, &book); tagErr != nil {
+			return nil, 0, tagErr
+		}
 		books = append(books, book)
 			}
 			return books, total, rows.Err()
 		}
 	}
 	return r.searchLike(ctx, libraryID, query, offset, limit)
+}
+
+func (r *BookRepository) SearchByTag(ctx context.Context, libraryID, tagID, query string, offset, limit int) ([]models.Book, int, error) {
+	where := " WHERE d.deleted_at IS NULL AND bt.tag_id=?"
+	args := []interface{}{tagID}
+	if libraryID != "" {
+		where += " AND d.library_id=?"
+		args = append(args, libraryID)
+	}
+	if query = strings.TrimSpace(query); query != "" {
+		pattern := "%" + query + "%"
+		where += " AND (d.title LIKE ? OR d.auteur LIKE ? OR d.editeur LIKE ? OR d.tags LIKE ? OR d.categorie LIKE ?)"
+		args = append(args, pattern, pattern, pattern, pattern, pattern)
+	}
+	var total int
+	if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM defta d JOIN book_tags bt ON bt.book_id=d.id"+where, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("count tagged books: %w", err)
+	}
+	queryArgs := append(append([]interface{}{}, args...), limit, offset)
+	rows, err := r.db.QueryContext(ctx, taggedBookSelect+where+" ORDER BY d.id DESC LIMIT ? OFFSET ?", queryArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("search tagged books: %w", err)
+	}
+	defer rows.Close()
+	books := make([]models.Book, 0)
+	for rows.Next() {
+		book, scanErr := scanManagedBook(rows)
+		if scanErr != nil {
+			return nil, 0, fmt.Errorf("scan tagged book: %w", scanErr)
+		}
+		if err = r.loadBookCategories(ctx, &book); err != nil {
+			return nil, 0, err
+		}
+		if err = r.loadBookTags(ctx, &book); err != nil {
+			return nil, 0, err
+		}
+		books = append(books, book)
+	}
+	return books, total, rows.Err()
 }
 
 func (r *BookRepository) searchLike(ctx context.Context, libraryID, query string, offset, limit int) ([]models.Book, int, error) {
@@ -118,6 +164,9 @@ func (r *BookRepository) searchLike(ctx context.Context, libraryID, query string
 		if taxonomyErr := r.loadBookCategories(ctx, &book); taxonomyErr != nil {
 			return nil, 0, taxonomyErr
 		}
+		if tagErr := r.loadBookTags(ctx, &book); tagErr != nil {
+			return nil, 0, tagErr
+		}
 		books = append(books, book)
 	}
 	return books, total, rows.Err()
@@ -147,6 +196,30 @@ func (r *BookRepository) loadBookCategories(ctx context.Context, book *models.Bo
 	return nil
 }
 
+func (r *BookRepository) loadBookTags(ctx context.Context, book *models.Book) error {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT tag_id FROM book_tags
+		WHERE book_id=?
+		ORDER BY tag_id
+	`, book.ID)
+	if err != nil {
+		return fmt.Errorf("list book tags: %w", err)
+	}
+	defer rows.Close()
+	book.TagIDs = make([]string, 0)
+	for rows.Next() {
+		var tagID string
+		if err = rows.Scan(&tagID); err != nil {
+			return fmt.Errorf("scan book tag: %w", err)
+		}
+		book.TagIDs = append(book.TagIDs, tagID)
+	}
+	if err = rows.Err(); err != nil {
+		return fmt.Errorf("iterate book tags: %w", err)
+	}
+	return nil
+}
+
 func (r *BookRepository) Find(ctx context.Context, id int, libraryID string) (models.Book, error) {
 	query := bookSelect + ` WHERE id=? AND deleted_at IS NULL`
 	args := []interface{}{id}
@@ -162,6 +235,9 @@ func (r *BookRepository) Find(ctx context.Context, id int, libraryID string) (mo
 		return models.Book{}, fmt.Errorf("find managed book: %w", err)
 	}
 	if err = r.loadBookCategories(ctx, &book); err != nil {
+		return models.Book{}, err
+	}
+	if err = r.loadBookTags(ctx, &book); err != nil {
 		return models.Book{}, err
 	}
 	return book, nil
@@ -210,6 +286,11 @@ func (r *BookRepository) Create(ctx context.Context, book models.BookInput, acto
 			return models.Book{}, fmt.Errorf("set book categories: %w", err)
 		}
 	}
+	if book.TagIDs != nil {
+		if err = replaceBookTags(ctx, tx, id, book.TagIDs, now); err != nil {
+			return models.Book{}, fmt.Errorf("set book tags: %w", err)
+		}
+	}
 	if _, err = tx.ExecContext(ctx, `
 		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
 		VALUES (?, ?, 'CREATE_BOOK', 'BOOK', ?, ?, 1, ?)
@@ -250,6 +331,11 @@ func (r *BookRepository) Update(ctx context.Context, id int, book models.BookInp
 	if book.CategoryIDs != nil {
 		if err = replaceBookCategories(ctx, tx, int64(id), book.CategoryIDs, book.PrimaryCategoryID, now); err != nil {
 			return models.Book{}, fmt.Errorf("replace book categories: %w", err)
+		}
+	}
+	if book.TagIDs != nil {
+		if err = replaceBookTags(ctx, tx, int64(id), book.TagIDs, now); err != nil {
+			return models.Book{}, fmt.Errorf("replace book tags: %w", err)
 		}
 	}
 	if _, err = tx.ExecContext(ctx, `
@@ -309,6 +395,21 @@ func replaceBookCategories(ctx context.Context, tx *sql.Tx, bookID int64, catego
 	return nil
 }
 
+func replaceBookTags(ctx context.Context, tx *sql.Tx, bookID int64, tagIDs []string, now string) error {
+	if _, err := tx.ExecContext(ctx, "DELETE FROM book_tags WHERE book_id=?", bookID); err != nil {
+		return err
+	}
+	for _, tagID := range tagIDs {
+		if _, err := tx.ExecContext(ctx,
+			"INSERT INTO book_tags(book_id, tag_id, created_at) VALUES (?, ?, ?)",
+			bookID, tagID, now,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *BookRepository) History(ctx context.Context, id int, offset, limit int) ([]models.AuditLog, int, error) {
 	resourceID := fmt.Sprintf("%d", id)
 	var total int
@@ -348,6 +449,13 @@ const bookSelect = `
 	       (SELECT category_id FROM book_categories WHERE book_id=defta.id AND is_primary=1), coverUrl,
 	       library_id, COALESCE(created_at, ''), COALESCE(updated_at, ''), version
 	FROM defta`
+
+const taggedBookSelect = `
+	SELECT d.id, d.title, d.auteur, d.editeur, COALESCE(d.price, 0), COALESCE(d.volume, 0),
+	       d.status, d.tags, d.categorie, d.publisher_id,
+	       (SELECT category_id FROM book_categories WHERE book_id=d.id AND is_primary=1), d.coverUrl,
+	       d.library_id, COALESCE(d.created_at, ''), COALESCE(d.updated_at, ''), d.version
+	FROM defta d JOIN book_tags bt ON bt.book_id=d.id`
 
 const managedBookSearchSelect = `
 	SELECT d.id, d.title, d.auteur, d.editeur, COALESCE(d.price, 0), COALESCE(d.volume, 0),
