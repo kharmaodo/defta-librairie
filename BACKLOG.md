@@ -198,6 +198,19 @@ empêche la perte d’un travail entre la transaction métier et la publication.
 MinIO, NATS et l’initialisation du bucket sont dockerisés. Le master normalisé
 est conservé ; la source brute suit une rétention avant suppression.
 
+## Fonctionnalité post-v1.4 — modération NSFW des couvertures
+
+La modération locale des couvertures est réalisée et sa recette finale est
+validée. Le suivi fonctionnel et opérationnel est conservé dans
+`docs/FEATURE_NSFW_COVER_MODERATION.md`.
+
+| US | État | Preuve |
+|---|---|---|
+| Quarantaine, décision locale et création conditionnelle | Réalisé | `book_submissions`, worker et modèle isolé |
+| Refus, revue root et reprise | Réalisé | États `REJECTED`, `REVIEW_REQUIRED`, `FAILED` |
+| Remplacement sécurisé et affichage public | Réalisé | Modération avant stockage, route `READY` active |
+| Purge des sources | Réalisé | File SQLite, baux, reprises et test d’idempotence |
+
 ## Questions métier à cadrer sans étendre silencieusement le périmètre
 
 - Solde net après retour : conserver la distinction entre vente brute, retours,

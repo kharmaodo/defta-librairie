@@ -1,5 +1,17 @@
 # Journal des versions
 
+## [À paraître]
+
+### Modération locale des couvertures
+
+- Modèle NSFW local isolé dans le conteneur `nsfw-moderator` : aucune couverture n’est transmise à un prestataire externe.
+- Les nouveaux livres avec image passent par une quarantaine privée et ne sont créés qu’après décision positive.
+- Rejet automatique, revue manuelle root et relance des indisponibilités, avec audit et isolation par librairie.
+- Remplacement d’une couverture existante modéré avant stockage : une image refusée conserve la couverture active.
+- Les lectures publiques et administratives ne servent qu’une variante `READY` active ; l’interface affiche sinon l’image par défaut.
+- Purge rejouable des sources rejetées ou expirées avec la file SQLite de nettoyage, baux et reprises MinIO.
+- Recette Go/FTS5, contrôles de livraison et Playwright validés.
+
 ## [1.4.0] — 2026-09-21
 
 Gestion des couvertures de livre par upload JPEG/PNG dans le dashboard.
