@@ -19,12 +19,17 @@ var (
 )
 
 type BookService struct {
-	repository *repositories.BookRepository
-	now        func() time.Time
+	repository         *repositories.BookRepository
+	taxonomyRepository *repositories.BookTaxonomyRepository
+	now                func() time.Time
 }
 
-func NewBookService(repository *repositories.BookRepository) *BookService {
-	return &BookService{repository: repository, now: time.Now}
+func NewBookService(repository *repositories.BookRepository, taxonomyRepositories ...*repositories.BookTaxonomyRepository) *BookService {
+	service := &BookService{repository: repository, now: time.Now}
+	if len(taxonomyRepositories) > 0 {
+		service.taxonomyRepository = taxonomyRepositories[0]
+	}
+	return service
 }
 
 func (s *BookService) List(ctx context.Context, claims *auth.Claims, requestedLibrary string, offset, limit int) ([]models.Book, int, error) {
@@ -95,6 +100,9 @@ func (s *BookService) Create(ctx context.Context, claims *auth.Claims, input mod
 	if err = validateBook(input, false); err != nil {
 		return models.Book{}, err
 	}
+	if err = s.validateTaxonomy(ctx, input); err != nil {
+		return models.Book{}, err
+	}
 	active, err := s.repository.LibraryActive(ctx, libraryID)
 	if err != nil {
 		return models.Book{}, err
@@ -131,6 +139,9 @@ func (s *BookService) Update(ctx context.Context, claims *auth.Claims, id int, i
 	input.LibraryID = existing.LibraryID
 	normalizeBook(&input)
 	if err = validateBook(input, true); err != nil {
+		return models.Book{}, err
+	}
+	if err = s.validateTaxonomy(ctx, input); err != nil {
 		return models.Book{}, err
 	}
 	auditID, err := identity.NewID()
@@ -209,6 +220,22 @@ func commercialSnapshotJSON(price float64, status, tags string, version int) (st
 		return "", err
 	}
 	return string(payload), nil
+}
+
+func (s *BookService) validateTaxonomy(ctx context.Context, input models.BookInput) error {
+	if input.CategoryIDs == nil && input.PublisherID == nil && input.PrimaryCategoryID == nil {
+		return nil
+	}
+	if s.taxonomyRepository == nil {
+		return ErrInvalidBook
+	}
+	if err := s.taxonomyRepository.ValidateSelection(ctx, input.CategoryIDs, input.PrimaryCategoryID, input.PublisherID); err != nil {
+		if errors.Is(err, repositories.ErrInvalidBookTaxonomy) {
+			return ErrInvalidBook
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *BookService) ensureOwnerLibraryActive(ctx context.Context, claims *auth.Claims, libraryID string) error {

@@ -19,6 +19,21 @@ func (sf StringField) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+func (sf *StringField) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		sf.String = ""
+		sf.Valid = false
+		return nil
+	}
+	var value string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	sf.String = value
+	sf.Valid = true
+	return nil
+}
+
 // IntField pour les champs entiers nullable
 type IntField struct {
 	sql.NullInt64
@@ -31,6 +46,21 @@ func (ifld IntField) MarshalJSON() ([]byte, error) {
 	return json.Marshal(nil)
 }
 
+func (ifld *IntField) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		ifld.Int64 = 0
+		ifld.Valid = false
+		return nil
+	}
+	var value int64
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+	ifld.Int64 = value
+	ifld.Valid = true
+	return nil
+}
+
 type Book struct {
 	ID        int             `json:"id"`
 	Title     string          `json:"title"`
@@ -41,6 +71,9 @@ type Book struct {
 	Status    StringField     `json:"status"`
 	Tags      StringField     `json:"tags"`
 	Categorie StringField     `json:"categorie"`
+	PublisherID IntField      `json:"publisherId"`
+	CategoryIDs []int         `json:"categoryIds,omitempty"`
+	PrimaryCategoryID IntField `json:"primaryCategoryId"`
 	CoverURL  StringField     `json:"coverUrl"`
 	Score     sql.NullFloat64 `json:"score,omitempty"`
 	LibraryID string          `json:"libraryId,omitempty"`
@@ -58,6 +91,9 @@ type BookInput struct {
 	Status    string  `json:"status"`
 	Tags      string  `json:"tags"`
 	Categorie string  `json:"categorie"`
+	PublisherID *int   `json:"publisherId,omitempty"`
+	CategoryIDs []int  `json:"categoryIds,omitempty"`
+	PrimaryCategoryID *int `json:"primaryCategoryId,omitempty"`
 	CoverURL  string  `json:"coverUrl"`
 	LibraryID string  `json:"libraryId,omitempty"`
 	Version   int     `json:"version,omitempty"`

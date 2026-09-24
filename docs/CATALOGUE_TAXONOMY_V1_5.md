@@ -59,7 +59,7 @@ sera ajoutée que si le besoin métier est confirmé.
 |---|---|---|
 | 1 | Fondation, seed et migrations | Réalisé — migration 029, seed idempotent de 29 catégories et 14 éditeurs AR/FR/EN |
 | 2 | CRUD catégories et éditeurs | Réalisé — lecture authentifiée, mutations root-only, désactivation, audit et OpenAPI |
-| 3 | Relations livre | Une catégorie principale, secondaires, éditeur principal et migrations compatibles |
+| 3 | Relations livre | Réalisé — migration 030, édition atomique, validation des références actives, OpenAPI et tests HTTP propriétaire |
 | 4 | Tags relationnels | `book_tags`, recherche, filtres et migration progressive du texte legacy |
 | 5 | Interface publique/admin | Sélecteurs accessibles, traduction, filtres et affichage des référentiels |
 | 6 | Stabilisation | Go/FTS5, Playwright, export, OpenAPI, recette de migration et release |

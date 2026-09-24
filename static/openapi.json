@@ -13743,6 +13743,23 @@
           },
           "version": {
             "type": "integer"
+          },
+          "publisherId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Identifiant de l’éditeur principal"
+          },
+          "categoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Catégories du livre, la première étant la catégorie principale"
+          },
+          "primaryCategoryId": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Identifiant de la catégorie principale"
           }
         },
         "required": [
@@ -13795,6 +13812,24 @@
           },
           "version": {
             "type": "integer"
+          },
+          "publisherId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Identifiant de l’éditeur principal"
+          },
+          "categoryIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Catégories à associer atomiquement au livre"
+          },
+          "primaryCategoryId": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Catégorie principale, présente dans categoryIds"
           }
         },
         "required": [
@@ -13805,7 +13840,13 @@
           "price": 1500,
           "volume": 1,
           "status": "AVAILABLE",
-          "libraryId": "LIBRARY_ID"
+          "libraryId": "LIBRARY_ID",
+          "publisherId": 3,
+          "categoryIds": [
+            2,
+            3
+          ],
+          "primaryCategoryId": 2
         }
       },
       "BookInventory": {

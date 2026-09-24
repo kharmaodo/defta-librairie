@@ -229,7 +229,7 @@ Le contrat détaillé est défini dans `docs/CATALOGUE_TAXONOMY_V1_5.md`.
 |---|---|---|
 | 1 | Fondation, seed et migrations | Réalisé — migration 029 et seed AR/FR/EN |
 | 2 | CRUD catégories et éditeurs | Réalisé — lecture, mutations root-only, audit et OpenAPI |
-| 3 | Relations livre-catégories et éditeur principal | À développer |
+| 3 | Relations livre-catégories et éditeur principal | Réalisé — migration 030, persistance atomique, validation des références actives, OpenAPI et tests HTTP propriétaire |
 | 4 | Tags relationnels | À développer |
 | 5 | Interface publique et administration | À développer |
 | 6 | Stabilisation et release | À développer |
