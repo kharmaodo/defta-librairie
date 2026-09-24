@@ -16,7 +16,7 @@ def require(condition: bool, message: str) -> None:
 
 
 require(HTML.count("data-dashboard-nav-group") == 5, "cinq groupes thématiques attendus")
-require(HTML.count("data-dashboard-nav-link") == 19, "dix-neuf liens de rubrique attendus")
+require(HTML.count("data-dashboard-nav-link") == 20, "vingt liens de rubrique attendus")
 require(
     '<footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>' in HTML,
     "le contenu contractuel du footer a changé",
@@ -25,6 +25,7 @@ require(
 for target_id in (
     "dashboard-overview", "commercial-statistics-panel", "business-alerts-panel",
     "csv-exports-panel", "books-panel", "tags-panel", "inventory-panel",
+    "book-submissions-panel",
     "customers-panel", "sales-panel", "cash-registers-panel", "payments-panel",
     "suppliers-panel", "purchases-panel", "supplier-returns-panel",
     "customer-returns-panel", "library-settings-panel", "owners-section",
@@ -48,4 +49,4 @@ require(
     "l’état actif accessible est absent",
 )
 
-print("OK: dashboard admin, 5 groupes, 19 liens, ancres, footer et CSS commentée contrôlés.")
+print("OK: dashboard admin, 5 groupes, 20 liens, ancres, footer et CSS commentée contrôlés.")
