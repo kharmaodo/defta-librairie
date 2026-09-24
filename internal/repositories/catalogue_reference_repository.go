@@ -41,3 +41,13 @@ func (r *CatalogueReferenceRepository) Create(ctx context.Context, kind string, 
 	if _, err = tx.ExecContext(ctx, "INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, ?)", auditID, actorID, "CREATE_"+kind, "CATALOGUE_REFERENCE", value.Code, value.Name, value.CreatedAt); err != nil { return err }
 	return tx.Commit()
 }
+
+
+func (r *CatalogueReferenceRepository) SetActive(ctx context.Context, kind string, id int64, active bool, actorID, auditID, now string) error {
+ table,_,err:=referenceTable(kind);if err!=nil{return err}
+ tx,err:=r.db.BeginTx(ctx,nil);if err!=nil{return err};defer tx.Rollback()
+ result,err:=tx.ExecContext(ctx,fmt.Sprintf("UPDATE %s SET active=?, updated_at=? WHERE id=?",table),active,now,id)
+ if err!=nil{return err};n,err:=result.RowsAffected();if err!=nil{return err};if n!=1{return ErrCatalogueReferenceNotFound}
+ if _,err=tx.ExecContext(ctx,"INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at) VALUES(?,?,?,?,?,?,1,?)",auditID,actorID,"SET_"+kind+"_ACTIVE","CATALOGUE_REFERENCE",fmt.Sprint(id),fmt.Sprint(active),now);err!=nil{return err}
+ return tx.Commit()
+}
