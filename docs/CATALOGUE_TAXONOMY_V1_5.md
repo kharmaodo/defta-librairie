@@ -55,7 +55,7 @@ sera ajoutée que si le besoin métier est confirmé.
 
 | Ordre | Incrément | Critère de validation |
 |---|---|---|
-| 1 | Fondation, seed et migrations | Seed idempotent AR/FR/EN ; rollback logique et données legacy préservées |
+| 1 | Fondation, seed et migrations | Réalisé — migration 029, seed idempotent de 29 catégories et 14 éditeurs AR/FR/EN |
 | 2 | CRUD catégories et éditeurs | Root, propriétaire cloisonné, désactivation, audit et OpenAPI |
 | 3 | Relations livre | Une catégorie principale, secondaires, éditeur principal et migrations compatibles |
 | 4 | Tags relationnels | `book_tags`, recherche, filtres et migration progressive du texte legacy |

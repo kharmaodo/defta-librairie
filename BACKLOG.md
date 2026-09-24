@@ -227,7 +227,7 @@ Le contrat détaillé est défini dans `docs/CATALOGUE_TAXONOMY_V1_5.md`.
 
 | Ordre | Incrément | État |
 |---|---|---|
-| 1 | Fondation, seed et migrations | À développer |
+| 1 | Fondation, seed et migrations | Réalisé — migration 029 et seed AR/FR/EN |
 | 2 | CRUD catégories et éditeurs | À développer |
 | 3 | Relations livre-catégories et éditeur principal | À développer |
 | 4 | Tags relationnels | À développer |
