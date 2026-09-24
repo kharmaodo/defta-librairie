@@ -150,11 +150,11 @@ func (r *BookRepository) Create(ctx context.Context, book models.BookInput, acto
 	}
 	defer tx.Rollback()
 	result, err := tx.ExecContext(ctx, `
-		INSERT INTO defta(title, auteur, editeur, price, volume, status, tags, categorie, coverUrl,
+		INSERT INTO defta(title, auteur, editeur, publisher_id, price, volume, status, tags, categorie, coverUrl,
 		                  library_id, created_at, updated_at, version)
-		VALUES (?, NULLIF(?, ''), NULLIF(?, ''), ?, ?, NULLIF(?, ''), NULLIF(?, ''),
+		VALUES (?, NULLIF(?, ''), NULLIF(?, ''), ?, ?, ?, NULLIF(?, ''), NULLIF(?, ''),
 		        NULLIF(?, ''), NULLIF(?, ''), ?, ?, ?, 1)
-	`, book.Title, book.Auteur, book.Editeur, book.Price, book.Volume, book.Status, book.Tags,
+	`, book.Title, book.Auteur, book.Editeur, book.PublisherID, book.Price, book.Volume, book.Status, book.Tags,
 		book.Categorie, book.CoverURL, book.LibraryID, now, now)
 	if err != nil {
 		return models.Book{}, fmt.Errorf("insert book: %w", err)
@@ -168,6 +168,11 @@ func (r *BookRepository) Create(ctx context.Context, book models.BookInput, acto
 		VALUES (?, ?, 0, COALESCE((SELECT default_low_stock_threshold FROM library_settings WHERE library_id=?),5), 1, ?)
 	`, id, book.LibraryID, book.LibraryID, now); err != nil {
 		return models.Book{}, fmt.Errorf("initialize book inventory: %w", err)
+	}
+	if book.CategoryIDs != nil {
+		if err = replaceBookCategories(ctx, tx, id, book.CategoryIDs, book.PrimaryCategoryID, now); err != nil {
+			return models.Book{}, fmt.Errorf("set book categories: %w", err)
+		}
 	}
 	if _, err = tx.ExecContext(ctx, `
 		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, new_values, success, created_at)
@@ -188,12 +193,14 @@ func (r *BookRepository) Update(ctx context.Context, id int, book models.BookInp
 	}
 	defer tx.Rollback()
 	result, err := tx.ExecContext(ctx, `
-		UPDATE defta SET title=?, auteur=NULLIF(?, ''), editeur=NULLIF(?, ''), price=?, volume=?,
+		UPDATE defta SET title=?, auteur=NULLIF(?, ''), editeur=NULLIF(?, ''),
+		                 publisher_id=CASE WHEN ? IS NULL THEN publisher_id ELSE ? END,
+		                 price=?, volume=?,
 		                 status=NULLIF(?, ''), tags=NULLIF(?, ''), categorie=NULLIF(?, ''),
 		                 coverUrl=NULLIF(?, ''), updated_at=?, version=version+1
 		WHERE id=? AND library_id=? AND deleted_at IS NULL AND version=?
-	`, book.Title, book.Auteur, book.Editeur, book.Price, book.Volume, book.Status, book.Tags,
-		book.Categorie, book.CoverURL, now, id, book.LibraryID, book.Version)
+	`, book.Title, book.Auteur, book.Editeur, book.PublisherID, book.PublisherID, book.Price, book.Volume,
+		book.Status, book.Tags, book.Categorie, book.CoverURL, now, id, book.LibraryID, book.Version)
 	if err != nil {
 		return models.Book{}, fmt.Errorf("update book: %w", err)
 	}
@@ -203,6 +210,11 @@ func (r *BookRepository) Update(ctx context.Context, id int, book models.BookInp
 	}
 	if rows != 1 {
 		return models.Book{}, ErrBookConflict
+	}
+	if book.CategoryIDs != nil {
+		if err = replaceBookCategories(ctx, tx, int64(id), book.CategoryIDs, book.PrimaryCategoryID, now); err != nil {
+			return models.Book{}, fmt.Errorf("replace book categories: %w", err)
+		}
 	}
 	if _, err = tx.ExecContext(ctx, `
 		INSERT INTO audit_logs(id, actor_user_id, action, resource_type, resource_id, old_values, new_values, success, created_at)
@@ -245,6 +257,22 @@ func (r *BookRepository) Delete(ctx context.Context, id int, libraryID, actorID,
 	return nil
 }
 
+func replaceBookCategories(ctx context.Context, tx *sql.Tx, bookID int64, categoryIDs []int, primaryID *int, now string) error {
+	if _, err := tx.ExecContext(ctx, "DELETE FROM book_categories WHERE book_id=?", bookID); err != nil {
+		return err
+	}
+	for _, categoryID := range categoryIDs {
+		primary := 0
+		if primaryID != nil && categoryID == *primaryID {
+			primary = 1
+		}
+		if _, err := tx.ExecContext(ctx, "INSERT INTO book_categories(book_id, category_id, is_primary, created_at) VALUES (?, ?, ?, ?)", bookID, categoryID, primary, now); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *BookRepository) History(ctx context.Context, id int, offset, limit int) ([]models.AuditLog, int, error) {
 	resourceID := fmt.Sprintf("%d", id)
 	var total int
@@ -280,13 +308,15 @@ func (r *BookRepository) History(ctx context.Context, id int, offset, limit int)
 
 const bookSelect = `
 	SELECT id, title, auteur, editeur, COALESCE(price, 0), COALESCE(volume, 0),
-	       status, tags, categorie, coverUrl,
+	       status, tags, categorie, publisher_id,
+	       (SELECT category_id FROM book_categories WHERE book_id=defta.id AND is_primary=1), coverUrl,
 	       library_id, COALESCE(created_at, ''), COALESCE(updated_at, ''), version
 	FROM defta`
 
 const managedBookSearchSelect = `
 	SELECT d.id, d.title, d.auteur, d.editeur, COALESCE(d.price, 0), COALESCE(d.volume, 0),
-	       d.status, d.tags, d.categorie, d.coverUrl,
+	       d.status, d.tags, d.categorie, d.publisher_id,
+	       (SELECT category_id FROM book_categories WHERE book_id=d.id AND is_primary=1), d.coverUrl,
 	       d.library_id, COALESCE(d.created_at, ''), COALESCE(d.updated_at, ''), d.version,
 	       defta_fts.rank
 	FROM defta_fts JOIN defta d ON defta_fts.rowid=d.id`
@@ -294,7 +324,7 @@ const managedBookSearchSelect = `
 func scanManagedBook(row rowScanner) (models.Book, error) {
 	var book models.Book
 	err := row.Scan(&book.ID, &book.Title, &book.Auteur, &book.Editeur, &book.Price, &book.Volume,
-		&book.Status, &book.Tags, &book.Categorie, &book.CoverURL, &book.LibraryID,
+		&book.Status, &book.Tags, &book.Categorie, &book.PublisherID, &book.PrimaryCategoryID, &book.CoverURL, &book.LibraryID,
 		&book.CreatedAt, &book.UpdatedAt, &book.Version)
 	return book, err
 }
