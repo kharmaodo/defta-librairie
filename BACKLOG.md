@@ -221,6 +221,19 @@ validée. Le suivi fonctionnel et opérationnel est conservé dans
   de XOF comme devise unique. Toute extension devra définir le traitement de
   l’historique avant implémentation.
 
+## Backlog v1.5.0 — taxonomie multilingue du catalogue
+
+Le contrat détaillé est défini dans `docs/CATALOGUE_TAXONOMY_V1_5.md`.
+
+| Ordre | Incrément | État |
+|---|---|---|
+| 1 | Fondation, seed et migrations | À développer |
+| 2 | CRUD catégories et éditeurs | À développer |
+| 3 | Relations livre-catégories et éditeur principal | À développer |
+| 4 | Tags relationnels | À développer |
+| 5 | Interface publique et administration | À développer |
+| 6 | Stabilisation et release | À développer |
+
 ## Preuves dans le dépôt
 
 | Domaine | Principaux fichiers de référence |
