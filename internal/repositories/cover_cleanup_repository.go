@@ -37,6 +37,14 @@ func (r *CoverCleanupRepository) Reconcile(
 ) (int64, error) {
 	nowText := now.UTC().Format(time.RFC3339Nano)
 	sourceBeforeText := sourceBefore.UTC().Format(time.RFC3339Nano)
+	// Expiry wins over a delayed worker and prevents late book creation.
+	if _, err := r.db.ExecContext(ctx, `
+		UPDATE book_submissions
+		SET moderation_status='FAILED', decision_code='SOURCE_EXPIRED', updated_at=?
+		WHERE moderation_status IN ('PENDING_SCAN', 'SCANNING') AND expires_at <= ?
+	`, nowText, nowText); err != nil {
+		return 0, fmt.Errorf("expire book submissions: %w", err)
+	}
 	result, err := r.db.ExecContext(ctx, `
 		INSERT OR IGNORE INTO cover_object_cleanup_jobs(
 			cover_id, library_id, object_key, object_kind,
@@ -71,6 +79,12 @@ func (r *CoverCleanupRepository) Reconcile(
 		FROM book_covers
 		WHERE status = 'READY' AND active = 0
 		  AND thumb_webp_object_key IS NOT NULL
+		UNION ALL
+		SELECT 'submission:' || id, library_id, source_object_key, 'SOURCE', ?, ?
+		FROM book_submissions
+		WHERE source_object_key <> ''
+		  AND (moderation_status = 'REJECTED' OR
+		       (moderation_status IN ('FAILED', 'REVIEW_REQUIRED') AND expires_at <= ?))
 	`,
 		nowText, nowText, sourceBeforeText,
 		nowText, nowText,
