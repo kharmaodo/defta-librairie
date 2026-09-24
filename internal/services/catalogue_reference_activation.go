@@ -4,12 +4,13 @@ import (
  "context"
  "defta-librairie/internal/auth"
  "defta-librairie/internal/identity"
+ "defta-librairie/internal/models"
  "strconv"
  "time"
 )
 
 func (s *CatalogueReferenceService) SetActive(ctx context.Context, claims *auth.Claims, kind, rawID string, active bool) error {
- if claims==nil || claims.Role!=auth.RoleSuperAdminRoot { return ErrBookForbidden }
+ if claims==nil || claims.Role!=models.RoleSuperAdminRoot { return ErrBookForbidden }
  if kind!="category" && kind!="publisher" { return ErrInvalidCatalogueReference }
  id,err:=strconv.ParseInt(rawID,10,64);if err!=nil||id<1{return ErrInvalidCatalogueReference}
  auditID,err:=identity.NewID();if err!=nil{return err}
