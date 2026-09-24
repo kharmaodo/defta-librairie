@@ -79,5 +79,12 @@ for path, methods in paths.items():
             assert any(p["name"] == name and p["in"] == "path" and p.get("required") for p in params)
         assert op["responses"] and op["x-codeSamples"]
         for media in op.get("requestBody", {}).get("content", {}).values():
-            validate(media["example"], media["schema"])
+            # An example is optional in OpenAPI. This is notably the case for
+            # binary multipart payloads, for which an inline JSON example is
+            # neither useful nor representative.
+            if "example" in media:
+                validate(media["example"], media["schema"])
+            for example in media.get("examples", {}).values():
+                if "value" in example:
+                    validate(example["value"], media["schema"])
 print(f"OK: {len(actual)} operations; references, parameters and request examples checked.")
