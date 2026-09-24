@@ -29,7 +29,7 @@ protected_sections = (
     "cash-registers-panel", "payments-panel", "sales-panel",
     "customer-returns-panel", "inventory-panel", "owners-section",
     "tags-panel", "books-panel", "audit-panel", "sessions-panel",
-    "supplier-returns-panel",
+    "supplier-returns-panel", "book-submissions-panel",
 )
 for section_id in protected_sections:
     require(f'id="{section_id}"' in HTML, f"section protégée absente : #{section_id}")
@@ -49,7 +49,7 @@ for attribute in (
 ):
     require(attribute in HTML, f"attribut de navigation absent : {attribute}")
 
-require(HTML.count("<dialog ") == 20, "vingt dialogues statiques sont attendus")
+require(HTML.count("<dialog ") == 21, "vingt-et-un dialogues statiques sont attendus")
 require(
     "<dialog " in SUPPLIER_RETURNS_JAVASCRIPT,
     "le dialogue dynamique de retour fournisseur est absent",
