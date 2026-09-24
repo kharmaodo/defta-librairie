@@ -34,7 +34,7 @@ CREATE UNIQUE INDEX idx_publishers_code ON publishers(code);
 INSERT OR IGNORE INTO publishers(fullname, ar, fr, en)
 SELECT fullname, COALESCE(ar, ''), COALESCE(fr, ''), COALESCE(en, '') FROM editeur;
 
-INSERT OR IGNORE INTO categories(code, categoriename, ar, fr, en) VALUES
+INSERT INTO categories(code, categoriename, ar, fr, en) VALUES
 ('sira','sira','السيرة','Sîra (Biographie prophétique)','Sira (Prophetic Biography)'),
 ('fiqh','fqh','الفقه','Fiqh (Jurisprudence)','Fiqh (Jurisprudence)'),
 ('nahw','nahw','النحو','Nahw (Syntaxe)','Nahw (Syntax/Grammar)'),
@@ -63,9 +63,10 @@ INSERT OR IGNORE INTO categories(code, categoriename, ar, fr, en) VALUES
 ('adab-al-muluk','adab al-muluk','أدب الملوك','Éthique des dirigeants','Ethics of rulers'),
 ('adab','adab','الأدب','Littérature / Éthique','Literature / Etiquette'),
 ('mawsuaat','mawsu''aat','موسوعات','Encyclopédies','Encyclopedias'),
-('nawazil','nawazil','نوازل','Nawazil (Cas juridiques contemporains)','Nawazil (Contemporary legal cases)');
+('nawazil','nawazil','نوازل','Nawazil (Cas juridiques contemporains)','Nawazil (Contemporary legal cases)')
+ON CONFLICT(categoriename) DO UPDATE SET code=excluded.code, ar=excluded.ar, fr=excluded.fr, en=excluded.en;
 
-INSERT OR IGNORE INTO publishers(code, fullname, ar, fr, en) VALUES
+INSERT INTO publishers(code, fullname, ar, fr, en) VALUES
 ('dar-ibn-hazm','dar ibn hazm','دار ابن حزم','dar ibn hazm','dar ibn hazm'),
 ('dar-al-asriyya','dar al asriyya','دار العصرية','dar al asriyya','dar al asriyya'),
 ('dar-al-fikr','dar al fikr','دار الفكر','dar al fikr','dar al fikr'),
@@ -79,4 +80,5 @@ INSERT OR IGNORE INTO publishers(code, fullname, ar, fr, en) VALUES
 ('dar-ibn-imam','dar ibn imam','دار ابن إمام','dar ibn imam','dar ibn imam'),
 ('dar-al-bayyina','dar al bayyina','دار البينة','dar al bayyina','dar al bayyina'),
 ('al-bouraq','al bouraq','البراق','al bouraq','al bouraq'),
-('al-madina','al madina','المدينة','al madina','al madina');
+('al-madina','al madina','المدينة','al madina','al madina')
+ON CONFLICT(fullname) DO UPDATE SET code=excluded.code, ar=excluded.ar, fr=excluded.fr, en=excluded.en;
