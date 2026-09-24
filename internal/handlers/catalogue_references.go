@@ -4,6 +4,7 @@ import (
 	"defta-librairie/internal/auth"
 	"defta-librairie/internal/services"
 	"defta-librairie/internal/models"
+	"defta-librairie/internal/repositories"
 	"errors"
 	"net/http"
 )
@@ -47,4 +48,16 @@ func (h *CatalogueReferenceHandler) create(w http.ResponseWriter, r *http.Reques
  claims,_:=auth.ClaimsFromContext(r.Context())
  if err:=h.service.Create(r.Context(),claims,kind,value);err!=nil { writeAuthJSON(w,http.StatusForbidden,map[string]string{"error":"forbidden","message":"Insufficient permissions"});return }
  w.WriteHeader(http.StatusCreated)
+}
+
+
+func (h *CatalogueReferenceHandler) DisableCategory(w http.ResponseWriter,r *http.Request){h.setActive(w,r,"category",false)}
+func (h *CatalogueReferenceHandler) DisablePublisher(w http.ResponseWriter,r *http.Request){h.setActive(w,r,"publisher",false)}
+func (h *CatalogueReferenceHandler) setActive(w http.ResponseWriter,r *http.Request,kind string,active bool){
+ claims,_:=auth.ClaimsFromContext(r.Context())
+ if err:=h.service.SetActive(r.Context(),claims,kind,r.PathValue("id"),active);err!=nil{
+  status:=http.StatusInternalServerError; code:="internal_error"
+  if errors.Is(err,services.ErrBookForbidden){status=http.StatusForbidden;code="forbidden"} else if errors.Is(err,services.ErrInvalidCatalogueReference){status=http.StatusBadRequest;code="invalid_catalogue_reference"} else if errors.Is(err,repositories.ErrCatalogueReferenceNotFound){status=http.StatusNotFound;code="catalogue_reference_not_found"}
+  writeAuthJSON(w,status,map[string]string{"error":code,"message":"Catalogue reference operation failed"});return
+ };w.WriteHeader(http.StatusNoContent)
 }
