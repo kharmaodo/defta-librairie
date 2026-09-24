@@ -41,6 +41,9 @@ type Book struct {
 	Status    StringField     `json:"status"`
 	Tags      StringField     `json:"tags"`
 	Categorie StringField     `json:"categorie"`
+	PublisherID IntField      `json:"publisherId"`
+	CategoryIDs []int         `json:"categoryIds,omitempty"`
+	PrimaryCategoryID IntField `json:"primaryCategoryId"`
 	CoverURL  StringField     `json:"coverUrl"`
 	Score     sql.NullFloat64 `json:"score,omitempty"`
 	LibraryID string          `json:"libraryId,omitempty"`
@@ -58,6 +61,9 @@ type BookInput struct {
 	Status    string  `json:"status"`
 	Tags      string  `json:"tags"`
 	Categorie string  `json:"categorie"`
+	PublisherID *int   `json:"publisherId,omitempty"`
+	CategoryIDs []int  `json:"categoryIds,omitempty"`
+	PrimaryCategoryID *int `json:"primaryCategoryId,omitempty"`
 	CoverURL  string  `json:"coverUrl"`
 	LibraryID string  `json:"libraryId,omitempty"`
 	Version   int     `json:"version,omitempty"`
