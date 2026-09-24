@@ -48,7 +48,7 @@ test('book cover upload, failure, retry and authenticated preview in the form', 
       if (path.startsWith('/api/manage/books?')) return {results: [book], total: 1, offset: 0, limit: 10};
       if (path === '/api/manage/categories') return [{id: 2, name: 'Fiqh'}];
       if (path === '/api/manage/publishers') return [{id: 1, name: 'Dar al Fikr'}];
-      if (path === '/api/manage/tags') return [{id: 'tag-1', name: 'Fiqh'}];
+      if (path.startsWith('/api/manage/tags')) return [{id: 'tag-1', name: 'Fiqh'}];
       if (path.endsWith('/cover/status')) {
         if (state.state === 'ABSENT') throw Object.assign(new Error('Absent'), {status: 404});
         return {status: state.state, canRetry: state.state === 'FAILED'};
