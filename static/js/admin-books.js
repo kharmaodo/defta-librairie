@@ -329,7 +329,10 @@
           if (!id && file) {
             const submission = new FormData();
             const payload = bookPayload(form);
-            Object.entries(payload).forEach(([key, value]) => submission.set(key, String(value)));
+            Object.entries(payload).forEach(([key, value]) => {
+              if (Array.isArray(value)) value.forEach(item => submission.append(key, String(item)));
+              else submission.set(key, String(value));
+            });
             submission.set("cover", file);
             const pending = await apiFetch("/api/manage/book-submissions", {method: "POST", body: submission});
             form.elements.cover.value = "";
