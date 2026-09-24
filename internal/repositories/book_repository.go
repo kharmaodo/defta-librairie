@@ -332,7 +332,7 @@ func scanManagedBook(row rowScanner) (models.Book, error) {
 func scanManagedSearchBook(row rowScanner) (models.Book, error) {
 	var book models.Book
 	err := row.Scan(&book.ID, &book.Title, &book.Auteur, &book.Editeur, &book.Price, &book.Volume,
-		&book.Status, &book.Tags, &book.Categorie, &book.CoverURL, &book.LibraryID,
-		&book.CreatedAt, &book.UpdatedAt, &book.Version, &book.Score)
+		&book.Status, &book.Tags, &book.Categorie, &book.PublisherID, &book.PrimaryCategoryID,
+		&book.CoverURL, &book.LibraryID, &book.CreatedAt, &book.UpdatedAt, &book.Version, &book.Score)
 	return book, err
 }
