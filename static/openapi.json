@@ -13760,6 +13760,13 @@
             "type": "integer",
             "nullable": true,
             "description": "Identifiant de la catégorie principale"
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Identifiants des tags associés au livre"
           }
         },
         "required": [
@@ -13830,6 +13837,13 @@
             "type": "integer",
             "minimum": 1,
             "description": "Catégorie principale, présente dans categoryIds"
+          },
+          "tagIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags de la librairie à associer atomiquement au livre"
           }
         },
         "required": [
@@ -13846,7 +13860,10 @@
             2,
             3
           ],
-          "primaryCategoryId": 2
+          "primaryCategoryId": 2,
+          "tagIds": [
+            "TAG_ID"
+          ]
         }
       },
       "BookInventory": {
