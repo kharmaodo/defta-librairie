@@ -75,6 +75,23 @@ func TestBookManagementHTTPPersistsRelationalTags(t *testing.T) {
 	if len(updated.TagIDs) != 1 || updated.TagIDs[0] != "tag-arabic" {
 		t.Fatalf("updated tags=%v", updated.TagIDs)
 	}
+
+	listResponse := httptest.NewRecorder()
+	handler.List(listResponse, relationalTagBookRequest(t, http.MethodGet,
+		"/api/manage/books?tagId=tag-arabic&q=HTTP", models.BookInput{}, claims))
+	if listResponse.Code != http.StatusOK {
+		t.Fatalf("filtered list status=%d body=%s", listResponse.Code, listResponse.Body.String())
+	}
+	var listed struct {
+		Results []models.Book `json:"results"`
+	}
+	if err = json.NewDecoder(listResponse.Body).Decode(&listed); err != nil {
+		t.Fatalf("decode filtered books: %v", err)
+	}
+	if len(listed.Results) != 1 || len(listed.Results[0].TagIDs) != 1 ||
+		listed.Results[0].TagIDs[0] != "tag-arabic" {
+		t.Fatalf("filtered books=%+v", listed.Results)
+	}
 }
 
 func relationalTagBookRequest(t *testing.T, method, target string, input models.BookInput, claims *auth.Claims) *http.Request {
