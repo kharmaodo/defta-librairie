@@ -1471,7 +1471,7 @@ tbody tr:last-child td {
    Keyboard focus and reduced motion
    ========================================================================== */
 
-.dashboard-page :is(a,button,input,select,textarea,summary,[tabindex]):focus-visible {
+.dashboard-page :is(a,button,input,select,textarea,summary,[tabindex]):focus {
   outline: 3px solid #125ea5;
   outline-offset: 3px;
 }
