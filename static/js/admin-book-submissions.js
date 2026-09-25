@@ -145,6 +145,6 @@
       const user = await window.DeftaHTTP.json("/api/auth/me");
       isRoot = user.role === "SUPER_ADMIN_ROOT";
     } catch (_) { isRoot = false; }
-    load();
+    await load();
   });
 })();
