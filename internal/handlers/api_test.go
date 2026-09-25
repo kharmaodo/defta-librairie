@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 )
@@ -42,5 +45,30 @@ func TestNormalizeAPISearch(t *testing.T) {
 	}
 	if search, err := normalizeAPISearch(strings.Repeat("أ", maxAPISearchLength)); err != nil || len([]rune(search)) != maxAPISearchLength {
 		t.Fatalf("expected %d-rune search to be accepted: len=%d err=%v", maxAPISearchLength, len([]rune(search)), err)
+	}
+}
+
+
+func TestCatalogueHandlersRejectOversizedSearchBeforeDatabaseAccess(t *testing.T) {
+	query := strings.Repeat("a", maxAPISearchLength+1)
+	for name, handler := range map[string]http.HandlerFunc{
+		"public": APIBooksHandler,
+		"managed": NewBookManagementHandler(nil).List,
+	} {
+		t.Run(name, func(t *testing.T) {
+			request := httptest.NewRequest(http.MethodGet, "/api/books?q="+query, nil)
+			response := httptest.NewRecorder()
+			handler(response, request)
+			if response.Code != http.StatusBadRequest {
+				t.Fatalf("status=%d want=%d", response.Code, http.StatusBadRequest)
+			}
+			var body map[string]string
+			if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+				t.Fatal(err)
+			}
+			if body["error"] != "invalid_query" {
+				t.Fatalf("body=%v", body)
+			}
+		})
 	}
 }
