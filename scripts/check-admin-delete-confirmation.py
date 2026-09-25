@@ -2,6 +2,7 @@
 """Check the destructive confirmation contract for v1.3."""
 
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 HTML = (ROOT / "templates/admin.html").read_text(encoding="utf-8")
@@ -31,7 +32,10 @@ if component_script not in HTML:
 else:
     position = HTML.index(component_script)
     for module in ("admin-books.js", "admin-sales.js", "admin-tags.js"):
-        if position > HTML.index(f'src="/static/js/{module}"'):
+        match = re.search(rf'src="/static/js/{re.escape(module)}(?:\\?[^"]*)?"', HTML)
+        if match is None:
+            errors.append(f"module absent de la page : {module}")
+        elif position > match.start():
             errors.append(f"module de confirmation chargé après {module}")
 
 required_logic = (
