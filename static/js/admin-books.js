@@ -125,7 +125,7 @@
           name.textContent = book.title;
           title.className = "book-cover-title";
           title.append(cover, name);
-          loadListCover(book.id, cover, generation);
+          if (book.hasActiveCover) loadListCover(book.id, cover, generation);
           textCell(row, book.auteur);
           textCell(row, new Intl.NumberFormat("fr-FR").format(book.price || 0));
           textCell(row, book.tags); textCell(row, book.status, "pill");
