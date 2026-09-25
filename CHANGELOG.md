@@ -2,6 +2,8 @@
 
 ## [À paraître]
 
+## [1.5.0] — 2026-09-25
+
 ### Taxonomie multilingue du catalogue
 
 - Seed idempotent de 29 catégories et 14 éditeurs traduits en arabe, français et anglais.
@@ -10,6 +12,7 @@
 - Recherche publique enrichie par les libellés de taxonomie traduits, avec repli compatible sur les champs historiques.
 - Écrans d’administration Catégories et Éditeurs, et sélecteurs relationnels dans le formulaire Livre.
 - Migrations SQLite compatibles, contrat OpenAPI, tests HTTP, contrôles d’accessibilité et parcours navigateur mis à jour.
+- Tag `v1.5.0` publié sur `6bd5785` ; archives Windows/Linux AMD64 et image worker GHCR publiées avec leurs digests.
 
 
 ### Modération locale des couvertures
