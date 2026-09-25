@@ -32,7 +32,7 @@ if component_script not in HTML:
 else:
     position = HTML.index(component_script)
     for module in ("admin-books.js", "admin-sales.js", "admin-tags.js"):
-        match = re.search(rf'src="/static/js/{re.escape(module)}(?:\\?[^"]*)?"', HTML)
+        match = re.search(rf'src="/static/js/{re.escape(module)}(?:\?[^"]*)?"', HTML)
         if match is None:
             errors.append(f"module absent de la page : {module}")
         elif position > match.start():
