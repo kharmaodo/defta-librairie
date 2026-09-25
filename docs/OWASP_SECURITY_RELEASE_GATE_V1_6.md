@@ -1,6 +1,6 @@
 # Gate de release sécurité et résilience — v1.6
 
-Cette procédure réalise l’US-6. Elle sépare les contrôles déterministes,
+Cette procédure réalise l’US-6. L’incrément est intégré à `develop`; les corrections de stabilisation #171 (aperçus de couverture) et #172 (verrouillage des soumissions acceptées) font partie de la recette finale. Elle sépare les contrôles déterministes,
 obligatoires pour chaque release, des campagnes de charge qui exigent un
 environnement isolé et une mesure de référence.
 
