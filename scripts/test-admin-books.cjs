@@ -21,7 +21,7 @@ function setup(api) {
  get('#book-search-form').elements.q={value:''};
  const window={
   DeftaDeleteConfirmation:{run:async({execute})=>h.confirmed?execute():false},
-  DeftaHTTP:{request:async()=>{throw Object.assign(new Error('No cover'),{status:404});}}
+  DeftaHTTP:{request:async()=>{h.coverRequests=(h.coverRequests||0)+1;throw Object.assign(new Error('No cover'),{status:404});}}
  };
  const element=tag=>({tagName:tag.toUpperCase(),append(...children){this.children=children;}});
  vm.runInNewContext(source,{window,document:{querySelector:get,createElement:element},URLSearchParams,Intl,clearTimeout,setTimeout});
@@ -75,6 +75,14 @@ test('editing keeps version and locks library field',async()=>{
 test('failed mutation keeps dialog open and does not refresh stock',async()=>{
  const h=setup(async()=>{throw new Error('Conflit de version');});h.module.init();await h.event('#book-form','submit');
  assert.equal(h.get('#book-dialog').closed,0);assert.equal(h.stocks,0);assert.equal(h.calls.length,1);assert.match(h.get('#book-form-error').textContent,/Conflit/);
+});
+test('book list does not request a preview without an active cover',async()=>{
+ const missingCover={...book,hasActiveCover:false};
+ const h=setup(async()=>page(0,[missingCover],1));h.module.init();await h.module.reload();
+ await Promise.resolve();
+ assert.equal(h.coverRequests||0,0);
+ const thumbnail=h.get('#books-body').rows[0].cells[0].children[0];
+ assert.equal(thumbnail.src,'/static/img/book-cover-placeholder.svg');
 });
 test('book list and editor use the same cover fallback',async()=>{
  const h=setup();h.module.init();await h.module.reload();
