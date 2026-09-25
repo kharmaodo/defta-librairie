@@ -249,6 +249,8 @@ une certification OWASP ni une autorisation de test sur la production.
 | 5 | Intégrité métier concurrente | Réalisé — une confirmation et un mouvement de stock malgré 40 requêtes |
 | 6 | Observabilité et gate de release | Réalisé — gate OWASP dans la delivery, procédure isolée et stabilisations de couverture/soumission (#171, #172) |
 
+La version **v1.6.0** est publiée sur le tag `v1.6.0` (`d850efb`) : archives Windows/Linux AMD64, `BUILD-INFO.txt`, `SHA256SUMS` vérifiés et image worker Linux AMD64 avec SBOM/provenance.
+
 ## Preuves dans le dépôt
 
 | Domaine | Principaux fichiers de référence |
