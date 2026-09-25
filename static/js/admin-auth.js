@@ -183,7 +183,7 @@
       showError, errorBox, isRoot: () => state.isRoot, reloadInventory, reloadAudit});
     tags = window.DeftaTags.create({apiFetch, showError, errorBox,
       isRoot: () => state.isRoot, reloadAudit});
-    catalogueReferences = window.DeftaCatalogueReferences.create({apiFetch, showError, errorBox,
+    catalogueReferences = window.DeftaCatalogueReferences.mount({apiFetch, showError, errorBox,
       isRoot: () => state.isRoot, reloadAudit});
     initEntityForms(errorBox);
     try {
@@ -212,7 +212,6 @@
       inventory.init();
       sales.init();
       tags.init();
-      catalogueReferences.init();
       const requests = [
         reloadCatalogueReferences(),
         reloadBooks(),
