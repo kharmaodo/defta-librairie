@@ -24,7 +24,7 @@ function setup(api) {
   DeftaHTTP:{request:async()=>{h.coverRequests=(h.coverRequests||0)+1;throw Object.assign(new Error('No cover'),{status:404});}}
  };
  const element=tag=>({tagName:tag.toUpperCase(),append(...children){this.children=children;}});
- vm.runInNewContext(source,{window,document:{querySelector:get,createElement:element},URLSearchParams,Intl,clearTimeout,setTimeout});
+ vm.runInNewContext(source,{window,document:{querySelector:get,createElement:element},URLSearchParams,Intl,FormData,clearTimeout,setTimeout});
  h.get=get;h.errorBox={};
  h.module=window.DeftaBooks.create({
   apiFetch:async(url,options)=>{
@@ -71,6 +71,20 @@ test('editing keeps version and locks library field',async()=>{
  assert.equal(f.version.value,3);assert.equal(f.libraryId.disabled,true);h.calls.length=0;
  await h.event('#book-form','submit');assert.equal(h.calls[0].options.method,'PUT');assert.equal(h.calls[0].url,'/api/manage/books/12');
  assert.equal(JSON.parse(h.calls[0].options.body).version,3);
+});
+test('accepted cover submission locks saving until the dialog is cancelled',async()=>{
+ const h=setup(async url=>url==='/api/manage/book-submissions'?{id:'submission-1'}:page());
+ h.module.init();
+ const form=h.get('#book-form').elements;
+ form.cover.files=[{type:'image/jpeg',size:1}];
+ await h.event('#book-form','submit');
+ await h.event('#book-form','submit');
+ assert.equal(h.calls.filter(call=>call.url==='/api/manage/book-submissions').length,1);
+ assert.equal(h.get('#book-form button[type=submit]').disabled,true);
+ assert.equal(form.cover.disabled,true);
+ assert.match(h.get('#book-form-error').textContent,/Annulez/);
+ h.get('#book-dialog').close();
+ assert.equal(h.get('#book-form button[type=submit]').disabled,false);
 });
 test('failed mutation keeps dialog open and does not refresh stock',async()=>{
  const h=setup(async()=>{throw new Error('Conflit de version');});h.module.init();await h.event('#book-form','submit');
