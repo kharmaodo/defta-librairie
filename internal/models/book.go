@@ -76,6 +76,7 @@ type Book struct {
 	CategoryIDs []int         `json:"categoryIds,omitempty"`
 	PrimaryCategoryID IntField `json:"primaryCategoryId"`
 	CoverURL  StringField     `json:"coverUrl"`
+	HasActiveCover bool       `json:"hasActiveCover"`
 	Score     sql.NullFloat64 `json:"score,omitempty"`
 	LibraryID string          `json:"libraryId,omitempty"`
 	CreatedAt string          `json:"createdAt,omitempty"`
