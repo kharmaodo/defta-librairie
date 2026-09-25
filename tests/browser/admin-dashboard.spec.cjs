@@ -39,7 +39,7 @@ test('admin dashboard keeps its thematic structure and stable section targets', 
   }
 
   const links = navigation.locator('[data-dashboard-nav-link]');
-  await expect(links).toHaveCount(20);
+  await expect(links).toHaveCount(22);
 
   for (const link of await links.all()) {
     const targetID = await link.getAttribute('href');
@@ -56,6 +56,8 @@ test('admin dashboard keeps its thematic structure and stable section targets', 
   await expect(summary.locator('[data-summary-results]')).toBeHidden();
   await navigation.getByRole('button', {name: 'Catalogue'}).click();
   await expect(navigation.getByRole('link', {name: 'Modération des couvertures'})).toBeVisible();
+  await expect(navigation.getByRole('link', {name: 'Catégories'})).toBeVisible();
+  await expect(navigation.getByRole('link', {name: 'Éditeurs'})).toBeVisible();
   await navigation.getByRole('button', {name: 'Administration'}).click();
   await expect(navigation.getByRole('link', {name: 'Propriétaires'})).toBeVisible();
   await expect(page.locator('footer.admin-footer'))

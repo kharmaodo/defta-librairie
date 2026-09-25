@@ -18,7 +18,7 @@
   const apiFetch = (path, options) => window.DeftaHTTP.json(path, options);
   if (page === "dashboard") window.DeftaHTTP.enableSessionRefresh();
 
-  let audit, sessions, owners, books, inventory, sales, tags;
+  let audit, sessions, owners, books, inventory, sales, tags, catalogueReferences;
   const reloadTags = () => tags.reload();
   const renderTags = payload => tags.render(payload);
   const reloadSales = () => sales.reload();
@@ -28,6 +28,7 @@
   const reloadOwnerOptions = () => owners.reloadOptions();
   const reloadSessions = () => sessions.reload();
   const reloadAudit = () => audit.reload();
+  const reloadCatalogueReferences = () => Promise.all([catalogueReferences.reload("categories"), catalogueReferences.reload("publishers")]);
 
   function textCell(row, value, className) {
     const cell = row.insertCell();
@@ -182,9 +183,11 @@
       showError, errorBox, isRoot: () => state.isRoot, reloadInventory, reloadAudit});
     tags = window.DeftaTags.create({apiFetch, showError, errorBox,
       isRoot: () => state.isRoot, reloadAudit});
+    catalogueReferences = window.DeftaCatalogueReferences.mount({apiFetch, showError, errorBox,
+      isRoot: () => state.isRoot, reloadAudit});
     initEntityForms(errorBox);
     try {
-      const user = await apiFetch("/api/auth/me");
+      const user = await window.DeftaHTTP.profile();
       const isRoot = user.role === "SUPER_ADMIN_ROOT";
       state.isRoot = isRoot;
       document.querySelector("#user-name").textContent = sessionStorage.getItem(USERNAME_KEY) || user.id;
@@ -210,6 +213,7 @@
       sales.init();
       tags.init();
       const requests = [
+        reloadCatalogueReferences(),
         reloadBooks(),
         reloadSales(),
         reloadInventory(),

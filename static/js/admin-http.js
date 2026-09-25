@@ -76,13 +76,14 @@
     if (error.name === 'AbortError' || error instanceof APIError) return error;
     return new APIError('Connexion interrompue. Vérifiez votre réseau. Avant de répéter une modification, vérifiez si elle a été enregistrée.');
   }
-  let refreshEnabled = false, pendingRefresh = null, generation = 0;
+  let refreshEnabled = false, pendingRefresh = null, generation = 0, pendingProfile = null;
   function enableSessionRefresh() { refreshEnabled = true; }
   function clearSession() {
     generation++;
     refreshEnabled = false;
     sessionStorage.removeItem('defta.accessToken');
     sessionStorage.removeItem('defta.username');
+    pendingProfile = null;
   }
   async function checked(response) {
     if (!response.ok) {
@@ -159,6 +160,11 @@
     pendingJSONReads.set(key, pending);
     return pending;
   }
+  function profile() {
+    if (pendingProfile) return pendingProfile;
+    pendingProfile = json('/api/auth/me').catch((error) => { pendingProfile = null; throw error; });
+    return pendingProfile;
+  }
   async function decode(response) {
     if (response.status === 204) return null;
     if (!/^application\/json(?:\s*;|$)/i.test(response.headers.get('Content-Type') || '')) {
@@ -170,5 +176,5 @@
       throw transportError(error);
     }
   }
-  window.DeftaHTTP = Object.freeze({request, json, APIError, authJSON, refreshSession, clearSession, enableSessionRefresh});
+  window.DeftaHTTP = Object.freeze({request, json, profile, APIError, authJSON, refreshSession, clearSession, enableSessionRefresh});
 })();
