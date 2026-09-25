@@ -23,6 +23,7 @@ async function loginRoot(page) {
   await page.locator('#login-form button[type=submit]').click();
   await expect(page).toHaveURL(/\/admin$/);
   await expect(page.locator('#role-badge')).toHaveText('SUPER ADMIN ROOT');
+  await page.waitForLoadState('networkidle');
 }
 
 async function amount(locator) {
@@ -182,7 +183,12 @@ test('refund and credit note restore stock and remain audited', async ({page, re
   await expect(paymentForm).toBeVisible();
   await paymentForm.locator('[name=method]').selectOption('CASH');
   await paymentForm.locator('[name=amount]').fill('2000');
+  const paymentResponse = page.waitForResponse(response =>
+    response.request().method() === 'POST'
+      && new URL(response.url()).pathname === `/api/manage/sales/${createdSale.id}/payments`);
   await paymentForm.locator('button[type=submit]').click();
+  const payment = await paymentResponse;
+  expect(payment.status(), await payment.text()).toBe(201);
   await expect(paymentForm).not.toBeVisible();
   await expect(page.locator('#payment-balance [data-payment-status]')).toHaveText('Payée');
 
