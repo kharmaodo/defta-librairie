@@ -40,7 +40,7 @@ correctifs pour les risques pertinents de l’application.
 | 3 | US-3 — Autorisation concurrente | Matrice root/propriétaire et librairie A/B exécutée en parallèle ; toute lecture ou mutation hors périmètre répond 403/404 sans fuite | API1, API3, API5 | Réalisé — 48 accès concurrents hors périmètre refusés sans paiement créé |
 | 4 | US-4 — Limites de ressources | Limites et comportement mesurés pour upload de couverture, recherche FTS, pagination, exports et endpoints coûteux ; réponses d’erreur cohérentes | API4, API6 | Réalisé — recherche catalogue bornée, OpenAPI et matrice des limites |
 | 5 | US-5 — Intégrité métier concurrente | Ventes, paiements, retours, réceptions et couvertures soumis à concurrence ; absence de double mouvement, double paiement ou transition impossible | API6, logique métier | Réalisé — une confirmation de vente et un mouvement de stock malgré 40 requêtes |
-| 6 | US-6 — Observabilité et gate de release | Rapports de charge, métriques, logs corrélés, seuils p95/p99/taux d’erreur et contrôle automatisé de release | API4, API8 | En validation — gate delivery OWASP et procédure de mesure isolée |
+| 6 | US-6 — Observabilité et gate de release | Rapports de charge, métriques, logs corrélés, seuils p95/p99/taux d’erreur et contrôle automatisé de release | API4, API8 | Réalisé — `scripts/check-owasp-v1.6.py`, gate de delivery et procédure de mesure isolée ; stabilisations #171 et #172 intégrées |
 
 ## Preuve de l’incrément 1
 
@@ -79,6 +79,13 @@ La matrice de référence est définie dans `docs/OWASP_SECURITY_BASELINE_V1_6.m
 - Changement non justifié des règles métier existantes.
 - Multidevise et consommation des avoirs : ces évolutions métier restent à
   planifier séparément.
+
+## Clôture du backlog v1.6.0
+
+Les six user stories sont réalisées et fusionnées dans `develop`. Le gate OWASP
+est désormais exécuté par `scripts/check-delivery.sh`. La publication de la
+release (tag et artefacts) reste une étape distincte, à réaliser selon
+`docs/RELEASE.md` après la recette finale sur `develop`.
 
 ## Mise à jour de suivi
 
