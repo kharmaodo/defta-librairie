@@ -41,7 +41,14 @@
     }
 
     async function reload(kind) {
-      render(kind, await apiFetch(`/api/manage/${kind}`));
+      try {
+        render(kind, await apiFetch(`/api/manage/${kind}`));
+      } catch (error) {
+        const target = body(kind); target.replaceChildren();
+        const row = target.insertRow(); const cell = row.insertCell();
+        cell.colSpan = 7; cell.className = "empty"; cell.textContent = `Impossible de charger les ${config[kind].plural.toLowerCase()}.`;
+        throw error;
+      }
     }
 
     function open(kind, item) {
@@ -71,7 +78,8 @@
     }
 
     function initKind(kind) {
-      panel(kind).querySelector("[data-reference-create]").addEventListener("click", () => open(kind));
+      const createButton = panel(kind).querySelector("[data-reference-create]");
+      if (createButton) createButton.addEventListener("click", () => open(kind));
       panel(kind).querySelector("tbody").addEventListener("click", async (event) => {
         const button = event.target.closest("button[data-action]"); if (!button) return;
         const item = state.items.find((value) => String(value.id) === button.dataset.id); if (!item) return;
