@@ -187,7 +187,7 @@
       isRoot: () => state.isRoot, reloadAudit});
     initEntityForms(errorBox);
     try {
-      const user = await apiFetch("/api/auth/me");
+      const user = await window.DeftaHTTP.profile();
       const isRoot = user.role === "SUPER_ADMIN_ROOT";
       state.isRoot = isRoot;
       document.querySelector("#user-name").textContent = sessionStorage.getItem(USERNAME_KEY) || user.id;
