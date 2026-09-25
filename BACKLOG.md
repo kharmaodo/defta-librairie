@@ -246,7 +246,7 @@ une certification OWASP ni une autorisation de test sur la production.
 | 2 | Authentification sous charge | Réalisé — limite IP concurrente, scénario k6 isolé et procédure de recette |
 | 3 | Autorisation concurrente | Réalisé — 48 accès concurrents hors librairie refusés sans effet de bord |
 | 4 | Limites de ressources | Réalisé — recherche catalogue bornée, OpenAPI et matrice des limites |
-| 5 | Intégrité métier concurrente | En validation — confirmation de vente atomique sous concurrence |
+| 5 | Intégrité métier concurrente | Réalisé — une confirmation et un mouvement de stock malgré 40 requêtes |
 | 6 | Observabilité et gate de release | À développer |
 
 ## Preuves dans le dépôt
