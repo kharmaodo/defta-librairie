@@ -278,10 +278,11 @@ func TestBookServiceCreatesAndUpdatesRelationalTags(t *testing.T) {
 	}
 	if _, err = db.Exec(`
 		INSERT INTO users(id, username, password_hash, role, status, created_at, updated_at) VALUES
-		('owner', 'owner', 'hash', 'OWNER_LIBRARY', 'ACTIVE', 'now', 'now');
+		('owner', 'owner', 'hash', 'OWNER_LIBRARY', 'ACTIVE', 'now', 'now'),
+		('other-owner', 'other-owner', 'hash', 'OWNER_LIBRARY', 'ACTIVE', 'now', 'now');
 		INSERT INTO libraries(id, name, owner_user_id, status, created_at, updated_at) VALUES
 		('library', 'Library', 'owner', 'ACTIVE', 'now', 'now'),
-		('other-library', 'Other', 'owner', 'ACTIVE', 'now', 'now');
+		('other-library', 'Other', 'other-owner', 'ACTIVE', 'now', 'now');
 		INSERT INTO library_tags(id, library_id, name, normalized_name, created_at, updated_at) VALUES
 		('tag-fiqh', 'library', 'Fiqh', 'fiqh', 'now', 'now'),
 		('tag-arabic', 'library', 'Arabic', 'arabic', 'now', 'now'),

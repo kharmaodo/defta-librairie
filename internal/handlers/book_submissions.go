@@ -84,13 +84,55 @@ func submissionBookInput(r *http.Request) (models.BookInput, error) {
 	if err != nil {
 		return models.BookInput{}, err
 	}
+	categoryIDs, err := submissionIntegerValues(r, "categoryIds")
+	if err != nil {
+		return models.BookInput{}, err
+	}
+	publisherID, err := submissionOptionalInteger(r, "publisherId")
+	if err != nil {
+		return models.BookInput{}, err
+	}
+	primaryCategoryID, err := submissionOptionalInteger(r, "primaryCategoryId")
+	if err != nil {
+		return models.BookInput{}, err
+	}
 	return models.BookInput{
 		Title: r.FormValue("title"), Auteur: r.FormValue("auteur"),
 		Editeur: r.FormValue("editeur"), Price: price, Volume: volume,
 		Status: r.FormValue("status"), Tags: r.FormValue("tags"),
-		Categorie: r.FormValue("categorie"), CoverURL: r.FormValue("coverUrl"),
+		TagIDs: r.Form["tagIds"], Categorie: r.FormValue("categorie"),
+		CategoryIDs: categoryIDs, PrimaryCategoryID: primaryCategoryID,
+		PublisherID: publisherID, CoverURL: r.FormValue("coverUrl"),
 		LibraryID: r.FormValue("libraryId"),
 	}, nil
+}
+
+func submissionIntegerValues(r *http.Request, name string) ([]int, error) {
+	values := r.Form[name]
+	if values == nil {
+		return nil, nil
+	}
+	result := make([]int, 0, len(values))
+	for _, value := range values {
+		parsed, err := strconv.Atoi(value)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, parsed)
+	}
+	return result, nil
+}
+
+func submissionOptionalInteger(r *http.Request, name string) (*int, error) {
+	value := r.FormValue(name)
+	if value == "" {
+		return nil, nil
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return nil, err
+	}
+	return &parsed, nil
 }
 
 var _ = errors.Is

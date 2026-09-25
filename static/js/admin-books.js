@@ -166,8 +166,58 @@
       }
       document.querySelector("#book-form-title").textContent = book ? "Modifier le livre" : "Nouveau livre";
       document.querySelector("#book-form-error").hidden = true;
+      loadBookTaxonomy(book).catch(error => showError(document.querySelector("#book-form-error"), error));
       dialog.showModal();
       if (book) refreshCoverStatus(book.id);
+    }
+
+    function selectedValues(select) {
+      return [...select.selectedOptions].map(option => option.value).filter(Boolean);
+    }
+
+    function replaceReferenceOptions(select, values, selected, placeholder) {
+      const selectedSet = new Set((selected || []).map(String));
+      select.replaceChildren();
+      if (placeholder) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.textContent = placeholder;
+        select.append(option);
+      }
+      values.forEach(value => {
+        const option = document.createElement("option");
+        option.value = String(value.id);
+        option.textContent = value.name || value.code;
+        option.selected = selectedSet.has(option.value);
+        select.append(option);
+      });
+    }
+
+    async function loadBookTaxonomy(book) {
+      const form = document.querySelector("#book-form");
+      const libraryId = form.elements.libraryId.value;
+      const tagQuery = libraryId ? `?libraryId=${encodeURIComponent(libraryId)}` : "";
+      const [categories, publishers, tags] = await Promise.all([
+        apiFetch("/api/manage/categories"),
+        apiFetch("/api/manage/publishers"),
+        isRoot() && !libraryId ? Promise.resolve([]) : apiFetch(`/api/manage/tags${tagQuery}`)
+      ]);
+      replaceReferenceOptions(form.elements.categoryIds, categories, book?.categoryIds || [], "");
+      syncPrimaryCategories(book?.primaryCategoryId);
+      replaceReferenceOptions(form.elements.publisherId, publishers,
+        book?.publisherId ? [book.publisherId] : [], "Non renseigné");
+      replaceReferenceOptions(form.elements.tagIds, tags, book?.tagIds || [], "");
+    }
+
+    function syncPrimaryCategories(selectedPrimaryID) {
+      const form = document.querySelector("#book-form");
+      const selectedCategoryIDs = new Set(selectedValues(form.elements.categoryIds));
+      const categories = [...form.elements.categoryIds.options]
+        .filter(option => selectedCategoryIDs.has(option.value))
+        .map(option => ({id: option.value, name: option.textContent}));
+      const current = selectedPrimaryID || form.elements.primaryCategoryId.value;
+      replaceReferenceOptions(form.elements.primaryCategoryId, categories,
+        current ? [current] : [], "Non renseignée");
     }
 
     function bookPayload(form) {
@@ -180,8 +230,13 @@
         status: form.elements.status.value,
         tags: form.elements.tags.value,
         categorie: form.elements.categorie.value,
-        coverUrl: form.elements.coverUrl.value
+        coverUrl: form.elements.coverUrl.value,
+        tagIds: selectedValues(form.elements.tagIds)
       };
+      const categoryIds = selectedValues(form.elements.categoryIds).map(Number);
+      if (categoryIds.length) payload.categoryIds = categoryIds;
+      if (form.elements.primaryCategoryId.value) payload.primaryCategoryId = Number(form.elements.primaryCategoryId.value);
+      if (form.elements.publisherId.value) payload.publisherId = Number(form.elements.publisherId.value);
       if (isRoot() && form.elements.libraryId.value) payload.libraryId = form.elements.libraryId.value;
       if (form.elements.id.value) payload.version = Number(form.elements.version.value);
       return payload;
@@ -240,10 +295,14 @@
         try { await reloadBooks(); }
         catch (error) { showError(errorBox, error); }
       });
+      document.querySelector("#book-form [name=categoryIds]").addEventListener("change", () => syncPrimaryCategories());
+
       document.querySelector("#book-form [name=libraryId]").addEventListener("change", async (event) => {
         if (!isRoot()) return;
         document.querySelector("#tag-library").value = event.currentTarget.value;
-        try { await reloadTags(); } catch (error) { showError(errorBox, error); }
+        try {
+          await Promise.all([reloadTags(), loadBookTaxonomy()]);
+        } catch (error) { showError(errorBox, error); }
       });
       document.querySelector("#books-previous").addEventListener("click", async () => {
         state.bookOffset = Math.max(0, state.bookOffset - state.bookLimit);
@@ -270,7 +329,10 @@
           if (!id && file) {
             const submission = new FormData();
             const payload = bookPayload(form);
-            Object.entries(payload).forEach(([key, value]) => submission.set(key, String(value)));
+            Object.entries(payload).forEach(([key, value]) => {
+              if (Array.isArray(value)) value.forEach(item => submission.append(key, String(item)));
+              else submission.set(key, String(value));
+            });
             submission.set("cover", file);
             const pending = await apiFetch("/api/manage/book-submissions", {method: "POST", body: submission});
             form.elements.cover.value = "";

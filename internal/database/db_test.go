@@ -86,8 +86,12 @@ func TestSearchBooksUsesFTS5AndKeepsTotal(t *testing.T) {
 			tags TEXT,
 			categorie TEXT,
 			coverUrl TEXT,
+			publisher_id INTEGER,
 			deleted_at TEXT
 		);
+		CREATE TABLE publishers (id INTEGER PRIMARY KEY, ar TEXT, fr TEXT, en TEXT);
+		CREATE TABLE categories (id INTEGER PRIMARY KEY, ar TEXT, fr TEXT, en TEXT);
+		CREATE TABLE book_categories (book_id INTEGER, category_id INTEGER, is_primary INTEGER);
 		CREATE VIRTUAL TABLE defta_fts USING fts5(
 			title, editeur, auteur, tags, categorie,
 			content='defta', content_rowid='id'
@@ -120,5 +124,47 @@ func TestSearchBooksUsesFTS5AndKeepsTotal(t *testing.T) {
 	}
 	if !results[0].Score.Valid {
 		t.Fatal("expected an FTS5 relevance score")
+	}
+}
+
+
+func TestSearchBooksPrefersPublicTaxonomyTranslations(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "taxonomy-public.db")
+	var err error
+	DB, err = sql.Open("sqlite3", dbPath)
+	if err != nil {
+		t.Fatalf("open database: %v", err)
+	}
+	t.Cleanup(func() { _ = DB.Close() })
+	if _, err = DB.Exec(`
+		CREATE TABLE defta (
+			id INTEGER PRIMARY KEY, title TEXT NOT NULL, auteur TEXT, editeur TEXT,
+			price REAL, volume INTEGER, status TEXT, tags TEXT, categorie TEXT,
+			coverUrl TEXT, publisher_id INTEGER, deleted_at TEXT
+		);
+		CREATE TABLE publishers (id INTEGER PRIMARY KEY, ar TEXT, fr TEXT, en TEXT);
+		CREATE TABLE categories (id INTEGER PRIMARY KEY, ar TEXT, fr TEXT, en TEXT);
+		CREATE TABLE book_categories (book_id INTEGER, category_id INTEGER, is_primary INTEGER);
+		CREATE VIRTUAL TABLE defta_fts USING fts5(title, editeur, auteur, tags, categorie, content='defta', content_rowid='id');
+		CREATE TRIGGER defta_ai AFTER INSERT ON defta BEGIN
+			INSERT INTO defta_fts(rowid, title, editeur, auteur, tags, categorie)
+			VALUES (new.id, new.title, new.editeur, new.auteur, new.tags, new.categorie);
+		END;
+		INSERT INTO publishers(id, ar, fr, en) VALUES (1, 'دار الفكر', 'Dar al-Fikr', 'Dar al-Fikr');
+		INSERT INTO categories(id, ar, fr, en) VALUES (2, 'الفقه', 'Jurisprudence', 'Fiqh');
+		INSERT INTO defta(id, title, editeur, categorie, publisher_id, price, volume) VALUES
+			(1, 'كتاب الفقه', 'Ancien éditeur', 'Ancienne catégorie', 1, 0, 0);
+		INSERT INTO book_categories(book_id, category_id, is_primary) VALUES (1, 2, 1);
+	`); err != nil {
+		t.Fatalf("seed public taxonomy: %v", err)
+	}
+
+	books, _, err := SearchBooks("كتاب", 0, 30)
+	if err != nil {
+		t.Fatalf("search books: %v", err)
+	}
+	if len(books) != 1 || !books[0].Editeur.Valid || books[0].Editeur.String != "دار الفكر" ||
+		!books[0].Categorie.Valid || books[0].Categorie.String != "الفقه" {
+		t.Fatalf("public taxonomy labels=%+v", books)
 	}
 }
