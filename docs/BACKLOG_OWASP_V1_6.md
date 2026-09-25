@@ -39,7 +39,7 @@ correctifs pour les risques pertinents de l’application.
 | 2 | US-2 — Authentification sous charge | Rafales de connexions erronées, anti-énumération, verrouillage/throttling, renouvellement et révocation de session testés | API2, consommation abusive | Réalisé — tests concurrents, scénario k6 isolé et procédure de recette |
 | 3 | US-3 — Autorisation concurrente | Matrice root/propriétaire et librairie A/B exécutée en parallèle ; toute lecture ou mutation hors périmètre répond 403/404 sans fuite | API1, API3, API5 | Réalisé — 48 accès concurrents hors périmètre refusés sans paiement créé |
 | 4 | US-4 — Limites de ressources | Limites et comportement mesurés pour upload de couverture, recherche FTS, pagination, exports et endpoints coûteux ; réponses d’erreur cohérentes | API4, API6 | Réalisé — recherche catalogue bornée, OpenAPI et matrice des limites |
-| 5 | US-5 — Intégrité métier concurrente | Ventes, paiements, retours, réceptions et couvertures soumis à concurrence ; absence de double mouvement, double paiement ou transition impossible | API6, logique métier | À développer |
+| 5 | US-5 — Intégrité métier concurrente | Ventes, paiements, retours, réceptions et couvertures soumis à concurrence ; absence de double mouvement, double paiement ou transition impossible | API6, logique métier | En validation — confirmation de vente atomique sous concurrence |
 | 6 | US-6 — Observabilité et gate de release | Rapports de charge, métriques, logs corrélés, seuils p95/p99/taux d’erreur et contrôle automatisé de release | API4, API8 | À développer |
 
 ## Preuve de l’incrément 1
