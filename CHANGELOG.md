@@ -16,6 +16,7 @@
 - Une soumission de nouveau livre avec couverture est verrouillée après l’acceptation asynchrone, jusqu’à annulation du dialogue, pour empêcher les doubles envois.
 - Les états de modération présentent des pastilles sémantiques et des libellés métier : contenu conforme, contenu non conforme, analyse en cours, revue manuelle et indisponibilité.
 - La procédure de release documente l’endpoint local du modérateur NSFW lorsque l’application tourne hors de Docker.
+- Tag `v1.6.0` publié sur `d850efb` ; archives Windows/Linux AMD64, `BUILD-INFO.txt` et `SHA256SUMS` publiés et vérifiés ; image worker Linux AMD64 publiée avec SBOM et provenance.
 
 ## [1.5.0] — 2026-09-25
 
