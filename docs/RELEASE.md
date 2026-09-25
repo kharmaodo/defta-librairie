@@ -1,4 +1,4 @@
-# Préparation de la version 1.5.0
+# Préparation de la version 1.6.0
 
 Cette procédure prépare la release à partir de `develop`. Le tag et la release
 GitHub ne sont créés qu’après validation du commit candidat exact.
@@ -23,7 +23,7 @@ n’est pas disponible.
 
 ## 2. Préparer l’exploitation
 
-La version 1.5.0 introduit les migrations 029 à 031. Avant le déploiement, restaurer une copie de sauvegarde et vérifier le seed idempotent des catégories/éditeurs, les relations de livres et les tags relationnels.
+La version 1.6.0 renforce les contrôles de sécurité et de résilience sans introduire de migration SQLite. Avant le déploiement, restaurer une copie de sauvegarde, exécuter `./scripts/check-delivery.sh` et conserver les résultats du gate OWASP v1.6.
 
 Avant toute migration d’une base existante, créer et vérifier une sauvegarde
 SQLite selon `SQLITE_RESTORE.md`. Prévoir la persistance de la base, du bucket
@@ -47,12 +47,12 @@ consommateur durable sans plan de capacité et de reprise.
 ```sh
 mkdir -p dist
 CGO_ENABLED=1 go build -trimpath -tags fts5 \
-  -o dist/defta-librairie-v1.5.0-linux-amd64 ./cmd
-sha256sum dist/defta-librairie-v1.5.0-linux-amd64 \
-  > dist/defta-librairie-v1.5.0-linux-amd64.sha256
+  -o dist/defta-librairie-v1.6.0-linux-amd64 ./cmd
+sha256sum dist/defta-librairie-v1.6.0-linux-amd64 \
+  > dist/defta-librairie-v1.6.0-linux-amd64.sha256
 ```
 
-Au lancement, définir `VERSION=1.5.0` et `BUILD_DATE` à la date réelle du
+Au lancement, définir `VERSION=1.6.0` et `BUILD_DATE` à la date réelle du
 build. Ne jamais incorporer `.env`, une base SQLite, une sauvegarde ou les
 objets MinIO dans l’archive.
 
@@ -61,16 +61,16 @@ objets MinIO dans l’archive.
 Vérifier que `HEAD` est toujours le SHA validé, puis :
 
 ```sh
-git tag -a v1.5.0 -m "Defta Librairie 1.5.0"
-git show --no-patch --decorate v1.5.0
-git push origin v1.5.0
+git tag -a v1.6.0 -m "Defta Librairie 1.6.0"
+git show --no-patch --decorate v1.6.0
+git push origin v1.6.0
 ```
 
 Le tag déclenche la construction et publication de l’image worker Linux AMD64
 sur GHCR. Déclencher ensuite le workflow des exécutables depuis `develop` :
 
 ```sh
-gh workflow run release-binaries.yml --ref develop -f tag=v1.5.0
+gh workflow run release-binaries.yml --ref develop -f tag=v1.6.0
 gh run list --workflow release-binaries.yml --limit 3
 ```
 
