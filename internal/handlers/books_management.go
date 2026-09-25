@@ -22,13 +22,18 @@ func (h *BookManagementHandler) List(w http.ResponseWriter, r *http.Request) {
 	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
 	libraryID := strings.TrimSpace(r.URL.Query().Get("libraryId"))
 	tagID := strings.TrimSpace(r.URL.Query().Get("tagId"))
+	query, err := normalizeAPISearch(r.URL.Query().Get("q"))
+	if err != nil {
+		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_query", "message": "Search query is too long"})
+		return
+	}
 	var books []models.Book
 	var total int
 	var err error
 	if tagID != "" {
-		books, total, err = h.service.SearchByTag(r.Context(), claims, libraryID, tagID, r.URL.Query().Get("q"), offset, limit)
+		books, total, err = h.service.SearchByTag(r.Context(), claims, libraryID, tagID, query, offset, limit)
 	} else {
-		books, total, err = h.service.Search(r.Context(), claims, libraryID, r.URL.Query().Get("q"), offset, limit)
+		books, total, err = h.service.Search(r.Context(), claims, libraryID, query, offset, limit)
 	}
 	if err != nil {
 		writeBookError(w, err)
