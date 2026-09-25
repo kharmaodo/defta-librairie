@@ -22,8 +22,8 @@ func (h *BookManagementHandler) List(w http.ResponseWriter, r *http.Request) {
 	offset, limit := normalizeAPIPagination(r.URL.Query().Get("offset"), r.URL.Query().Get("limit"), 30)
 	libraryID := strings.TrimSpace(r.URL.Query().Get("libraryId"))
 	tagID := strings.TrimSpace(r.URL.Query().Get("tagId"))
-	query, err := normalizeAPISearch(r.URL.Query().Get("q"))
-	if err != nil {
+	query, searchErr := normalizeAPISearch(r.URL.Query().Get("q"))
+	if searchErr != nil {
 		writeAuthJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_query", "message": "Search query is too long"})
 		return
 	}
