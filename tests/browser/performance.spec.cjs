@@ -29,7 +29,7 @@ test('initial dashboard coalesces concurrent profile reads', async ({page}) => {
       stylesheets: resources.filter(path => path === '/static/css/admin.css').length,
     };
   });
-  // v1.4 adds the isolated book-submission moderation module.
-  expect(assets.adminScripts).toBeLessThanOrEqual(24);
+  // v1.5 adds the shared catalogue-reference administration module.
+  expect(assets.adminScripts).toBeLessThanOrEqual(25);
   expect(assets.stylesheets).toBe(1);
 });
