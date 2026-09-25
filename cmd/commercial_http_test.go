@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -199,3 +200,123 @@ INSERT INTO book_inventory(book_id,library_id,quantity,average_unit_cost,version
 INSERT INTO cash_registers(id,library_id,name,normalized_name,created_by,created_at,updated_at)
  VALUES('http-register','http-library','Caisse HTTP','caisse http','http-owner','now','now');
 `
+
+
+func TestCommercialHTTPRejectsConcurrentCrossLibraryAccess(t *testing.T) {
+	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "authorization.db")+"?_foreign_keys=on")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+	if err = migrations.Run(context.Background(), db); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(commercialHTTPFixture); err != nil {
+		t.Fatal(err)
+	}
+
+	tokens, err := auth.NewTokenManager(strings.Repeat("test-only-", 8), "authorization", "authorization", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	issue := func(id, library string) string {
+		t.Helper()
+		expiresAt := time.Now().UTC().Add(time.Hour).Format(time.RFC3339Nano)
+		if _, err := db.Exec(
+			"INSERT INTO refresh_sessions(id,user_id,token_hash,token_family,expires_at,created_at) VALUES(?,?,?,?,?,?)",
+			id, id, id, id, expiresAt, time.Now().UTC().Format(time.RFC3339Nano),
+		); err != nil {
+			t.Fatal(err)
+		}
+		token, _, err := tokens.IssueForSession(models.User{ID: id, Role: models.RoleOwnerLibrary, LibraryID: library}, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return token
+	}
+	owner := issue("http-owner", "http-library")
+	other := issue("http-other", "http-other-library")
+	protected := func(handler http.Handler) http.Handler {
+		return middleware.AuthenticateSession(tokens, repositories.NewSessionRepository(db),
+			middleware.RequirePasswordChanged(middleware.RequireRoles(handler, models.RoleOwnerLibrary)))
+	}
+	mux := http.NewServeMux()
+	registerCommercialHTTPRoutes(mux, protected,
+		handlers.NewCommercialStatisticsHandler(services.NewCommercialStatisticsService(repositories.NewCommercialStatisticsRepository(db))),
+		handlers.NewSaleHandler(services.NewSaleService(repositories.NewSaleRepository(db))),
+		handlers.NewPaymentHandler(services.NewPaymentService(repositories.NewPaymentRepository(db))),
+		handlers.NewCustomerReturnHandler(services.NewCustomerReturnService(repositories.NewCustomerReturnRepository(db))),
+		handlers.NewReturnSettlementHandler(services.NewReturnSettlementService(repositories.NewReturnSettlementRepository(db))),
+	)
+	app := middleware.SecureHTTP(mux)
+
+	send := func(method, path, token string, body interface{}) *httptest.ResponseRecorder {
+		t.Helper()
+		var payload bytes.Buffer
+		if body != nil {
+			if err := json.NewEncoder(&payload).Encode(body); err != nil {
+				t.Fatal(err)
+			}
+		}
+		request := httptest.NewRequest(method, path, &payload)
+		request.Header.Set("Authorization", "Bearer "+token)
+		if body != nil {
+			request.Header.Set("Content-Type", "application/json")
+		}
+		response := httptest.NewRecorder()
+		app.ServeHTTP(response, request)
+		return response
+	}
+
+	created := send(http.MethodPost, "/api/manage/sales", owner, map[string]interface{}{
+		"customerName": "Isolation concurrente",
+		"lines":        []map[string]interface{}{{"bookId": 1, "quantity": 1}},
+	})
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create sale: status=%d body=%s", created.Code, created.Body.String())
+	}
+	var sale struct {
+		ID      string `json:"id"`
+		Version int    `json:"version"`
+	}
+	if err := json.Unmarshal(created.Body.Bytes(), &sale); err != nil {
+		t.Fatal(err)
+	}
+	confirmed := send(http.MethodPost, "/api/manage/sales/"+sale.ID+"/confirm", owner, map[string]interface{}{"version": sale.Version})
+	if confirmed.Code != http.StatusOK {
+		t.Fatalf("confirm sale: status=%d body=%s", confirmed.Code, confirmed.Body.String())
+	}
+
+	const attempts = 48
+	statuses := make(chan int, attempts)
+	var group sync.WaitGroup
+	for index := 0; index < attempts; index++ {
+		group.Add(1)
+		go func(index int) {
+			defer group.Done()
+			if index%2 == 0 {
+				statuses <- send(http.MethodGet, "/api/manage/sales/"+sale.ID, other, nil).Code
+				return
+			}
+			statuses <- send(http.MethodPost, "/api/manage/sales/"+sale.ID+"/payments", other, map[string]interface{}{
+				"cashRegisterId": "http-register", "method": "CASH", "amount": 100,
+			}).Code
+		}(index)
+	}
+	group.Wait()
+	close(statuses)
+
+	for status := range statuses {
+		if status != http.StatusNotFound {
+			t.Errorf("cross-library request returned %d, want %d", status, http.StatusNotFound)
+		}
+	}
+	var paymentCount int
+	if err := db.QueryRow("SELECT COUNT(*) FROM payments").Scan(&paymentCount); err != nil {
+		t.Fatal(err)
+	}
+	if paymentCount != 0 {
+		t.Fatalf("cross-library requests created %d payments", paymentCount)
+	}
+}
