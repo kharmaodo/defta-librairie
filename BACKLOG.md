@@ -232,7 +232,7 @@ Le contrat détaillé est défini dans `docs/CATALOGUE_TAXONOMY_V1_5.md`.
 | 3 | Relations livre-catégories et éditeur principal | Réalisé — migration 030, persistance atomique, validation des références actives, OpenAPI et tests HTTP propriétaire |
 | 4 | Tags relationnels | Réalisé — migration 031, associations atomiques, filtre `tagId`, migration CSV compatible, OpenAPI et tests HTTP |
 | 5 | Interface publique et administration | Réalisé — écrans Catégories/Éditeurs root, lecture propriétaire, sélecteurs relationnels, recherche traduite et tests |
-| 6 | Stabilisation et release | Candidat prêt — contrôles de livraison et 23 parcours Chromium verts ; validation du commit de release puis merge dans `develop` |
+| 6 | Stabilisation et release | Réalisé — PR #156 mergée, tag `v1.5.0`, archives Windows/Linux AMD64 et image worker publiées |
 
 ## Preuves dans le dépôt
 
