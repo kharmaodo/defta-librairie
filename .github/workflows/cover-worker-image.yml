@@ -30,7 +30,7 @@ on:
         default: edge
   push:
     tags:
-      - "v1.5.*"
+      - "v1.6.*"
 
 permissions:
   contents: read
@@ -56,7 +56,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$IMAGE_TAG" in
-            v1.5.*) ;;
+            v1.6.*) ;;
             *) echo "Tag invalide: $IMAGE_TAG" >&2; exit 1 ;;
           esac
           test "$(git describe --tags --exact-match)" = "$IMAGE_TAG"
@@ -83,4 +83,4 @@ jobs:
           sbom: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-            ${{ env.IMAGE_NAME }}:1.5
+            ${{ env.IMAGE_NAME }}:1.6
