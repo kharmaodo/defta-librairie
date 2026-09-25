@@ -320,3 +320,114 @@ func TestCommercialHTTPRejectsConcurrentCrossLibraryAccess(t *testing.T) {
 		t.Fatalf("cross-library requests created %d payments", paymentCount)
 	}
 }
+
+
+func TestCommercialHTTPConfirmsSaleOnlyOnceUnderConcurrency(t *testing.T) {
+	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "integrity.db")+"?_foreign_keys=on")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+	if err = migrations.Run(context.Background(), db); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(commercialHTTPFixture); err != nil {
+		t.Fatal(err)
+	}
+
+	tokens, err := auth.NewTokenManager(strings.Repeat("test-only-", 8), "integrity", "integrity", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expiresAt := time.Now().UTC().Add(time.Hour).Format(time.RFC3339Nano)
+	if _, err = db.Exec(
+		"INSERT INTO refresh_sessions(id,user_id,token_hash,token_family,expires_at,created_at) VALUES(?,?,?,?,?,?)",
+		"http-owner", "http-owner", "http-owner", "http-owner", expiresAt, time.Now().UTC().Format(time.RFC3339Nano),
+	); err != nil {
+		t.Fatal(err)
+	}
+	owner, _, err := tokens.IssueForSession(models.User{ID: "http-owner", Role: models.RoleOwnerLibrary, LibraryID: "http-library"}, "http-owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	protected := func(handler http.Handler) http.Handler {
+		return middleware.AuthenticateSession(tokens, repositories.NewSessionRepository(db),
+			middleware.RequirePasswordChanged(middleware.RequireRoles(handler, models.RoleOwnerLibrary)))
+	}
+	mux := http.NewServeMux()
+	registerCommercialHTTPRoutes(mux, protected,
+		handlers.NewCommercialStatisticsHandler(services.NewCommercialStatisticsService(repositories.NewCommercialStatisticsRepository(db))),
+		handlers.NewSaleHandler(services.NewSaleService(repositories.NewSaleRepository(db))),
+		handlers.NewPaymentHandler(services.NewPaymentService(repositories.NewPaymentRepository(db))),
+		handlers.NewCustomerReturnHandler(services.NewCustomerReturnService(repositories.NewCustomerReturnRepository(db))),
+		handlers.NewReturnSettlementHandler(services.NewReturnSettlementService(repositories.NewReturnSettlementRepository(db))),
+	)
+	app := middleware.SecureHTTP(mux)
+	send := func(method, path string, body interface{}) *httptest.ResponseRecorder {
+		t.Helper()
+		var payload bytes.Buffer
+		if body != nil {
+			if err := json.NewEncoder(&payload).Encode(body); err != nil {
+				t.Fatal(err)
+			}
+		}
+		request := httptest.NewRequest(method, path, &payload)
+		request.Header.Set("Authorization", "Bearer "+owner)
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		app.ServeHTTP(response, request)
+		return response
+	}
+
+	created := send(http.MethodPost, "/api/manage/sales", map[string]interface{}{
+		"customerName": "Concurrence",
+		"lines":        []map[string]interface{}{{"bookId": 1, "quantity": 2}},
+	})
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create sale: status=%d body=%s", created.Code, created.Body.String())
+	}
+	var sale struct {
+		ID      string `json:"id"`
+		Version int    `json:"version"`
+	}
+	if err := json.Unmarshal(created.Body.Bytes(), &sale); err != nil {
+		t.Fatal(err)
+	}
+
+	const attempts = 40
+	statuses := make(chan int, attempts)
+	var group sync.WaitGroup
+	for range attempts {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			statuses <- send(http.MethodPost, "/api/manage/sales/"+sale.ID+"/confirm", map[string]interface{}{"version": sale.Version}).Code
+		}()
+	}
+	group.Wait()
+	close(statuses)
+
+	confirmed := 0
+	conflicted := 0
+	for status := range statuses {
+		switch status {
+		case http.StatusOK:
+			confirmed++
+		case http.StatusConflict:
+			conflicted++
+		default:
+			t.Errorf("unexpected confirmation status %d", status)
+		}
+	}
+	if confirmed != 1 || conflicted != attempts-1 {
+		t.Fatalf("confirmed=%d conflicted=%d, want 1/%d", confirmed, conflicted, attempts-1)
+	}
+	var quantity int
+	if err := db.QueryRow("SELECT quantity FROM book_inventory WHERE book_id=1").Scan(&quantity); err != nil {
+		t.Fatal(err)
+	}
+	if quantity != 8 {
+		t.Fatalf("inventory quantity=%d, want 8 after exactly one confirmation", quantity)
+	}
+}
