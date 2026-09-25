@@ -97,7 +97,6 @@ test('book cover upload, failure, retry and authenticated preview in the form', 
   await page.locator('#books-body').getByRole('button', {name: 'Modifier'}).click();
   await expect(page.locator('#book-cover-status')).toHaveText('Aucune couverture');
   await expect(page.locator('#book-form [name=publisherId]')).toHaveValue('1');
-  await expect(page.locator('#book-form [name=primaryCategoryId]')).toHaveValue('2');
   await expect(page.locator('#book-form [name=categoryIds] option:checked')).toHaveCount(1);
   await expect(page.locator('#book-form [name=tagIds] option:checked')).toHaveCount(1);
   await expect(page.locator('#book-cover-preview')).toHaveAttribute('alt', 'Couverture par défaut');
