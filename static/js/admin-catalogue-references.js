@@ -129,7 +129,7 @@
       reloadAudit: async () => {}
     });
     try {
-      const profile = await window.DeftaHTTP.json("/api/auth/me");
+      const profile = await window.DeftaHTTP.profile();
       root = profile.role === "SUPER_ADMIN_ROOT";
       if (root) document.querySelectorAll(".root-only").forEach((element) => { element.hidden = false; });
       await Promise.all([fallback.reload("categories"), fallback.reload("publishers")]);
