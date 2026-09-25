@@ -1,4 +1,49 @@
-# Artefacts publiés de la version 1.4.0
+# Artefacts publiés des releases
+
+## Version 1.5.0 — 25 septembre 2026
+
+Le tag annoté immuable `v1.5.0` référence le commit validé
+`6bd578521b55c15321a8cc8ecdd2374b3388b474`. Les publications ont été
+déclenchées depuis `develop` et ont réussi le 25 septembre 2026.
+
+### Application
+
+| Archive publiée | Système cible | Architecture | Digest GitHub |
+|---|---|---|---|
+| `defta-librairie-1.5.0-windows-amd64.zip` | Windows 10/11 64 bits | AMD64 | `sha256:51b20b991c0c4c3bf84e34e57ec1f2e4ce7ffd2cb968097deb6c30de2e72e3c0` |
+| `defta-librairie-1.5.0-linux-amd64.tar.gz` | Linux 64 bits | AMD64 | `sha256:29d2c7f8d916af8df706c23a6bc8ebe35b584edee518a5bef3446094cad9104a` |
+
+Le workflow `release-binaries.yml`, exécution `36126652435`, a publié ces
+archives, `BUILD-INFO.txt` et `SHA256SUMS`. Le digest GitHub de
+`SHA256SUMS` est
+`sha256:2d35b26dc893d9650faa46aab8fa9c0266254c0f60ecb7d318cb4a5a5d986738`.
+
+### Worker Linux AMD64
+
+Le workflow `cover-worker-image.yml`, exécution `36126741822`, a publié
+`ghcr.io/kharmaodo/defta-cover-worker:v1.5.0` pour `linux/amd64`, avec SBOM
+et provenance. Son artefact de construction
+`kharmaodo~defta-librairie~TR2B86.dockerbuild` porte le digest
+`sha256:346787fe42d4414d0f483f95e051cc94d9aae2abdb2abf1af969ecddaf6d4f78`.
+Le déploiement doit épingler le digest de l’image vérifié, sans embarquer de
+secret dans l’image.
+
+### Vérification locale à archiver
+
+Les digests ci-dessus proviennent de la publication GitHub. La vérification
+indépendante des archives reste reproductible ainsi :
+
+```sh
+release_dir=$(mktemp -d)
+gh release download v1.5.0 --dir "$release_dir"
+(cd "$release_dir" && sha256sum -c SHA256SUMS)
+cat "$release_dir/BUILD-INFO.txt"
+```
+
+Consigner le résultat de ce contrôle avec les éléments de déploiement.
+
+## Version 1.4.0
+
 
 Le tag immuable `v1.4.0` référence le commit validé `a5025e39d936d87fb366576528c4618f3c2a1430`.
 Les workflows de publication des archives et de l’image worker ont réussi le
