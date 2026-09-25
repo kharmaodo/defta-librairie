@@ -2,6 +2,21 @@
 
 ## [À paraître]
 
+## [1.6.0] — 2026-09-25
+
+### Sécurité OWASP et résilience
+
+- Gate OWASP v1.6 intégré à la commande de delivery : baseline documentée, contrôles d’authentification, d’autorisation, de ressources et d’intégrité concurrente.
+- Recherche catalogue bornée afin de limiter la consommation de ressources ; contrat OpenAPI et tests de régression mis à jour.
+- Scénarios isolés de charge et de concurrence couvrant notamment l’isolation inter-librairies et l’unicité de la confirmation de vente.
+
+### Fiabilité et modération des couvertures
+
+- Les aperçus d’administration ne demandent une image que lorsqu’une couverture READY active existe ; les autres livres utilisent directement l’image par défaut.
+- Une soumission de nouveau livre avec couverture est verrouillée après l’acceptation asynchrone, jusqu’à annulation du dialogue, pour empêcher les doubles envois.
+- Les états de modération présentent des pastilles sémantiques et des libellés métier : contenu conforme, contenu non conforme, analyse en cours, revue manuelle et indisponibilité.
+- La procédure de release documente l’endpoint local du modérateur NSFW lorsque l’application tourne hors de Docker.
+
 ## [1.5.0] — 2026-09-25
 
 ### Taxonomie multilingue du catalogue
