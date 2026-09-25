@@ -12,6 +12,7 @@
     let coverListGeneration = 0;
     const listCoverURLs = new Set();
     let coversAvailable = true;
+    let bookSubmissionPending = false;
     const defaultCover = "/static/img/book-cover-placeholder.svg";
 
     function setCoverImage(image, url) {
@@ -35,6 +36,18 @@
     const coverDialog = () => document.querySelector("#book-dialog");
     const coverStatus = () => document.querySelector("#book-cover-status");
     const coverRetry = () => document.querySelector("#book-cover-retry");
+    const bookSaveButton = () => document.querySelector("#book-form button[type=submit]");
+
+    function resetBookSubmissionState() {
+      bookSubmissionPending = false;
+      bookSaveButton().disabled = false;
+    }
+
+    function lockBookSubmission() {
+      bookSubmissionPending = true;
+      bookSaveButton().disabled = true;
+      document.querySelector("#book-form").elements.cover.disabled = true;
+    }
 
     function clearCoverPreview() {
       if (coverPreviewURL) URL.revokeObjectURL(coverPreviewURL);
@@ -144,6 +157,7 @@
     function openBookForm(book = null) {
       const dialog = document.querySelector("#book-dialog");
       const form = document.querySelector("#book-form");
+      resetBookSubmissionState();
       resetCoverState();
       form.reset();
       form.elements.cover.disabled = false;
@@ -260,7 +274,10 @@
     function init() {
       if (initialized) return;
       initialized = true;
-      coverDialog().addEventListener("close", resetCoverState);
+      coverDialog().addEventListener("close", () => {
+        resetCoverState();
+        resetBookSubmissionState();
+      });
       coverRetry().addEventListener("click", async () => {
         const id = document.querySelector("#book-form").elements.id.value;
         if (!id) return;
@@ -300,6 +317,7 @@
         event.preventDefault();
         const form = event.currentTarget;
         const formError = document.querySelector("#book-form-error");
+        if (bookSubmissionPending) return;
         formError.hidden = true;
         const id = form.elements.id.value;
         if (isRoot() && !id && !form.elements.libraryId.value) {
@@ -320,7 +338,8 @@
             submission.set("cover", file);
             const pending = await apiFetch("/api/manage/book-submissions", {method: "POST", body: submission});
             form.elements.cover.value = "";
-            formError.textContent = `Soumission ${pending.id} reçue : le livre sera créé après validation de la couverture.`;
+            lockBookSubmission();
+            formError.textContent = `Soumission ${pending.id} reçue : le livre sera créé après validation de la couverture. Annulez pour fermer ce formulaire.`;
             formError.hidden = false;
             return;
           }
