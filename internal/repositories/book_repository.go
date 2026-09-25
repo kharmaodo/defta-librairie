@@ -447,6 +447,7 @@ const bookSelect = `
 	SELECT id, title, auteur, editeur, COALESCE(price, 0), COALESCE(volume, 0),
 	       status, tags, categorie, publisher_id,
 	       (SELECT category_id FROM book_categories WHERE book_id=defta.id AND is_primary=1), coverUrl,
+	       EXISTS(SELECT 1 FROM book_covers c WHERE c.book_id=defta.id AND c.active=1 AND c.status='READY'),
 	       library_id, COALESCE(created_at, ''), COALESCE(updated_at, ''), version
 	FROM defta`
 
@@ -454,6 +455,7 @@ const taggedBookSelect = `
 	SELECT d.id, d.title, d.auteur, d.editeur, COALESCE(d.price, 0), COALESCE(d.volume, 0),
 	       d.status, d.tags, d.categorie, d.publisher_id,
 	       (SELECT category_id FROM book_categories WHERE book_id=d.id AND is_primary=1), d.coverUrl,
+	       EXISTS(SELECT 1 FROM book_covers c WHERE c.book_id=d.id AND c.active=1 AND c.status='READY'),
 	       d.library_id, COALESCE(d.created_at, ''), COALESCE(d.updated_at, ''), d.version
 	FROM defta d JOIN book_tags bt ON bt.book_id=d.id`
 
@@ -461,22 +463,27 @@ const managedBookSearchSelect = `
 	SELECT d.id, d.title, d.auteur, d.editeur, COALESCE(d.price, 0), COALESCE(d.volume, 0),
 	       d.status, d.tags, d.categorie, d.publisher_id,
 	       (SELECT category_id FROM book_categories WHERE book_id=d.id AND is_primary=1), d.coverUrl,
+	       EXISTS(SELECT 1 FROM book_covers c WHERE c.book_id=d.id AND c.active=1 AND c.status='READY'),
 	       d.library_id, COALESCE(d.created_at, ''), COALESCE(d.updated_at, ''), d.version,
 	       defta_fts.rank
 	FROM defta_fts JOIN defta d ON defta_fts.rowid=d.id`
 
 func scanManagedBook(row rowScanner) (models.Book, error) {
 	var book models.Book
+	var hasActiveCover int
 	err := row.Scan(&book.ID, &book.Title, &book.Auteur, &book.Editeur, &book.Price, &book.Volume,
-		&book.Status, &book.Tags, &book.Categorie, &book.PublisherID, &book.PrimaryCategoryID, &book.CoverURL, &book.LibraryID,
+		&book.Status, &book.Tags, &book.Categorie, &book.PublisherID, &book.PrimaryCategoryID, &book.CoverURL, &hasActiveCover, &book.LibraryID,
 		&book.CreatedAt, &book.UpdatedAt, &book.Version)
+	book.HasActiveCover = hasActiveCover == 1
 	return book, err
 }
 
 func scanManagedSearchBook(row rowScanner) (models.Book, error) {
 	var book models.Book
+	var hasActiveCover int
 	err := row.Scan(&book.ID, &book.Title, &book.Auteur, &book.Editeur, &book.Price, &book.Volume,
 		&book.Status, &book.Tags, &book.Categorie, &book.PublisherID, &book.PrimaryCategoryID,
-		&book.CoverURL, &book.LibraryID, &book.CreatedAt, &book.UpdatedAt, &book.Version, &book.Score)
+		&book.CoverURL, &hasActiveCover, &book.LibraryID, &book.CreatedAt, &book.UpdatedAt, &book.Version, &book.Score)
+	book.HasActiveCover = hasActiveCover == 1
 	return book, err
 }
