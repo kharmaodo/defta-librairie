@@ -76,14 +76,14 @@
     if (error.name === 'AbortError' || error instanceof APIError) return error;
     return new APIError('Connexion interrompue. Vérifiez votre réseau. Avant de répéter une modification, vérifiez si elle a été enregistrée.');
   }
-  let refreshEnabled = false, pendingRefresh = null, generation = 0, cachedProfile = null;
+  let refreshEnabled = false, pendingRefresh = null, generation = 0, pendingProfile = null;
   function enableSessionRefresh() { refreshEnabled = true; }
   function clearSession() {
     generation++;
     refreshEnabled = false;
     sessionStorage.removeItem('defta.accessToken');
     sessionStorage.removeItem('defta.username');
-    cachedProfile = null;
+    pendingProfile = null;
   }
   async function checked(response) {
     if (!response.ok) {
@@ -154,16 +154,16 @@
   function json(path, options) {
     if (options !== undefined) return request(path, options).then(decode);
     const key = String(path);
-    if (key === '/api/auth/me' && cachedProfile) return cachedProfile;
     if (pendingJSONReads.has(key)) return pendingJSONReads.get(key);
     const pending = request(path).then(decode)
       .finally(() => pendingJSONReads.delete(key));
     pendingJSONReads.set(key, pending);
-    if (key === '/api/auth/me') {
-      cachedProfile = pending.catch((error) => { cachedProfile = null; throw error; });
-      return cachedProfile;
-    }
     return pending;
+  }
+  function profile() {
+    if (pendingProfile) return pendingProfile;
+    pendingProfile = json('/api/auth/me').catch((error) => { pendingProfile = null; throw error; });
+    return pendingProfile;
   }
   async function decode(response) {
     if (response.status === 204) return null;
@@ -176,5 +176,5 @@
       throw transportError(error);
     }
   }
-  window.DeftaHTTP = Object.freeze({request, json, APIError, authJSON, refreshSession, clearSession, enableSessionRefresh});
+  window.DeftaHTTP = Object.freeze({request, json, profile, APIError, authJSON, refreshSession, clearSession, enableSessionRefresh});
 })();
