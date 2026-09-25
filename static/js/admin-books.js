@@ -151,12 +151,9 @@
       form.elements.version.value = book ? book.version : "";
       form.elements.title.value = book ? book.title : "";
       form.elements.auteur.value = book ? book.auteur || "" : "";
-      form.elements.editeur.value = book ? book.editeur || "" : "";
       form.elements.price.value = book ? book.price : 0;
       form.elements.volume.value = book ? book.volume : 0;
       form.elements.status.value = book ? book.status || "AVAILABLE" : "AVAILABLE";
-      form.elements.categorie.value = book ? book.categorie || "" : "";
-      form.elements.tags.value = book ? book.tags || "" : "";
       form.elements.coverUrl.value = book ? book.coverUrl || "" : "";
       form.elements.libraryId.value = book ? book.libraryId || "" : "";
       form.elements.libraryId.disabled = Boolean(book);
@@ -229,12 +226,9 @@
       const payload = {
         title: form.elements.title.value,
         auteur: form.elements.auteur.value,
-        editeur: form.elements.editeur.value,
         price: Number(form.elements.price.value),
         volume: Number(form.elements.volume.value),
         status: form.elements.status.value,
-        tags: form.elements.tags.value,
-        categorie: form.elements.categorie.value,
         coverUrl: form.elements.coverUrl.value,
         tagIds: selectedValues(form.elements.tagIds)
       };
