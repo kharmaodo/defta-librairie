@@ -234,6 +234,21 @@ Le contrat détaillé est défini dans `docs/CATALOGUE_TAXONOMY_V1_5.md`.
 | 5 | Interface publique et administration | Réalisé — écrans Catégories/Éditeurs root, lecture propriétaire, sélecteurs relationnels, recherche traduite et tests |
 | 6 | Stabilisation et release | Réalisé — PR #156 mergée, tag `v1.5.0`, archives Windows/Linux AMD64 et image worker publiées |
 
+## Backlog v1.6.0 — sécurité OWASP et résilience sous charge
+
+Le contrat détaillé est défini dans `docs/BACKLOG_OWASP_V1_6.md`. Les essais
+s’exécutent exclusivement sur un environnement isolé ; ils ne constituent pas
+une certification OWASP ni une autorisation de test sur la production.
+
+| Ordre | Incrément | État |
+|---|---|---|
+| 1 | Baseline de sécurité | À développer |
+| 2 | Authentification sous charge | À développer |
+| 3 | Autorisation concurrente | À développer |
+| 4 | Limites de ressources | À développer |
+| 5 | Intégrité métier concurrente | À développer |
+| 6 | Observabilité et gate de release | À développer |
+
 ## Preuves dans le dépôt
 
 | Domaine | Principaux fichiers de référence |
