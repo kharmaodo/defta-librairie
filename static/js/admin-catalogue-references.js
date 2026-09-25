@@ -108,5 +108,33 @@
     }
     return Object.freeze({init, reload});
   }
-  window.DeftaCatalogueReferences = Object.freeze({create});
+  let mounted = null;
+  function mount(dependencies) {
+    if (mounted) return mounted;
+    mounted = create(dependencies);
+    mounted.init();
+    return mounted;
+  }
+
+  window.DeftaCatalogueReferences = Object.freeze({create, mount});
+  document.addEventListener("DOMContentLoaded", async () => {
+    if (document.body.dataset.page !== "dashboard" || mounted || !window.DeftaHTTP) return;
+    const errorBox = document.querySelector("#dashboard-error");
+    let root = false;
+    const fallback = mount({
+      apiFetch: (path, options) => window.DeftaHTTP.json(path, options),
+      showError: (element, error) => { element.textContent = error.message || "Une erreur est survenue."; element.hidden = false; },
+      errorBox,
+      isRoot: () => root,
+      reloadAudit: async () => {}
+    });
+    try {
+      const profile = await window.DeftaHTTP.json("/api/auth/me");
+      root = profile.role === "SUPER_ADMIN_ROOT";
+      if (root) document.querySelectorAll(".root-only").forEach((element) => { element.hidden = false; });
+      await Promise.all([fallback.reload("categories"), fallback.reload("publishers")]);
+    } catch (error) {
+      if (errorBox) { errorBox.textContent = error.message || "Chargement des référentiels impossible."; errorBox.hidden = false; }
+    }
+  });
 })();
