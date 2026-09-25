@@ -2,6 +2,7 @@
 """Protect the measured foundation agreed for the v1.2 admin dashboard."""
 
 from pathlib import Path
+import re
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -49,7 +50,7 @@ for attribute in (
 ):
     require(attribute in HTML, f"attribut de navigation absent : {attribute}")
 
-require(HTML.count("<dialog ") == 23, "vingt-trois dialogues statiques sont attendus")
+require(len(re.findall(r"<dialog\\b", HTML)) == 23, "vingt-trois dialogues statiques sont attendus")
 require(
     "<dialog " in SUPPLIER_RETURNS_JAVASCRIPT,
     "le dialogue dynamique de retour fournisseur est absent",
