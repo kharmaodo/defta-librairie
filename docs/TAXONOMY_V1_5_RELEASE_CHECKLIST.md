@@ -35,6 +35,14 @@ npx playwright test
 
 ## Sortie de release
 
-- [ ] Backlog et changelog v1.5.0 mis à jour.
-- [ ] Procédure de release suivie sur le commit candidat.
-- [ ] Artefacts publiés et sommes SHA-256 consignés.
+- [x] Backlog et changelog v1.5.0 mis à jour.
+- [x] Procédure de release suivie sur le commit candidat (`6bd5785`, tag `v1.5.0`).
+- [x] Artefacts publiés et sommes SHA-256 consignés dans `docs/RELEASE_ARTIFACTS.md`.
+
+
+## Publication
+
+- Tag annoté : `v1.5.0` → `6bd578521b55c15321a8cc8ecdd2374b3388b474`.
+- Archives Windows/Linux AMD64 : workflow `release-binaries.yml` #`36126652435` réussi.
+- Image worker AMD64 : workflow `cover-worker-image.yml` #`36126741822` réussi.
+- La vérification indépendante par `sha256sum -c SHA256SUMS` demeure reproductible et doit être archivée avec la preuve de déploiement.
