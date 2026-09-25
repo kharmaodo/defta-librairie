@@ -244,7 +244,7 @@ une certification OWASP ni une autorisation de test sur la production.
 |---|---|---|
 | 1 | Baseline de sécurité | Réalisé — matrice routes/rôles/risques/invariants dans `docs/OWASP_SECURITY_BASELINE_V1_6.md` |
 | 2 | Authentification sous charge | Réalisé — limite IP concurrente, scénario k6 isolé et procédure de recette |
-| 3 | Autorisation concurrente | À développer |
+| 3 | Autorisation concurrente | En validation — lecture et mutation concurrentes hors librairie |
 | 4 | Limites de ressources | À développer |
 | 5 | Intégrité métier concurrente | À développer |
 | 6 | Observabilité et gate de release | À développer |
