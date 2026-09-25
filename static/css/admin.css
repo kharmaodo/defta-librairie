@@ -16,6 +16,13 @@
   --input-disabled-background: #edf1ef;
   --input-focus-ring: rgba(18,94,165,.22);
   --danger: #a73737;
+  --success-soft: #e8f5ee;
+  --info: #0d5f87;
+  --info-soft: #e8f4fa;
+  --warning: #775414;
+  --warning-soft: #fff5d9;
+  --neutral: #52615b;
+  --neutral-soft: #edf1ef;
   --shadow: 0 18px 50px rgba(16,71,56,.12);
   --shadow-soft: 0 8px 28px rgba(16,71,56,.08);
   --sidebar-width: 17.5rem;
@@ -41,6 +48,12 @@
   --row-line: #294039;
   --line: #314a42;
   --danger: #ff9999;
+  --info: #8fd3f4;
+  --info-soft: #173746;
+  --warning: #f1ca72;
+  --warning-soft: #423516;
+  --neutral: #c1cec8;
+  --neutral-soft: #2a3a34;
   --shadow: 0 18px 50px rgba(0,0,0,.32);
   --shadow-soft: 0 8px 28px rgba(0,0,0,.24);
 }
@@ -591,9 +604,28 @@ tbody tr:last-child td {
   font-size: .68rem;
   font-weight: 700;
 }
-.pill.failure {
-  color: #7b2727;
+.pill.success {
+  color: var(--green-dark);
+  background: var(--success-soft);
+}
+.pill.info {
+  color: var(--info);
+  background: var(--info-soft);
+}
+.pill.warning {
+  color: var(--warning);
+  background: var(--warning-soft);
+}
+.pill.danger,.pill.failure {
+  color: var(--danger);
   background: #fff0f0;
+}
+:root[data-theme="dark"] .pill.danger,:root[data-theme="dark"] .pill.failure {
+  background: #492727;
+}
+.pill.neutral {
+  color: var(--neutral);
+  background: var(--neutral-soft);
 }
 .admin-footer {
   grid-area: footer;
