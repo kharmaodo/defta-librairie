@@ -57,6 +57,8 @@
       <ul id="nav-catalogue" hidden>
         <li><a href="#books-panel" data-dashboard-nav-link>Livres</a></li>
         <li><a href="#tags-panel" data-dashboard-nav-link>Tags</a></li>
+        <li><a href="#categories-panel" data-dashboard-nav-link>Catégories</a></li>
+        <li><a href="#publishers-panel" data-dashboard-nav-link>Éditeurs</a></li>
         <li><a href="#inventory-panel" data-dashboard-nav-link>Stocks</a></li>
         <li><a href="#book-submissions-panel" data-dashboard-nav-link>Modération des couvertures</a></li>
       </ul>
@@ -363,6 +365,18 @@
       <div class="panel-heading tag-heading"><div><p class="eyebrow">Référentiel</p><h2>Tags de la librairie</h2></div><form id="tag-form" class="filters"><label class="root-only-field" hidden>Librairie<select name="libraryId" id="tag-library"></select></label><label>Nouveau tag<input name="name" minlength="2" maxlength="50" placeholder="ex. fiqh" required></label><button class="button primary" type="submit">Ajouter</button></form></div>
       <p class="scope-note">Les tags sont uniques sans distinction de majuscules dans chaque librairie.</p>
       <div id="tags-list" class="tag-list"><span class="hint">Chargement…</span></div>
+    </section>
+
+    <section class="panel" id="categories-panel" tabindex="-1" aria-labelledby="categories-title">
+      <div class="panel-heading"><div><p class="eyebrow">Référentiel global</p><h2 id="categories-title">Catégories</h2></div><button class="button primary root-only" type="button" data-reference-create hidden>Nouvelle catégorie</button></div>
+      <p class="scope-note">Les catégories préchargées sont partagées par toutes les librairies.</p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Catégories"><table><thead><tr><th scope="col">Code</th><th scope="col">Nom</th><th scope="col">Arabe</th><th scope="col">Français</th><th scope="col">Anglais</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead><tbody><tr><td colspan="7" class="empty">Chargement…</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel" id="publishers-panel" tabindex="-1" aria-labelledby="publishers-title">
+      <div class="panel-heading"><div><p class="eyebrow">Référentiel global</p><h2 id="publishers-title">Éditeurs</h2></div><button class="button primary root-only" type="button" data-reference-create hidden>Nouvel éditeur</button></div>
+      <p class="scope-note">Les éditeurs préchargés sont partagés par toutes les librairies.</p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Éditeurs"><table><thead><tr><th scope="col">Code</th><th scope="col">Nom</th><th scope="col">Arabe</th><th scope="col">Français</th><th scope="col">Anglais</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead><tbody><tr><td colspan="7" class="empty">Chargement…</td></tr></tbody></table></div>
     </section>
 
     <section class="panel" id="books-panel" tabindex="-1">
@@ -721,6 +735,20 @@
     </div>
   </dialog>
 
+  <dialog id="catalogue-reference-dialog" class="modal narrow" aria-labelledby="catalogue-reference-dialog-title">
+    <form id="catalogue-reference-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Référentiel global</p><h2 id="catalogue-reference-dialog-title">Référentiel</h2></div><button class="icon-button" type="button" data-reference-cancel aria-label="Fermer">×</button></div>
+      <input name="id" type="hidden">
+      <label>Code<input name="code" maxlength="150" required></label>
+      <label>Nom<input name="name" maxlength="150" required></label>
+      <label>Arabe<input name="ar" maxlength="150" required></label>
+      <label>Français<input name="fr" maxlength="150" required></label>
+      <label>Anglais<input name="en" maxlength="150" required></label>
+      <p class="alert" data-reference-error role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-reference-cancel>Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
+
   <dialog id="delete-confirmation-dialog" class="modal narrow" aria-labelledby="delete-confirmation-title" aria-describedby="delete-confirmation-warning">
     <form id="delete-confirmation-form" class="entity-form">
       <div class="modal-heading">
@@ -767,6 +795,7 @@
 <script src="/static/js/admin-inventory.js" defer></script>
 <script src="/static/js/admin-sales.js" defer></script>
 <script src="/static/js/admin-tags.js" defer></script>
+<script src="/static/js/admin-catalogue-references.js" defer></script>
 <script src="/static/js/admin-auth.js" defer></script>
   <script src="/static/js/admin-procurement.js" defer></script>
   <script src="/static/js/admin-customers.js" defer></script>
