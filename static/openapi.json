@@ -2649,8 +2649,10 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "maxLength": 256
+            },
+            "description": "Recherche FTS5 optionnelle, limitée à 256 caractères."
           },
           {
             "name": "tagId",
@@ -9119,6 +9121,16 @@
               }
             }
           },
+          "400": {
+            "description": "invalid_query : terme de recherche trop long.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "500": {
             "description": "database error (details) ou erreur d’encodage.",
             "content": {
@@ -9137,8 +9149,10 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "maxLength": 256
+            },
+            "description": "Recherche FTS5 optionnelle, limitée à 256 caractères."
           },
           {
             "name": "offset",
