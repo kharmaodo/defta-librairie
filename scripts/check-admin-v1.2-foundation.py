@@ -50,7 +50,7 @@ for attribute in (
 ):
     require(attribute in HTML, f"attribut de navigation absent : {attribute}")
 
-require(len(re.findall(r"<dialog\\b", HTML)) == 22, "vingt-deux dialogues statiques sont attendus")
+require(len(re.findall(r"<dialog\b", HTML)) == 22, "vingt-deux dialogues statiques sont attendus")
 require(
     "<dialog " in SUPPLIER_RETURNS_JAVASCRIPT,
     "le dialogue dynamique de retour fournisseur est absent",
