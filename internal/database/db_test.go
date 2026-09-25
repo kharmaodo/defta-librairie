@@ -152,8 +152,8 @@ func TestSearchBooksPrefersPublicTaxonomyTranslations(t *testing.T) {
 		END;
 		INSERT INTO publishers(id, ar, fr, en) VALUES (1, 'دار الفكر', 'Dar al-Fikr', 'Dar al-Fikr');
 		INSERT INTO categories(id, ar, fr, en) VALUES (2, 'الفقه', 'Jurisprudence', 'Fiqh');
-		INSERT INTO defta(id, title, editeur, categorie, publisher_id) VALUES
-			(1, 'كتاب الفقه', 'Ancien éditeur', 'Ancienne catégorie', 1);
+		INSERT INTO defta(id, title, editeur, categorie, publisher_id, price, volume) VALUES
+			(1, 'كتاب الفقه', 'Ancien éditeur', 'Ancienne catégorie', 1, 0, 0);
 		INSERT INTO book_categories(book_id, category_id, is_primary) VALUES (1, 2, 1);
 	`); err != nil {
 		t.Fatalf("seed public taxonomy: %v", err)
