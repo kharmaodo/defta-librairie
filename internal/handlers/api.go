@@ -8,15 +8,22 @@ import (
 
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 var globalCfg *config.Config
 
-const maxAPIBooksLimit = 100
+const (
+	maxAPIBooksLimit = 100
+	maxAPISearchLength = 256
+)
+
+var ErrAPISearchTooLong = errors.New("search query exceeds maximum length")
 
 func SetConfig(c *config.Config) {
 	globalCfg = c
@@ -67,6 +74,14 @@ func nullableFloat(f sql.NullFloat64) interface{} {
 	return nil
 }
 
+func normalizeAPISearch(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if utf8.RuneCountInString(value) > maxAPISearchLength {
+		return "", ErrAPISearchTooLong
+	}
+	return value, nil
+}
+
 func normalizeAPIPagination(offsetStr, limitStr string, defaultLimit int) (int, int) {
 	offset, err := strconv.Atoi(offsetStr)
 	if err != nil || offset < 0 {
@@ -88,7 +103,12 @@ func APIBooksHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	q, err := normalizeAPISearch(r.URL.Query().Get("q"))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "invalid_query", "message": "Search query is too long"})
+		return
+	}
 	offsetStr := r.URL.Query().Get("offset")
 	limitStr := r.URL.Query().Get("limit")
 
