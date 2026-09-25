@@ -93,9 +93,18 @@
     }
 
     function init() {
-      ["categories", "publishers"].forEach(initKind);
-      dialog().querySelectorAll("[data-reference-cancel]").forEach((button) => button.addEventListener("click", () => dialog().close()));
-      form().addEventListener("submit", submit);
+      try {
+        ["categories", "publishers"].forEach(initKind);
+        dialog().querySelectorAll("[data-reference-cancel]").forEach((button) => button.addEventListener("click", () => dialog().close()));
+        form().addEventListener("submit", submit);
+      } catch (error) {
+        ["categories", "publishers"].forEach((kind) => {
+          const target = body(kind); target.replaceChildren();
+          const row = target.insertRow(); const cell = row.insertCell();
+          cell.colSpan = 7; cell.className = "empty"; cell.textContent = "Initialisation des référentiels impossible.";
+        });
+        showError(errorBox, error);
+      }
     }
     return Object.freeze({init, reload});
   }
