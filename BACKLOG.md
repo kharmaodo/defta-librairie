@@ -242,7 +242,7 @@ une certification OWASP ni une autorisation de test sur la production.
 
 | Ordre | Incrément | État |
 |---|---|---|
-| 1 | Baseline de sécurité | À développer |
+| 1 | Baseline de sécurité | Réalisé — matrice routes/rôles/risques/invariants dans `docs/OWASP_SECURITY_BASELINE_V1_6.md` |
 | 2 | Authentification sous charge | À développer |
 | 3 | Autorisation concurrente | À développer |
 | 4 | Limites de ressources | À développer |
