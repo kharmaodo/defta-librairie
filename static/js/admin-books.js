@@ -205,21 +205,9 @@
       const publisherItems = Array.isArray(publishers) ? publishers : publishers.results || [];
       const tagItems = Array.isArray(tags) ? tags : tags.results || [];
       replaceReferenceOptions(form.elements.categoryIds, categoryItems, book?.categoryIds || [], "");
-      syncPrimaryCategories(book?.primaryCategoryId);
       replaceReferenceOptions(form.elements.publisherId, publisherItems,
         book?.publisherId ? [book.publisherId] : [], "Non renseigné");
       replaceReferenceOptions(form.elements.tagIds, tagItems, book?.tagIds || [], "");
-    }
-
-    function syncPrimaryCategories(selectedPrimaryID) {
-      const form = document.querySelector("#book-form");
-      const selectedCategoryIDs = new Set(selectedValues(form.elements.categoryIds));
-      const categories = [...form.elements.categoryIds.options]
-        .filter(option => selectedCategoryIDs.has(option.value))
-        .map(option => ({id: option.value, name: option.textContent}));
-      const current = selectedPrimaryID || form.elements.primaryCategoryId.value;
-      replaceReferenceOptions(form.elements.primaryCategoryId, categories,
-        current ? [current] : [], "Non renseignée");
     }
 
     function bookPayload(form) {
@@ -234,7 +222,6 @@
       };
       const categoryIds = selectedValues(form.elements.categoryIds).map(Number);
       if (categoryIds.length) payload.categoryIds = categoryIds;
-      if (form.elements.primaryCategoryId.value) payload.primaryCategoryId = Number(form.elements.primaryCategoryId.value);
       if (form.elements.publisherId.value) payload.publisherId = Number(form.elements.publisherId.value);
       if (isRoot() && form.elements.libraryId.value) payload.libraryId = form.elements.libraryId.value;
       if (form.elements.id.value) payload.version = Number(form.elements.version.value);
@@ -294,8 +281,6 @@
         try { await reloadBooks(); }
         catch (error) { showError(errorBox, error); }
       });
-      document.querySelector("#book-form [name=categoryIds]").addEventListener("change", () => syncPrimaryCategories());
-
       document.querySelector("#book-form [name=libraryId]").addEventListener("change", async (event) => {
         if (!isRoot()) return;
         document.querySelector("#tag-library").value = event.currentTarget.value;
