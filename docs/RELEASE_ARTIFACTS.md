@@ -1,5 +1,39 @@
 # Artefacts publiés des releases
 
+## Version 1.6.0 — 25 septembre 2026
+
+Le tag annoté immuable `v1.6.0` référence le commit validé
+`d850efbfebf1aee70903b46ad9ff1fcb2383c0b7`. Les publications ont été
+déclenchées depuis `develop` et ont réussi le 25 septembre 2026.
+
+### Application
+
+| Archive publiée | Système cible | Architecture | Vérification |
+|---|---|---|---|
+| `defta-librairie-1.6.0-windows-amd64.zip` | Windows 10/11 64 bits | AMD64 | `SHA256SUMS` vérifié |
+| `defta-librairie-1.6.0-linux-amd64.tar.gz` | Linux 64 bits | AMD64 | `SHA256SUMS` vérifié |
+
+Le workflow `release-binaries.yml`, exécution `36162710304`, a publié les
+archives, `BUILD-INFO.txt` et `SHA256SUMS`. La vérification locale
+`sha256sum -c SHA256SUMS` a confirmé les deux archives.
+
+### Worker Linux AMD64
+
+Le build déclenché par le tag, exécution `36162701233`, a réussi pour
+`ghcr.io/kharmaodo/defta-cover-worker:v1.6.0` sur `linux/amd64`, avec SBOM
+et provenance. La publication manuelle de confirmation, exécution
+`36162715257`, a également réussi. Le déploiement doit épingler le digest
+vérifié de l’image et ne doit embarquer aucun secret.
+
+### Vérification locale à archiver
+
+```sh
+release_dir=$(mktemp -d)
+gh release download v1.6.0 --dir "$release_dir"
+(cd "$release_dir" && sha256sum -c SHA256SUMS)
+cat "$release_dir/BUILD-INFO.txt"
+```
+
 ## Version 1.5.0 — 25 septembre 2026
 
 Le tag annoté immuable `v1.5.0` référence le commit validé
