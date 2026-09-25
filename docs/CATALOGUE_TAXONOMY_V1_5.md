@@ -61,7 +61,7 @@ sera ajoutée que si le besoin métier est confirmé.
 | 2 | CRUD catégories et éditeurs | Réalisé — lecture authentifiée, mutations root-only, désactivation, audit et OpenAPI |
 | 3 | Relations livre | Réalisé — migration 030, édition atomique, validation des références actives, OpenAPI et tests HTTP propriétaire |
 | 4 | Tags relationnels | Réalisé — migration 031, associations atomiques, filtre `tagId`, migration CSV compatible, OpenAPI et tests HTTP |
-| 5 | Interface publique/admin | Réalisé — sélecteurs accessibles, soumissions multipart, filtre `tagId`, traduction publique AR/FR/EN avec repli legacy et tests navigateur |
+| 5 | Interface publique/admin | Partiel — sélecteurs accessibles, soumissions multipart, filtre `tagId`, traduction publique AR/FR/EN et tests ; écrans CRUD root des référentiels à livrer |
 | 6 | Stabilisation | Go/FTS5, Playwright, export, OpenAPI, recette de migration et release |
 
 ## Critères de clôture
