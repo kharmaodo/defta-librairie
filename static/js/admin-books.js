@@ -176,7 +176,9 @@
     }
 
     function replaceReferenceOptions(select, values, selected, placeholder) {
-      const selectedSet = new Set((selected || []).map(String));
+      const items = Array.isArray(values) ? values : Array.isArray(values?.results) ? values.results : [];
+      const selectedValues = Array.isArray(selected) ? selected : selected === null || selected === undefined ? [] : [selected];
+      const selectedSet = new Set(selectedValues.map(String));
       select.replaceChildren();
       if (placeholder) {
         const option = document.createElement("option");
@@ -184,7 +186,7 @@
         option.textContent = placeholder;
         select.append(option);
       }
-      values.forEach(value => {
+      items.forEach(value => {
         const option = document.createElement("option");
         option.value = String(value.id);
         option.textContent = value.name || value.code;
