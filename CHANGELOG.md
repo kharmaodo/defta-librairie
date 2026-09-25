@@ -2,6 +2,16 @@
 
 ## [À paraître]
 
+### Taxonomie multilingue du catalogue
+
+- Seed idempotent de 29 catégories et 14 éditeurs traduits en arabe, français et anglais.
+- Référentiels globaux consultables par les propriétaires ; création, modification et désactivation réservées au super-admin root, avec audit.
+- Éditeur principal et catégories relationnelles d’un livre enregistrés de façon atomique ; les tags restent rattachés à leur librairie.
+- Recherche publique enrichie par les libellés de taxonomie traduits, avec repli compatible sur les champs historiques.
+- Écrans d’administration Catégories et Éditeurs, et sélecteurs relationnels dans le formulaire Livre.
+- Migrations SQLite compatibles, contrat OpenAPI, tests HTTP, contrôles d’accessibilité et parcours navigateur mis à jour.
+
+
 ### Modération locale des couvertures
 
 - Modèle NSFW local isolé dans le conteneur `nsfw-moderator` : aucune couverture n’est transmise à un prestataire externe.

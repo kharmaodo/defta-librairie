@@ -36,6 +36,7 @@ Elle s’arrête dès le premier échec et ne touche pas à la base applicative.
 | Dashboard v1.1 | `check-admin-dashboard.py` et `admin-dashboard.spec.cjs` |
 | API et exploitation | Contrat OpenAPI, sondes, métriques et test de restauration |
 | Couvertures v1.4 | Validation des sources, outbox, worker JetStream, cycle de vie, lecture privée et `book-covers.spec.cjs` |
+| Taxonomie v1.5 | Seed AR/FR/EN, migrations 029–031, CRUD root, relations livre, OpenAPI, `check-delivery.sh` et parcours Chromium |
 
 ## Checklist de déploiement
 
@@ -50,6 +51,7 @@ Elle s’arrête dès le premier échec et ne touche pas à la base applicative.
 - Conserver l’artefact précédent et documenter le responsable du retour arrière.
 - Si les couvertures sont activées : vérifier bucket privé, volume SQLite partagé avec le worker, persistance JetStream, sauvegarde MinIO et reprise de l’outbox.
 - Contrôler l’upload, les états asynchrones, la lecture autorisée, le remplacement et le nettoyage après rétention.
+- Vérifier les migrations 029 à 031 sur une copie de base existante et tester la création/modification d’un livre avec éditeur, catégories et tags.
 
 ## Décision de mise en production
 

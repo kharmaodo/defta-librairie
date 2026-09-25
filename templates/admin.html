@@ -57,6 +57,8 @@
       <ul id="nav-catalogue" hidden>
         <li><a href="#books-panel" data-dashboard-nav-link>Livres</a></li>
         <li><a href="#tags-panel" data-dashboard-nav-link>Tags</a></li>
+        <li><a href="#categories-panel" data-dashboard-nav-link>Catégories</a></li>
+        <li><a href="#publishers-panel" data-dashboard-nav-link>Éditeurs</a></li>
         <li><a href="#inventory-panel" data-dashboard-nav-link>Stocks</a></li>
         <li><a href="#book-submissions-panel" data-dashboard-nav-link>Modération des couvertures</a></li>
       </ul>
@@ -365,6 +367,18 @@
       <div id="tags-list" class="tag-list"><span class="hint">Chargement…</span></div>
     </section>
 
+    <section class="panel" id="categories-panel" tabindex="-1" aria-labelledby="categories-title">
+      <div class="panel-heading"><div><p class="eyebrow">Référentiel global</p><h2 id="categories-title">Catégories</h2></div><button class="button primary root-only" type="button" data-reference-create hidden>Nouvelle catégorie</button></div>
+      <p class="scope-note">Les catégories préchargées sont partagées par toutes les librairies.</p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Catégories"><table><thead><tr><th scope="col">Code</th><th scope="col">Nom</th><th scope="col">Arabe</th><th scope="col">Français</th><th scope="col">Anglais</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead><tbody><tr><td colspan="7" class="empty">Chargement…</td></tr></tbody></table></div>
+    </section>
+
+    <section class="panel" id="publishers-panel" tabindex="-1" aria-labelledby="publishers-title">
+      <div class="panel-heading"><div><p class="eyebrow">Référentiel global</p><h2 id="publishers-title">Éditeurs</h2></div><button class="button primary root-only" type="button" data-reference-create hidden>Nouvel éditeur</button></div>
+      <p class="scope-note">Les éditeurs préchargés sont partagés par toutes les librairies.</p>
+      <div class="table-wrap" tabindex="0" role="region" aria-label="Éditeurs"><table><thead><tr><th scope="col">Code</th><th scope="col">Nom</th><th scope="col">Arabe</th><th scope="col">Français</th><th scope="col">Anglais</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead><tbody><tr><td colspan="7" class="empty">Chargement…</td></tr></tbody></table></div>
+    </section>
+
     <section class="panel" id="books-panel" tabindex="-1">
       <div class="panel-heading book-heading"><div><p class="eyebrow">Catalogue privé</p><h2>Livres</h2></div><div class="heading-actions"><form id="book-search-form" class="inline-search"><input name="q" maxlength="200" placeholder="Titre, auteur, tag…" aria-label="Rechercher dans les livres"><button class="button ghost" type="submit">Rechercher</button></form><button id="add-book-button" class="button primary" type="button">Nouveau livre</button></div></div>
       <div class="table-wrap">
@@ -409,6 +423,8 @@
       <div class="pagination"><button id="sessions-previous" class="button ghost" type="button">Précédent</button><span id="sessions-page-label" class="hint">Page 1</span><button id="sessions-next" class="button ghost" type="button">Suivant</button></div>
     </section>
     <section class="panel" id="supplier-returns-panel" tabindex="-1" aria-label="Retours fournisseurs"></section>
+  <section id="book-submissions-panel" class="panel"><div class="panel-heading"><div><p class="eyebrow">Modération</p><h2>Soumissions de couvertures</h2></div><button class="button ghost" type="button">Actualiser</button></div><p data-submission-notice class="hint"></p><div class="table-wrap"><table><thead><tr><th scope="col">Titre</th><th scope="col">État</th><th scope="col">Score</th><th scope="col">Décision</th><th scope="col">Livre créé</th><th scope="col">Actions</th></tr></thead><tbody></tbody></table></div></section>
+
   </main>
 
   <dialog id="owner-dialog" class="modal" aria-labelledby="owner-form-title">
@@ -450,23 +466,20 @@
       <div class="form-grid">
         <label class="full root-only-field" hidden>Librairie<select name="libraryId"></select></label>
         <label class="full">Titre<input name="title" maxlength="300" required></label>
-        <label>Auteur<input name="auteur"></label><label>Éditeur (legacy)<input name="editeur"></label>
+        <label>Auteur<input name="auteur"></label>
         <label>Éditeur principal<select name="publisherId"><option value="">Non renseigné</option></select></label>
         <label>Catégories<select name="categoryIds" multiple size="5" aria-describedby="book-categories-help"></select><small id="book-categories-help">Sélectionnez une ou plusieurs catégories.</small></label>
-        <label>Catégorie principale<select name="primaryCategoryId"><option value="">Non renseignée</option></select></label>
         <label>Tags relationnels<select name="tagIds" multiple size="5" aria-describedby="book-tags-help"></select><small id="book-tags-help">Tags propres à la librairie.</small></label>
         <label>Prix<input name="price" type="number" min="0" step="0.01" value="0" required></label>
         <label>Volume<input name="volume" type="number" min="0" step="1" value="0" required></label>
-        <label>Statut<select name="status"><option value="AVAILABLE">Disponible</option><option value="UNAVAILABLE">Indisponible</option><option value="OUT_OF_STOCK">Rupture</option></select></label>
-        <label>Catégorie<input name="categorie" maxlength="120"></label>
-        <label class="full">Tags<input name="tags" list="tag-suggestions" maxlength="500" placeholder="arabe, fiqh, promotion"><datalist id="tag-suggestions"></datalist></label>
-        <input name="coverUrl" type="hidden">
+<input name="coverUrl" type="hidden">
+        <label class="full">Statut<select name="status"><option value="AVAILABLE">Disponible</option><option value="UNAVAILABLE">Indisponible</option><option value="OUT_OF_STOCK">Rupture</option></select></label>
         <div class="full book-cover-panel">
           <div class="book-cover-preview">
             <img id="book-cover-preview" alt="Couverture par défaut" src="/static/img/book-cover-placeholder.svg">
           </div>
           <div>
-            <label for="book-cover-file">Couverture (JPEG ou PNG, 5 Mo maximum)</label>
+                    <label for="book-cover-file">Couverture (JPEG ou PNG, 5 Mo maximum)</label>
             <input id="book-cover-file" name="cover" type="file" accept="image/jpeg,image/png">
             <p id="book-cover-status" role="status" aria-live="polite">Aucune couverture</p>
             <button id="book-cover-retry" class="button ghost" type="button" hidden>Relancer le traitement</button>
@@ -719,6 +732,20 @@
     </div>
   </dialog>
 
+  <dialog id="catalogue-reference-dialog" class="modal narrow" aria-labelledby="catalogue-reference-dialog-title">
+    <form id="catalogue-reference-form" class="entity-form">
+      <div class="modal-heading"><div><p class="eyebrow">Référentiel global</p><h2 id="catalogue-reference-dialog-title">Référentiel</h2></div><button class="icon-button" type="button" data-reference-cancel aria-label="Fermer">×</button></div>
+      <input name="id" type="hidden">
+      <label>Code<input name="code" maxlength="150" required></label>
+      <label>Nom<input name="name" maxlength="150" required></label>
+      <label>Arabe<input name="ar" maxlength="150" required></label>
+      <label>Français<input name="fr" maxlength="150" required></label>
+      <label>Anglais<input name="en" maxlength="150" required></label>
+      <p class="alert" data-reference-error role="alert" hidden></p>
+      <div class="modal-actions"><button class="button ghost" type="button" data-reference-cancel>Annuler</button><button class="button primary" type="submit">Enregistrer</button></div>
+    </form>
+  </dialog>
+
   <dialog id="delete-confirmation-dialog" class="modal narrow" aria-labelledby="delete-confirmation-title" aria-describedby="delete-confirmation-warning">
     <form id="delete-confirmation-form" class="entity-form">
       <div class="modal-heading">
@@ -752,8 +779,6 @@
     </form>
   </dialog>
 
-  <section id="book-submissions-panel" class="panel"><div class="panel-heading"><div><p class="eyebrow">Modération</p><h2>Soumissions de couvertures</h2></div><button class="button ghost" type="button">Actualiser</button></div><p data-submission-notice class="hint"></p><div class="table-wrap"><table><thead><tr><th scope="col">Titre</th><th scope="col">État</th><th scope="col">Score</th><th scope="col">Décision</th><th scope="col">Livre créé</th><th scope="col">Actions</th></tr></thead><tbody></tbody></table></div></section>
-
   <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
   <script src="/static/js/admin-navigation.js" defer></script>
   <script src="/static/js/admin-http.js" defer></script>
@@ -762,12 +787,13 @@
 <script src="/static/js/admin-audit.js" defer></script>
 <script src="/static/js/admin-sessions.js" defer></script>
 <script src="/static/js/admin-owners.js" defer></script>
-<script src="/static/js/admin-books.js" defer></script>
+<script src="/static/js/admin-books.js?v=taxonomy-ui-2" defer></script>
 <script src="/static/js/admin-book-submissions.js" defer></script>
 <script src="/static/js/admin-inventory.js" defer></script>
 <script src="/static/js/admin-sales.js" defer></script>
 <script src="/static/js/admin-tags.js" defer></script>
-<script src="/static/js/admin-auth.js" defer></script>
+<script src="/static/js/admin-catalogue-references.js?v=taxonomy-ui-2" defer></script>
+<script src="/static/js/admin-auth.js?v=taxonomy-ui-2" defer></script>
   <script src="/static/js/admin-procurement.js" defer></script>
   <script src="/static/js/admin-customers.js" defer></script>
   <script src="/static/js/admin-customer-history.js" defer></script>

@@ -151,12 +151,9 @@
       form.elements.version.value = book ? book.version : "";
       form.elements.title.value = book ? book.title : "";
       form.elements.auteur.value = book ? book.auteur || "" : "";
-      form.elements.editeur.value = book ? book.editeur || "" : "";
       form.elements.price.value = book ? book.price : 0;
       form.elements.volume.value = book ? book.volume : 0;
       form.elements.status.value = book ? book.status || "AVAILABLE" : "AVAILABLE";
-      form.elements.categorie.value = book ? book.categorie || "" : "";
-      form.elements.tags.value = book ? book.tags || "" : "";
       form.elements.coverUrl.value = book ? book.coverUrl || "" : "";
       form.elements.libraryId.value = book ? book.libraryId || "" : "";
       form.elements.libraryId.disabled = Boolean(book);
@@ -176,7 +173,9 @@
     }
 
     function replaceReferenceOptions(select, values, selected, placeholder) {
-      const selectedSet = new Set((selected || []).map(String));
+      const items = Array.isArray(values) ? values : Array.isArray(values?.results) ? values.results : [];
+      const selectedValues = Array.isArray(selected) ? selected : selected === null || selected === undefined ? [] : [selected];
+      const selectedSet = new Set(selectedValues.map(String));
       select.replaceChildren();
       if (placeholder) {
         const option = document.createElement("option");
@@ -184,7 +183,7 @@
         option.textContent = placeholder;
         select.append(option);
       }
-      values.forEach(value => {
+      items.forEach(value => {
         const option = document.createElement("option");
         option.value = String(value.id);
         option.textContent = value.name || value.code;
@@ -202,40 +201,27 @@
         apiFetch("/api/manage/publishers"),
         isRoot() && !libraryId ? Promise.resolve([]) : apiFetch(`/api/manage/tags${tagQuery}`)
       ]);
-      replaceReferenceOptions(form.elements.categoryIds, categories, book?.categoryIds || [], "");
-      syncPrimaryCategories(book?.primaryCategoryId);
-      replaceReferenceOptions(form.elements.publisherId, publishers,
+      const categoryItems = Array.isArray(categories) ? categories : categories.results || [];
+      const publisherItems = Array.isArray(publishers) ? publishers : publishers.results || [];
+      const tagItems = Array.isArray(tags) ? tags : tags.results || [];
+      replaceReferenceOptions(form.elements.categoryIds, categoryItems, book?.categoryIds || [], "");
+      replaceReferenceOptions(form.elements.publisherId, publisherItems,
         book?.publisherId ? [book.publisherId] : [], "Non renseigné");
-      replaceReferenceOptions(form.elements.tagIds, tags, book?.tagIds || [], "");
-    }
-
-    function syncPrimaryCategories(selectedPrimaryID) {
-      const form = document.querySelector("#book-form");
-      const selectedCategoryIDs = new Set(selectedValues(form.elements.categoryIds));
-      const categories = [...form.elements.categoryIds.options]
-        .filter(option => selectedCategoryIDs.has(option.value))
-        .map(option => ({id: option.value, name: option.textContent}));
-      const current = selectedPrimaryID || form.elements.primaryCategoryId.value;
-      replaceReferenceOptions(form.elements.primaryCategoryId, categories,
-        current ? [current] : [], "Non renseignée");
+      replaceReferenceOptions(form.elements.tagIds, tagItems, book?.tagIds || [], "");
     }
 
     function bookPayload(form) {
       const payload = {
         title: form.elements.title.value,
         auteur: form.elements.auteur.value,
-        editeur: form.elements.editeur.value,
         price: Number(form.elements.price.value),
         volume: Number(form.elements.volume.value),
         status: form.elements.status.value,
-        tags: form.elements.tags.value,
-        categorie: form.elements.categorie.value,
         coverUrl: form.elements.coverUrl.value,
         tagIds: selectedValues(form.elements.tagIds)
       };
       const categoryIds = selectedValues(form.elements.categoryIds).map(Number);
       if (categoryIds.length) payload.categoryIds = categoryIds;
-      if (form.elements.primaryCategoryId.value) payload.primaryCategoryId = Number(form.elements.primaryCategoryId.value);
       if (form.elements.publisherId.value) payload.publisherId = Number(form.elements.publisherId.value);
       if (isRoot() && form.elements.libraryId.value) payload.libraryId = form.elements.libraryId.value;
       if (form.elements.id.value) payload.version = Number(form.elements.version.value);
@@ -295,8 +281,6 @@
         try { await reloadBooks(); }
         catch (error) { showError(errorBox, error); }
       });
-      document.querySelector("#book-form [name=categoryIds]").addEventListener("change", () => syncPrimaryCategories());
-
       document.querySelector("#book-form [name=libraryId]").addEventListener("change", async (event) => {
         if (!isRoot()) return;
         document.querySelector("#tag-library").value = event.currentTarget.value;

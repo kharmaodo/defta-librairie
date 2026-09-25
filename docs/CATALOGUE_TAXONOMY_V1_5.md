@@ -19,7 +19,7 @@ sélectionne dans les formulaires de livres.
 categories(id, code, ar, fr, en, active)
 publishers(id, code, ar, fr, en, active)
 defta(..., publisher_id)
-book_categories(book_id, category_id, is_primary)
+book_categories(book_id, category_id)
 library_tags(id, library_id, name, normalized_name, ...)
 book_tags(book_id, tag_id)
 ```
@@ -28,8 +28,8 @@ Une édition a exactement un éditeur principal. Les coéditions restent hors
 périmètre ; elles pourront être introduites plus tard avec une relation
 spécialisée sans dégrader le modèle courant.
 
-Un livre possède une catégorie principale et peut avoir des catégories
-secondaires. La contrainte garantit une seule catégorie principale par livre.
+Un livre peut appartenir à une ou plusieurs catégories. La relation est sans
+hiérarchie : le choix d’une catégorie principale n’est pas nécessaire.
 
 ## Seed de démarrage
 
@@ -61,7 +61,7 @@ sera ajoutée que si le besoin métier est confirmé.
 | 2 | CRUD catégories et éditeurs | Réalisé — lecture authentifiée, mutations root-only, désactivation, audit et OpenAPI |
 | 3 | Relations livre | Réalisé — migration 030, édition atomique, validation des références actives, OpenAPI et tests HTTP propriétaire |
 | 4 | Tags relationnels | Réalisé — migration 031, associations atomiques, filtre `tagId`, migration CSV compatible, OpenAPI et tests HTTP |
-| 5 | Interface publique/admin | Réalisé — sélecteurs accessibles, soumissions multipart, filtre `tagId`, traduction publique AR/FR/EN avec repli legacy et tests navigateur |
+| 5 | Interface publique/admin | Réalisé — écrans Catégories/Éditeurs root, lecture propriétaire, sélecteurs relationnels de livres, recherche publique traduite AR/FR/EN et tests |
 | 6 | Stabilisation | Go/FTS5, Playwright, export, OpenAPI, recette de migration et release |
 
 ## Critères de clôture
@@ -69,7 +69,7 @@ sera ajoutée que si le besoin métier est confirmé.
 - Un nouveau client reçoit le seed sans doublon.
 - Les libellés AR/FR/EN sont retournés sans dépendre de l’identifiant numérique.
 - Une édition possède un éditeur principal actif.
-- Une seule catégorie principale est autorisée par livre.
+- Un livre peut sélectionner une ou plusieurs catégories actives.
 - Les catégories secondaires et tags enrichissent la recherche sans doublon.
 - Aucune donnée catalogue existante n’est perdue durant la migration.
 - Les contrôles Go, OpenAPI, accessibilité, Playwright et livraison sont verts.

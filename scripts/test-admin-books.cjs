@@ -15,6 +15,8 @@ function setup(api) {
   });return nodes.get(id);
  };
  for(const name of ['id','version','title','auteur','editeur','price','volume','status','categorie','tags','coverUrl','libraryId'])get('#book-form').elements[name]={value:''};
+ const select=()=>({value:'',options:[],replaceChildren(){this.options=[];},append(option){this.options.push(option);},get selectedOptions(){return this.options.filter(option=>option.selected);}});
+ for(const name of ['publisherId','categoryIds','primaryCategoryId','tagIds'])get('#book-form').elements[name]=select();
  get('#book-form').elements.cover={value:'',files:[],disabled:false};
  get('#book-search-form').elements.q={value:''};
  const window={
@@ -25,7 +27,13 @@ function setup(api) {
  vm.runInNewContext(source,{window,document:{querySelector:get,createElement:element},URLSearchParams,Intl,clearTimeout,setTimeout});
  h.get=get;h.errorBox={};
  h.module=window.DeftaBooks.create({
-  apiFetch:async(url,options)=>{h.calls.push({url,options});return api?api(url,options):page();},
+  apiFetch:async(url,options)=>{
+   h.calls.push({url,options});
+   if(url==='/api/manage/categories')return [{id:2,name:'Fiqh'}];
+   if(url==='/api/manage/publishers')return [{id:1,name:'Dar al Fikr'}];
+   if(url.startsWith('/api/manage/tags'))return [{id:'tag-1',name:'Fiqh'}];
+   return api?api(url,options):page();
+  },
   textCell(row,value){const cell={textContent:value,append(...children){this.children=children;},replaceChildren(...buttons){this.buttons=buttons;}};row.cells.push(cell);return cell;},
   actionButton:(label,action,id)=>({label,action,id}),formatDate:value=>value,
   showError:(box,error)=>{box.textContent=error.message;box.hidden=false;},errorBox:h.errorBox,isRoot:()=>h.root,
