@@ -46,7 +46,7 @@
 
     function open(kind, item) {
       state.kind = kind;
-      const referenceForm = form(); referenceForm.reset();
+      const referenceForm = form(); referenceForm.reset(); referenceForm.querySelector("[data-reference-error]").hidden = true;
       referenceForm.elements.id.value = item ? item.id : "";
       referenceForm.elements.code.value = item?.code || "";
       referenceForm.elements.name.value = item?.name || "";
@@ -86,7 +86,7 @@
 
     function init() {
       ["categories", "publishers"].forEach(initKind);
-      dialog().querySelector("[data-reference-cancel]").addEventListener("click", () => dialog().close());
+      dialog().querySelectorAll("[data-reference-cancel]").forEach((button) => button.addEventListener("click", () => dialog().close()));
       form().addEventListener("submit", submit);
     }
     return Object.freeze({init, reload});
