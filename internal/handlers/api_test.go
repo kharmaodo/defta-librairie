@@ -1,6 +1,9 @@
 package handlers
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestNormalizeAPIPagination(t *testing.T) {
 	tests := []struct {
@@ -25,5 +28,19 @@ func TestNormalizeAPIPagination(t *testing.T) {
 				t.Fatalf("got offset=%d limit=%d, want offset=%d limit=%d", offset, limit, tt.wantOffset, tt.wantLimit)
 			}
 		})
+	}
+}
+
+
+func TestNormalizeAPISearch(t *testing.T) {
+	search, err := normalizeAPISearch("  كتاب  ")
+	if err != nil || search != "كتاب" {
+		t.Fatalf("search=%q err=%v", search, err)
+	}
+	if _, err := normalizeAPISearch(strings.Repeat("a", maxAPISearchLength+1)); err == nil {
+		t.Fatal("expected oversized search to be rejected")
+	}
+	if search, err := normalizeAPISearch(strings.Repeat("أ", maxAPISearchLength)); err != nil || len([]rune(search)) != maxAPISearchLength {
+		t.Fatalf("expected %d-rune search to be accepted: len=%d err=%v", maxAPISearchLength, len([]rune(search)), err)
 	}
 }
