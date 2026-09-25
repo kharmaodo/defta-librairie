@@ -2,6 +2,52 @@
   "use strict";
   let isRoot = false;
   let retryButton = null;
+  const moderationStatus = Object.freeze({
+    PENDING_SCAN: ["En attente d’analyse", "info"],
+    SCANNING: ["Analyse en cours", "info"],
+    APPROVED: ["Approuvée", "success"],
+    REJECTED: ["Refusée", "danger"],
+    REVIEW_REQUIRED: ["Revue manuelle requise", "warning"],
+    FAILED: ["Analyse impossible", "failure"]
+  });
+  const moderationDecision = Object.freeze({
+    MODEL_SAFE: ["Contenu conforme", "success"],
+    MODEL_UNSAFE: ["Contenu non conforme", "danger"],
+    RETRY_REQUESTED: ["Nouvelle analyse demandée", "info"],
+    MODERATOR_UNAVAILABLE: ["Service de modération indisponible", "failure"],
+    MANUAL_APPROVED: ["Approuvée manuellement", "success"],
+    MANUAL_REJECTED: ["Refusée manuellement", "danger"]
+  });
+
+  function pill(label, tone, code) {
+    const value = document.createElement("span");
+    value.className = `pill ${tone}`;
+    value.textContent = label;
+    value.title = code;
+    return value;
+  }
+
+  function statusPill(status) {
+    const [label, tone] = moderationStatus[status] || ["État inconnu", "neutral"];
+    return pill(label, tone, status || "");
+  }
+
+  function decisionPill(decision) {
+    if (!decision) return null;
+    const [label, tone] = moderationDecision[decision] || ["Décision enregistrée", "neutral"];
+    return pill(label, tone, decision);
+  }
+
+  function appendTextCell(row, value) {
+    const cell = row.insertCell();
+    cell.textContent = value;
+  }
+
+  function appendPillCell(row, value) {
+    const cell = row.insertCell();
+    if (value) cell.append(value);
+    else cell.textContent = "—";
+  }
 
   function actionButton(label, decision, id) {
     const button = document.createElement("button");
@@ -66,9 +112,11 @@
       body.replaceChildren();
       data.results.forEach((item) => {
         const row = body.insertRow();
-        [item.title, item.moderationStatus, item.moderationScore ?? "—", item.decisionCode || "—", item.createdBookId || "—"].forEach((value) => {
-          const cell = row.insertCell(); cell.textContent = value;
-        });
+        appendTextCell(row, item.title);
+        appendPillCell(row, statusPill(item.moderationStatus));
+        appendTextCell(row, item.moderationScore ?? "—");
+        appendPillCell(row, decisionPill(item.decisionCode));
+        appendTextCell(row, item.createdBookId || "—");
         const actions = row.insertCell();
         if (isRoot && item.moderationStatus === "REVIEW_REQUIRED") {
           actions.append(actionButton("Approuver", "APPROVE", item.id), actionButton("Refuser", "REJECT", item.id));
