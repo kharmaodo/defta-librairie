@@ -36,7 +36,7 @@ correctifs pour les risques pertinents de l’application.
 | Ordre | US | Livrable vérifiable | Risques principaux | État |
 |---|---|---|---|---|
 | 1 | US-1 — Baseline de sécurité | Cartographie des routes, rôles, objets sensibles et flux métier ; matrice risque → contrôle → test | API1, API3, API5, API8, API9 | Réalisé — `docs/OWASP_SECURITY_BASELINE_V1_6.md` |
-| 2 | US-2 — Authentification sous charge | Rafales de connexions erronées, anti-énumération, verrouillage/throttling, renouvellement et révocation de session testés | API2, consommation abusive | À développer |
+| 2 | US-2 — Authentification sous charge | Rafales de connexions erronées, anti-énumération, verrouillage/throttling, renouvellement et révocation de session testés | API2, consommation abusive | En validation — tests concurrents et scénario k6 isolé |
 | 3 | US-3 — Autorisation concurrente | Matrice root/propriétaire et librairie A/B exécutée en parallèle ; toute lecture ou mutation hors périmètre répond 403/404 sans fuite | API1, API3, API5 | À développer |
 | 4 | US-4 — Limites de ressources | Limites et comportement mesurés pour upload de couverture, recherche FTS, pagination, exports et endpoints coûteux ; réponses d’erreur cohérentes | API4, API6 | À développer |
 | 5 | US-5 — Intégrité métier concurrente | Ventes, paiements, retours, réceptions et couvertures soumis à concurrence ; absence de double mouvement, double paiement ou transition impossible | API6, logique métier | À développer |
