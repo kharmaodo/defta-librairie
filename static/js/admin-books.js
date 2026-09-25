@@ -202,11 +202,14 @@
         apiFetch("/api/manage/publishers"),
         isRoot() && !libraryId ? Promise.resolve([]) : apiFetch(`/api/manage/tags${tagQuery}`)
       ]);
-      replaceReferenceOptions(form.elements.categoryIds, categories, book?.categoryIds || [], "");
+      const categoryItems = Array.isArray(categories) ? categories : categories.results || [];
+      const publisherItems = Array.isArray(publishers) ? publishers : publishers.results || [];
+      const tagItems = Array.isArray(tags) ? tags : tags.results || [];
+      replaceReferenceOptions(form.elements.categoryIds, categoryItems, book?.categoryIds || [], "");
       syncPrimaryCategories(book?.primaryCategoryId);
-      replaceReferenceOptions(form.elements.publisherId, publishers,
+      replaceReferenceOptions(form.elements.publisherId, publisherItems,
         book?.publisherId ? [book.publisherId] : [], "Non renseigné");
-      replaceReferenceOptions(form.elements.tagIds, tags, book?.tagIds || [], "");
+      replaceReferenceOptions(form.elements.tagIds, tagItems, book?.tagIds || [], "");
     }
 
     function syncPrimaryCategories(selectedPrimaryID) {
