@@ -128,7 +128,7 @@ func TestBookManagementHTTPPersistsTaxonomyRelations(t *testing.T) {
 		t.Fatalf("decode listed books: %v", err)
 	}
 	if len(listed.Results) != 1 || len(listed.Results[0].CategoryIDs) != 1 ||
-		listed.Results[0].CategoryIDs[0] != nahwID {
+		listed.Results[0].CategoryIDs[0] != nahwID || listed.Results[0].HasActiveCover {
 		t.Fatalf("listed book taxonomy=%+v", listed.Results)
 	}
 

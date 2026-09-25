@@ -13740,6 +13740,10 @@
             "type": "string",
             "nullable": true
           },
+          "hasActiveCover": {
+            "type": "boolean",
+            "description": "Indique si une couverture READY active peut être affichée"
+          },
           "score": {
             "type": "object",
             "properties": {
