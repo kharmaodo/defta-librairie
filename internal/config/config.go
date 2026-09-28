@@ -48,9 +48,11 @@ type Config struct {
 	NATSImportConsumer        string
 	NATSOCRSubject            string
 	NATSOCRConsumer           string
-	OCREngine                  string
-	OCRLanguage                string
-	OCRTimeout                 time.Duration
+	NATSMatchSubject          string
+	NATSMatchConsumer         string
+	OCREngine                 string
+	OCRLanguage               string
+	OCRTimeout                time.Duration
 	NSFWModerationEndpoint    string
 }
 
@@ -81,27 +83,29 @@ func Load() (*Config, error) {
 		MinIOSourceRetentionHours: getEnvInt("MINIO_SOURCE_RETENTION_HOURS", 24),
 		// v1.7.0 accepts up to 10 MiB per cover; the import total is enforced
 		// separately by the HTTP handler.
-		CoverMaxBytes:             getEnvPositiveInt64("COVER_MAX_BYTES", 10*1024*1024),
-		CoverMaxPixels:            uint64(getEnvPositiveInt64("COVER_MAX_PIXELS", 24_000_000)),
-		NATSURL:                   getEnv("NATS_URL", "nats://localhost:4222"),
-		NATSUser:                  getEnv("NATS_USER", ""),
-		NATSPassword:              getEnv("NATS_PASSWORD", ""),
-		NATSCoversStream:          getEnv("NATS_COVERS_STREAM", "BOOK_COVERS"),
-		NATSCoversSubject:         getEnv("NATS_COVERS_SUBJECT", "book.covers.process.v1"),
-		NATSCoversConsumer:        getEnv("NATS_COVERS_CONSUMER", "cover-worker-v1"),
-		CoverWorkerMaxDeliver:     int(getEnvPositiveInt64("COVER_WORKER_MAX_DELIVER", 5)),
-		NATSSubmissionStream:      getEnv("NATS_SUBMISSION_STREAM", "BOOK_SUBMISSIONS"),
-		NATSSubmissionSubject:     getEnv("NATS_SUBMISSION_SUBJECT", "book.submissions.moderate.v1"),
-		NATSSubmissionConsumer:    getEnv("NATS_SUBMISSION_CONSUMER", "book-submission-worker-v1"),
-		NATSImportStream:          getEnv("NATS_IMPORT_STREAM", "COVER_IMPORTS"),
-		NATSImportSubject:         getEnv("NATS_IMPORT_SUBJECT", "cover.imports.moderate.v1"),
-		NATSImportConsumer:        getEnv("NATS_IMPORT_CONSUMER", "cover-import-moderation-worker-v1"),
-		NATSOCRSubject:            getEnv("NATS_OCR_SUBJECT", "cover.imports.ocr.v1"),
-		NATSOCRConsumer:           getEnv("NATS_OCR_CONSUMER", "cover-import-ocr-worker-v1"),
-		OCREngine:                  getEnv("OCR_ENGINE", "tesseract"),
-		OCRLanguage:                getEnv("OCR_LANGUAGE", "ara"),
-		OCRTimeout:                 time.Duration(getEnvPositiveInt64("OCR_TIMEOUT_SECONDS", 20)) * time.Second,
-		NSFWModerationEndpoint:    getEnv("NSFW_MODERATION_ENDPOINT", "http://nsfw-moderator:8090"),
+		CoverMaxBytes:          getEnvPositiveInt64("COVER_MAX_BYTES", 10*1024*1024),
+		CoverMaxPixels:         uint64(getEnvPositiveInt64("COVER_MAX_PIXELS", 24_000_000)),
+		NATSURL:                getEnv("NATS_URL", "nats://localhost:4222"),
+		NATSUser:               getEnv("NATS_USER", ""),
+		NATSPassword:           getEnv("NATS_PASSWORD", ""),
+		NATSCoversStream:       getEnv("NATS_COVERS_STREAM", "BOOK_COVERS"),
+		NATSCoversSubject:      getEnv("NATS_COVERS_SUBJECT", "book.covers.process.v1"),
+		NATSCoversConsumer:     getEnv("NATS_COVERS_CONSUMER", "cover-worker-v1"),
+		CoverWorkerMaxDeliver:  int(getEnvPositiveInt64("COVER_WORKER_MAX_DELIVER", 5)),
+		NATSSubmissionStream:   getEnv("NATS_SUBMISSION_STREAM", "BOOK_SUBMISSIONS"),
+		NATSSubmissionSubject:  getEnv("NATS_SUBMISSION_SUBJECT", "book.submissions.moderate.v1"),
+		NATSSubmissionConsumer: getEnv("NATS_SUBMISSION_CONSUMER", "book-submission-worker-v1"),
+		NATSImportStream:       getEnv("NATS_IMPORT_STREAM", "COVER_IMPORTS"),
+		NATSImportSubject:      getEnv("NATS_IMPORT_SUBJECT", "cover.imports.moderate.v1"),
+		NATSImportConsumer:     getEnv("NATS_IMPORT_CONSUMER", "cover-import-moderation-worker-v1"),
+		NATSOCRSubject:         getEnv("NATS_OCR_SUBJECT", "cover.imports.ocr.v1"),
+		NATSOCRConsumer:        getEnv("NATS_OCR_CONSUMER", "cover-import-ocr-worker-v1"),
+		NATSMatchSubject:       getEnv("NATS_MATCH_SUBJECT", "cover.imports.match.v1"),
+		NATSMatchConsumer:      getEnv("NATS_MATCH_CONSUMER", "cover-import-matching-worker-v1"),
+		OCREngine:              getEnv("OCR_ENGINE", "tesseract"),
+		OCRLanguage:            getEnv("OCR_LANGUAGE", "ara"),
+		OCRTimeout:             time.Duration(getEnvPositiveInt64("OCR_TIMEOUT_SECONDS", 20)) * time.Second,
+		NSFWModerationEndpoint: getEnv("NSFW_MODERATION_ENDPOINT", "http://nsfw-moderator:8090"),
 	}
 
 	return cfg, nil

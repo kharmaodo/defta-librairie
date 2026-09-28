@@ -14,8 +14,8 @@ import (
 	"defta-librairie/internal/handlers"
 	"defta-librairie/internal/identity"
 	"defta-librairie/internal/middleware"
-	"defta-librairie/internal/moderation"
 	"defta-librairie/internal/models"
+	"defta-librairie/internal/moderation"
 	"defta-librairie/internal/repositories"
 	"defta-librairie/internal/services"
 	"errors"
@@ -117,7 +117,9 @@ func main() {
 		}
 		coverRepository := repositories.NewCoverRepository(database.DB)
 		coverModerator, coverErr := moderation.NewHTTPClient(cfg.NSFWModerationEndpoint)
-		if coverErr != nil { log.Fatalf("Configuration modération couvertures invalide : %v", coverErr) }
+		if coverErr != nil {
+			log.Fatalf("Configuration modération couvertures invalide : %v", coverErr)
+		}
 		coverService := services.NewBookCoverService(true, bookService, coverRepository, coverUploader, coverModerator)
 		bookCoverHandler = handlers.NewBookCoverHandler(coverService, true, cfg.CoverMaxBytes)
 		bookSubmissionHandler = handlers.NewBookSubmissionHandler(
@@ -321,6 +323,7 @@ func main() {
 	coverImportPublisherDone := make(chan struct{})
 	coverImportWorkerDone := make(chan struct{})
 	coverImportOCRWorkerDone := make(chan struct{})
+	coverImportMatchWorkerDone := make(chan struct{})
 	approvedCoverPromotionDone := make(chan struct{})
 	coverWorkerDone := make(chan struct{})
 	coverCleanupDone := make(chan struct{})
@@ -350,6 +353,10 @@ func main() {
 			runCoverImportOCRWorker(signalContext, cfg, database.DB, slog.Default())
 		}()
 		go func() {
+			defer close(coverImportMatchWorkerDone)
+			runCoverImportMatchWorker(signalContext, cfg, database.DB, slog.Default())
+		}()
+		go func() {
 			defer close(approvedCoverPromotionDone)
 			runApprovedCoverPromotionWorker(signalContext, cfg, database.DB, slog.Default())
 		}()
@@ -368,6 +375,7 @@ func main() {
 		close(coverImportPublisherDone)
 		close(coverImportWorkerDone)
 		close(coverImportOCRWorkerDone)
+		close(coverImportMatchWorkerDone)
 		close(approvedCoverPromotionDone)
 		close(coverWorkerDone)
 		close(coverCleanupDone)
@@ -390,7 +398,7 @@ func main() {
 	stop()
 	coverShutdownTimer := time.NewTimer(5 * time.Second)
 	defer coverShutdownTimer.Stop()
-	for coverPublisherDone != nil || submissionPublisherDone != nil || submissionWorkerDone != nil || coverImportPublisherDone != nil || coverImportWorkerDone != nil || coverImportOCRWorkerDone != nil || approvedCoverPromotionDone != nil || coverWorkerDone != nil || coverCleanupDone != nil {
+	for coverPublisherDone != nil || submissionPublisherDone != nil || submissionWorkerDone != nil || coverImportPublisherDone != nil || coverImportWorkerDone != nil || coverImportOCRWorkerDone != nil || coverImportMatchWorkerDone != nil || approvedCoverPromotionDone != nil || coverWorkerDone != nil || coverCleanupDone != nil {
 		select {
 		case <-coverPublisherDone:
 			coverPublisherDone = nil
@@ -404,6 +412,8 @@ func main() {
 			coverImportWorkerDone = nil
 		case <-coverImportOCRWorkerDone:
 			coverImportOCRWorkerDone = nil
+		case <-coverImportMatchWorkerDone:
+			coverImportMatchWorkerDone = nil
 		case <-approvedCoverPromotionDone:
 			approvedCoverPromotionDone = nil
 		case <-coverWorkerDone:
@@ -428,6 +438,9 @@ func main() {
 			}
 			if coverImportOCRWorkerDone != nil {
 				slog.Warn("cover_import_ocr_worker_shutdown_timeout")
+			}
+			if coverImportMatchWorkerDone != nil {
+				slog.Warn("cover_import_match_worker_shutdown_timeout")
 			}
 			if approvedCoverPromotionDone != nil {
 				slog.Warn("approved_cover_promotion_shutdown_timeout")
