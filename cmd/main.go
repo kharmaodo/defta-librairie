@@ -320,6 +320,7 @@ func main() {
 	submissionWorkerDone := make(chan struct{})
 	coverImportPublisherDone := make(chan struct{})
 	coverImportWorkerDone := make(chan struct{})
+	coverImportOCRWorkerDone := make(chan struct{})
 	approvedCoverPromotionDone := make(chan struct{})
 	coverWorkerDone := make(chan struct{})
 	coverCleanupDone := make(chan struct{})
@@ -345,6 +346,10 @@ func main() {
 			runCoverImportModerationWorker(signalContext, cfg, database.DB, slog.Default())
 		}()
 		go func() {
+			defer close(coverImportOCRWorkerDone)
+			runCoverImportOCRWorker(signalContext, cfg, database.DB, slog.Default())
+		}()
+		go func() {
 			defer close(approvedCoverPromotionDone)
 			runApprovedCoverPromotionWorker(signalContext, cfg, database.DB, slog.Default())
 		}()
@@ -362,6 +367,7 @@ func main() {
 		close(submissionWorkerDone)
 		close(coverImportPublisherDone)
 		close(coverImportWorkerDone)
+		close(coverImportOCRWorkerDone)
 		close(approvedCoverPromotionDone)
 		close(coverWorkerDone)
 		close(coverCleanupDone)
@@ -384,7 +390,7 @@ func main() {
 	stop()
 	coverShutdownTimer := time.NewTimer(5 * time.Second)
 	defer coverShutdownTimer.Stop()
-	for coverPublisherDone != nil || submissionPublisherDone != nil || submissionWorkerDone != nil || coverImportPublisherDone != nil || coverImportWorkerDone != nil || approvedCoverPromotionDone != nil || coverWorkerDone != nil || coverCleanupDone != nil {
+	for coverPublisherDone != nil || submissionPublisherDone != nil || submissionWorkerDone != nil || coverImportPublisherDone != nil || coverImportWorkerDone != nil || coverImportOCRWorkerDone != nil || approvedCoverPromotionDone != nil || coverWorkerDone != nil || coverCleanupDone != nil {
 		select {
 		case <-coverPublisherDone:
 			coverPublisherDone = nil
@@ -396,6 +402,8 @@ func main() {
 			coverImportPublisherDone = nil
 		case <-coverImportWorkerDone:
 			coverImportWorkerDone = nil
+		case <-coverImportOCRWorkerDone:
+			coverImportOCRWorkerDone = nil
 		case <-approvedCoverPromotionDone:
 			approvedCoverPromotionDone = nil
 		case <-coverWorkerDone:
@@ -417,6 +425,9 @@ func main() {
 			}
 			if coverImportWorkerDone != nil {
 				slog.Warn("cover_import_worker_shutdown_timeout")
+			}
+			if coverImportOCRWorkerDone != nil {
+				slog.Warn("cover_import_ocr_worker_shutdown_timeout")
 			}
 			if approvedCoverPromotionDone != nil {
 				slog.Warn("approved_cover_promotion_shutdown_timeout")
