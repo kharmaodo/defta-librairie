@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"path/filepath"
 	"testing"
 
@@ -33,8 +34,38 @@ func openCoverImportModerationDB(t *testing.T) *sql.DB {
 			resource_type TEXT NOT NULL, resource_id TEXT NOT NULL, new_values TEXT NOT NULL,
 			success INTEGER NOT NULL, created_at TEXT NOT NULL
 		);
+		CREATE TABLE cover_import_ocr_results (
+			job_id TEXT PRIMARY KEY, engine TEXT NOT NULL, engine_version TEXT NOT NULL,
+			language TEXT NOT NULL, text_raw TEXT NOT NULL, text_normalized TEXT NOT NULL,
+			confidence REAL, title TEXT, auteur TEXT, editeur TEXT, isbn13 TEXT,
+			completed_at TEXT NOT NULL
+		);
 	`); err != nil { t.Fatal(err) }
 	return db
+}
+
+func TestCoverImportOCRCompletionIsIdempotent(t *testing.T) {
+	db := openCoverImportModerationDB(t)
+	seedModerationJob(t, db, "job-ocr")
+	if _, err := db.Exec(`UPDATE cover_import_jobs SET status='OCR_PENDING' WHERE id='job-ocr'`); err != nil {
+		t.Fatal(err)
+	}
+	repo := NewCoverImportRepository(db)
+	job, err := repo.ClaimForOCR(context.Background(), "job-ocr", "now")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = repo.CompleteOCR(context.Background(), job, "tesseract", "tesseract-5", "ara", "عنوان", "عنوان", "event-match-1", "audit-ocr-1", "later"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = repo.ClaimForOCR(context.Background(), "job-ocr", "again"); !errors.Is(err, ErrCoverImportJobNotFound) {
+		t.Fatalf("expected idempotent claim rejection, got %v", err)
+	}
+	var results, events, audits int
+	if err = db.QueryRow(`SELECT COUNT(*) FROM cover_import_ocr_results WHERE job_id='job-ocr'`).Scan(&results); err != nil { t.Fatal(err) }
+	if err = db.QueryRow(`SELECT COUNT(*) FROM cover_import_outbox WHERE job_id='job-ocr' AND event_type='cover.imports.match.v1'`).Scan(&events); err != nil { t.Fatal(err) }
+	if err = db.QueryRow(`SELECT COUNT(*) FROM audit_logs WHERE resource_id='job-ocr' AND action='COMPLETE_COVER_IMPORT_OCR'`).Scan(&audits); err != nil { t.Fatal(err) }
+	if results != 1 || events != 1 || audits != 1 { t.Fatalf("results=%d events=%d audits=%d", results, events, audits) }
 }
 
 func seedModerationJob(t *testing.T, db *sql.DB, id string) {
