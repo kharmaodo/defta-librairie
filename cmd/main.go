@@ -99,6 +99,7 @@ func main() {
 	bookCoverReadHandler := handlers.NewBookCoverReadHandler(nil, false)
 	bookSubmissionHandler := handlers.NewBookSubmissionHandler(nil, false, cfg.CoverMaxBytes)
 	coverImportHandler := handlers.NewCoverImportHandler(nil, false, cfg.CoverMaxBytes)
+	coverImportReviewHandler := handlers.NewCoverImportReviewHandler(nil, false)
 	if cfg.CoversEnabled {
 		coverStore, coverErr := covers.NewMinIOStore(
 			cfg.MinIOEndpoint, cfg.MinIOAccessKey, cfg.MinIOSecretKey,
@@ -142,6 +143,9 @@ func main() {
 		if coverErr != nil {
 			log.Fatalf("Initialisation lecture couvertures impossible : %v", coverErr)
 		}
+		coverImportReviewHandler = handlers.NewCoverImportReviewHandler(
+			services.NewCoverImportReviewService(bookService, repositories.NewCoverImportRepository(database.DB), coverReader), true,
+		)
 		bookCoverReadHandler = handlers.NewBookCoverReadHandler(
 			services.NewBookCoverReadService(bookService, coverRepository, coverReader),
 			true,
@@ -238,6 +242,10 @@ func main() {
 	mux.Handle("POST /api/manage/book-submissions/{id}/retry", rootOnly(http.HandlerFunc(bookSubmissionHandler.RetryFailed)))
 	mux.Handle("GET /api/manage/cover-imports", bookManagers(http.HandlerFunc(coverImportHandler.List)))
 	mux.Handle("POST /api/manage/cover-imports", bookManagers(http.HandlerFunc(coverImportHandler.Create)))
+	mux.Handle("GET /api/manage/cover-imports/{id}", bookManagers(http.HandlerFunc(coverImportReviewHandler.Job)))
+	mux.Handle("GET /api/manage/cover-imports/{id}/source", bookManagers(http.HandlerFunc(coverImportReviewHandler.Source)))
+	mux.Handle("POST /api/manage/cover-imports/{id}/decision", bookManagers(http.HandlerFunc(coverImportReviewHandler.Decide)))
+	mux.Handle("POST /api/manage/cover-imports/{id}/quarantine-decision", rootOnly(http.HandlerFunc(coverImportReviewHandler.DecideQuarantine)))
 	mux.Handle("GET /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Get)))
 	mux.Handle("GET /api/manage/books/{id}/history", bookManagers(http.HandlerFunc(bookHandler.History)))
 	mux.Handle("PUT /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Update)))

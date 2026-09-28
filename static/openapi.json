@@ -13634,6 +13634,49 @@
           }
         ]
       }
+    },
+    "/api/manage/cover-imports/{id}": {
+      "get": {
+        "operationId": "CoverImportReviewHandler_Job",
+        "summary": "Consulter les candidats de revue d'un import",
+        "tags": ["books_management"],
+        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}},{"name":"libraryId","in":"query","required":false,"schema":{"type":"string"}}],
+        "responses": {"200":{"description":"Import et candidats limités à la bibliothèque autorisée, sans clé d'objet privé."},"403":{"description":"Accès interdit."},"404":{"description":"Import introuvable."}},
+        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -H 'Authorization: Bearer ${TOKEN}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}'"}]
+      }
+    },
+    "/api/manage/cover-imports/{id}/source": {
+      "get": {
+        "operationId": "CoverImportReviewHandler_Source",
+        "summary": "Afficher la source privée pour la revue humaine",
+        "tags": ["books_management"],
+        "description": "Réservé au propriétaire pour un import SAFE à revoir, ou au root pour une quarantaine ambiguë. Aucun cache ni URL publique.",
+        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}},{"name":"libraryId","in":"query","required":false,"schema":{"type":"string"}}],
+        "responses": {"200":{"description":"Image JPEG ou PNG privée."},"403":{"description":"Accès interdit."},"404":{"description":"Import introuvable."},"409":{"description":"Source non révisable."}},
+        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -H 'Authorization: Bearer ${TOKEN}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}/source' -o source.jpg"}]
+      }
+    },
+    "/api/manage/cover-imports/{id}/decision": {
+      "post": {
+        "operationId": "CoverImportReviewHandler_Decide",
+        "summary": "Accepter un candidat SAFE ou rejeter le rattachement",
+        "tags": ["books_management"],
+        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}}],
+        "requestBody": {"required":true,"content":{"application/json":{"schema":{"type":"object","required":["action"],"properties":{"libraryId":{"type":"string"},"action":{"type":"string","enum":["ACCEPT","REJECT"]},"bookId":{"type":"integer"},"reason":{"type":"string"}}}}}},
+        "responses": {"202":{"description":"Décision persistée ; en cas d'acceptation, couverture en attente de traitement."},"403":{"description":"Accès interdit."},"404":{"description":"Candidat introuvable."},"409":{"description":"Décision déjà prise ou état incompatible."}},
+        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -X POST -H 'Authorization: Bearer ${TOKEN}' -H 'Content-Type: application/json' -d '{\"action\":\"ACCEPT\",\"bookId\":123}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}/decision'"}]
+      }
+    },
+    "/api/manage/cover-imports/{id}/quarantine-decision": {
+      "post": {
+        "operationId": "CoverImportReviewHandler_DecideQuarantine",
+        "summary": "Décision root sur une quarantaine NSFW ambiguë",
+        "tags": ["books_management"],
+        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}}],
+        "requestBody": {"required":true,"content":{"application/json":{"schema":{"type":"object","required":["libraryId","decision"],"properties":{"libraryId":{"type":"string"},"decision":{"type":"string","enum":["APPROVE","REJECT"]}}}}}},
+        "responses": {"202":{"description":"Décision persistée ; OCR remis en file en cas d'approbation."},"403":{"description":"Root requis."},"404":{"description":"Import introuvable."},"409":{"description":"Décision déjà prise ou état incompatible."}},
+        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -X POST -H 'Authorization: Bearer ${TOKEN}' -H 'Content-Type: application/json' -d '{\"libraryId\":\"${LIBRARY_ID}\",\"decision\":\"APPROVE\"}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}/quarantine-decision'"}]
+      }
     }
   },
   "components": {
