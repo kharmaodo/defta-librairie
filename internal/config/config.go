@@ -46,6 +46,11 @@ type Config struct {
 	NATSImportStream          string
 	NATSImportSubject         string
 	NATSImportConsumer        string
+	NATSOCRSubject            string
+	NATSOCRConsumer           string
+	OCREngine                  string
+	OCRLanguage                string
+	OCRTimeout                 time.Duration
 	NSFWModerationEndpoint    string
 }
 
@@ -91,6 +96,11 @@ func Load() (*Config, error) {
 		NATSImportStream:          getEnv("NATS_IMPORT_STREAM", "COVER_IMPORTS"),
 		NATSImportSubject:         getEnv("NATS_IMPORT_SUBJECT", "cover.imports.moderate.v1"),
 		NATSImportConsumer:        getEnv("NATS_IMPORT_CONSUMER", "cover-import-moderation-worker-v1"),
+		NATSOCRSubject:            getEnv("NATS_OCR_SUBJECT", "cover.imports.ocr.v1"),
+		NATSOCRConsumer:           getEnv("NATS_OCR_CONSUMER", "cover-import-ocr-worker-v1"),
+		OCREngine:                  getEnv("OCR_ENGINE", "tesseract"),
+		OCRLanguage:                getEnv("OCR_LANGUAGE", "ara"),
+		OCRTimeout:                 time.Duration(getEnvPositiveInt64("OCR_TIMEOUT_SECONDS", 20)) * time.Second,
 		NSFWModerationEndpoint:    getEnv("NSFW_MODERATION_ENDPOINT", "http://nsfw-moderator:8090"),
 	}
 

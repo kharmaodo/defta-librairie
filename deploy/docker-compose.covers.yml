@@ -88,6 +88,12 @@ services:
       NATS_COVERS_SUBJECT: ${NATS_COVERS_SUBJECT:-book.covers.process.v1}
       NATS_COVERS_CONSUMER: ${NATS_COVERS_CONSUMER:-cover-worker-v1}
       COVER_WORKER_MAX_DELIVER: ${COVER_WORKER_MAX_DELIVER:-5}
+      NATS_IMPORT_STREAM: ${NATS_IMPORT_STREAM:-COVER_IMPORTS}
+      NATS_OCR_SUBJECT: ${NATS_OCR_SUBJECT:-cover.imports.ocr.v1}
+      NATS_OCR_CONSUMER: ${NATS_OCR_CONSUMER:-cover-import-ocr-worker-v1}
+      OCR_ENGINE: ${OCR_ENGINE:-tesseract}
+      OCR_LANGUAGE: ${OCR_LANGUAGE:-ara}
+      OCR_TIMEOUT_SECONDS: ${OCR_TIMEOUT_SECONDS:-20}
     volumes:
       - ../data:/app/data
     read_only: true
