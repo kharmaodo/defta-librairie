@@ -78,7 +78,7 @@ required_env = (
     "NATS_PASSWORD=",
     "NATS_COVERS_STREAM=BOOK_COVERS",
     "NATS_COVERS_SUBJECT=book.covers.process.v1",
-    "COVER_MAX_BYTES=5242880",
+    "COVER_MAX_BYTES=10485760",
     "COVER_MAX_PIXELS=24000000",
 )
 for token in required_env:
