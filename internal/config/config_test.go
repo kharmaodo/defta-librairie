@@ -57,7 +57,7 @@ func TestCoverLimitsRejectInvalidValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
-	if cfg.CoverMaxBytes != 5*1024*1024 || cfg.CoverMaxPixels != 24_000_000 {
+	if cfg.CoverMaxBytes != 10*1024*1024 || cfg.CoverMaxPixels != 24_000_000 {
 		t.Fatalf("unexpected cover defaults: bytes=%d pixels=%d", cfg.CoverMaxBytes, cfg.CoverMaxPixels)
 	}
 }
