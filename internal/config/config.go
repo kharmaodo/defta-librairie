@@ -43,6 +43,9 @@ type Config struct {
 	NATSSubmissionStream      string
 	NATSSubmissionSubject     string
 	NATSSubmissionConsumer    string
+	NATSImportStream          string
+	NATSImportSubject         string
+	NATSImportConsumer        string
 	NSFWModerationEndpoint    string
 }
 
@@ -85,6 +88,9 @@ func Load() (*Config, error) {
 		NATSSubmissionStream:      getEnv("NATS_SUBMISSION_STREAM", "BOOK_SUBMISSIONS"),
 		NATSSubmissionSubject:     getEnv("NATS_SUBMISSION_SUBJECT", "book.submissions.moderate.v1"),
 		NATSSubmissionConsumer:    getEnv("NATS_SUBMISSION_CONSUMER", "book-submission-worker-v1"),
+		NATSImportStream:          getEnv("NATS_IMPORT_STREAM", "COVER_IMPORTS"),
+		NATSImportSubject:         getEnv("NATS_IMPORT_SUBJECT", "cover.imports.moderate.v1"),
+		NATSImportConsumer:        getEnv("NATS_IMPORT_CONSUMER", "cover-import-moderation-worker-v1"),
 		NSFWModerationEndpoint:    getEnv("NSFW_MODERATION_ENDPOINT", "http://nsfw-moderator:8090"),
 	}
 
