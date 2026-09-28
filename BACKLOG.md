@@ -253,6 +253,27 @@ La version **v1.6.0** est publiée sur le tag `v1.6.0` (`d850efb`) : archives Wi
 
 ## Preuves dans le dépôt
 
+## Backlog v1.7.0 — import, modération et rapprochement de couvertures
+
+Cette version étend l’administration existante : sessions JWT, rôles
+`SUPER_ADMIN_ROOT`/`OWNER_LIBRARY`, isolation par `library_id`, MinIO privé et
+JetStream sont réutilisés. Aucune étape ne crée ni ne modifie automatiquement
+un livre ou sa couverture : le rattachement final reste une décision humaine.
+
+| US | Livrable vérifiable | État | Preuve / reste à faire |
+|---|---|---|---|
+| US-1701 | Import groupé de 1 à 100 JPEG/PNG, quotas, idempotence, quarantaine privée et outbox SQLite | Réalisé sur la branche | Migration 032, routes `/api/manage/cover-imports`, validation MIME/magic bytes/dimensions/SHA-256, OpenAPI et tests Go verts. |
+| US-1702 | Worker de modération NSFW local : JetStream, ACK après persistance, `SAFE` → `OCR_PENDING`, `REVIEW` → quarantaine, `UNSAFE` → rejet | Réalisé sur la branche | Publisher/worker, audit et tests de transitions ; aucune mutation de `defta`. À fusionner après revue finale. |
+| US-1703 | Runtime OCR local CPU Tesseract 5 arabe | En cours | Image worker : paquets `tesseract-ocr` et `tesseract-ocr-ara`, variables `OCR_*`. Reste l’adaptateur Go, les délais, résultats et tests. |
+| US-1704 | Normalisation OCR et candidats FTS5/BM25 | À développer | Aucun OpenSearch avant benchmark démontrant le besoin. |
+| US-1705 | Revue propriétaire du rattachement SAFE et promotion humaine | À développer | Le root conserve la décision NSFW ambiguë ; propriétaire borné à sa bibliothèque pour le rattachement. |
+| US-1706 | Interface React/TypeScript/Vite : dépôt, progression temps réel et revue | À développer | Réutiliser login, logout, JWT et redirection 401 existants. |
+| US-1707 | Rétention, nettoyage, tests d’intégration et gate de release | À développer | Appliquer les durées/rôles validés et couvrir Go, JetStream, Playwright et Docker. |
+
+Règle de suivi v1.7.0 : à la clôture de chaque US, mettre à jour cette table
+avec l’état, les preuves (tests/commit) et le travail restant avant tout nouveau
+lot fonctionnel.
+
 | Domaine | Principaux fichiers de référence |
 |---|---|
 | Approvisionnement | `internal/repositories/purchase_repository.go`, `internal/services/purchase_service_test.go` |

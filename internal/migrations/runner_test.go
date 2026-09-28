@@ -54,8 +54,8 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	if err = db.QueryRow("SELECT COUNT(*) FROM schema_migrations").Scan(&migrationsCount); err != nil {
 		t.Fatalf("count migrations: %v", err)
 	}
-	if migrationsCount != 32 {
-		t.Fatalf("expected 32 migrations, got %d", migrationsCount)
+	if migrationsCount != 33 {
+		t.Fatalf("expected 33 migrations, got %d", migrationsCount)
 	}
 
 	var assignedBooks int
@@ -185,6 +185,21 @@ func TestRunMigratesLegacyCatalogueAndIsIdempotent(t *testing.T) {
 	}
 	if coverCleanupTables != 1 {
 		t.Fatalf("expected cover cleanup table, got %d", coverCleanupTables)
+	}
+
+	var coverImportTables int
+	if err = db.QueryRow(`
+		SELECT COUNT(*) FROM sqlite_master
+		WHERE type='table' AND name IN (
+			'cover_imports', 'cover_import_jobs', 'cover_import_outbox',
+			'cover_import_ocr_results', 'cover_import_candidate_matches',
+			'cover_import_review_decisions'
+		)
+	`).Scan(&coverImportTables); err != nil {
+		t.Fatalf("inspect cover import tables: %v", err)
+	}
+	if coverImportTables != 6 {
+		t.Fatalf("expected six cover import tables, got %d", coverImportTables)
 	}
 
 	if _, err = db.Exec("UPDATE defta SET library_id = 'missing-library' WHERE id = 1"); err == nil {

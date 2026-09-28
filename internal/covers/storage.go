@@ -3,6 +3,8 @@ package covers
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -38,6 +40,23 @@ type StoredSource struct {
 	Width       int
 	Height      int
 	Size        int64
+	SHA256      string
+}
+
+// UploadImport stores an already-validated import job in the same private
+// quarantine namespace as a submission.  The caller supplies the job ID so
+// that persistence can atomically associate the object with its outbox event.
+func (u *SourceUploader) UploadImport(ctx context.Context, libraryID, importID, jobID, declaredContentType string, body io.Reader) (StoredSource, error) {
+	image, err := u.validator.Validate(body, declaredContentType)
+	if err != nil { return StoredSource{}, err }
+	key, err := QuarantineObjectKey(libraryID, importID, jobID, image.Extension)
+	if err != nil { return StoredSource{}, err }
+	if err = u.store.Put(ctx, key, bytes.NewReader(image.Data), int64(len(image.Data)), image.ContentType); err != nil {
+		return StoredSource{}, fmt.Errorf("%w: %v", ErrStoreUnavailable, err)
+	}
+	sum := sha256.Sum256(image.Data)
+	return StoredSource{CoverID: jobID, ObjectKey: key, ContentType: image.ContentType, Format: image.Format,
+		Width: image.Width, Height: image.Height, Size: int64(len(image.Data)), SHA256: hex.EncodeToString(sum[:])}, nil
 }
 
 func NewSourceUploader(store ObjectStore, validator Validator, newID IDGenerator) (*SourceUploader, error) {

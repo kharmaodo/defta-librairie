@@ -13540,6 +13540,100 @@
           }
         ]
       }
+    },
+    "/api/manage/cover-imports": {
+      "post": {
+        "operationId": "CoverImportHandler_Create",
+        "summary": "Importer un lot de couvertures à modérer",
+        "tags": [
+          "books_management"
+        ],
+        "description": "Accepte de 1 à 100 fichiers JPEG ou PNG. La clé Idempotency-Key est obligatoire.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "covers"
+                ],
+                "properties": {
+                  "libraryId": {
+                    "type": "string"
+                  },
+                  "covers": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 100,
+                    "items": {
+                      "type": "string",
+                      "format": "binary"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Lot accepté et mis en quarantaine."
+          },
+          "413": {
+            "description": "Fichier ou lot trop volumineux."
+          },
+          "422": {
+            "description": "Fichier invalide ou format non accepté."
+          },
+          "429": {
+            "description": "Quota d’import dépassé."
+          },
+          "503": {
+            "description": "Stockage indisponible."
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl --fail-with-body -sS -X POST \"${BASE_URL}/api/manage/cover-imports\" \\\n  -H \"Authorization: Bearer ${TOKEN}\" \\\n  -H \"Idempotency-Key: import-20260928-001\" \\\n  -F \"covers=@couverture-1.jpg;type=image/jpeg\""
+          }
+        ]
+      },
+      "get": {
+        "operationId": "CoverImportHandler_List",
+        "summary": "Lister les imports de couvertures",
+        "tags": [
+          "books_management"
+        ],
+        "responses": {
+          "200": {
+            "description": "Liste des imports de la bibliothèque autorisée."
+          },
+          "403": {
+            "description": "Accès interdit."
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl --fail-with-body -sS \"${BASE_URL}/api/manage/cover-imports?limit=30\" -H \"Authorization: Bearer ${TOKEN}\""
+          }
+        ]
+      }
     }
   },
   "components": {

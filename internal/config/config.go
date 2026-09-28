@@ -43,6 +43,9 @@ type Config struct {
 	NATSSubmissionStream      string
 	NATSSubmissionSubject     string
 	NATSSubmissionConsumer    string
+	NATSImportStream          string
+	NATSImportSubject         string
+	NATSImportConsumer        string
 	NSFWModerationEndpoint    string
 }
 
@@ -71,7 +74,9 @@ func Load() (*Config, error) {
 		MinIOUseSSL:               getEnvBool("MINIO_USE_SSL", false),
 		MinIOBucketCovers:         getEnv("MINIO_BUCKET_COVERS", "book-covers"),
 		MinIOSourceRetentionHours: getEnvInt("MINIO_SOURCE_RETENTION_HOURS", 24),
-		CoverMaxBytes:             getEnvPositiveInt64("COVER_MAX_BYTES", 5*1024*1024),
+		// v1.7.0 accepts up to 10 MiB per cover; the import total is enforced
+		// separately by the HTTP handler.
+		CoverMaxBytes:             getEnvPositiveInt64("COVER_MAX_BYTES", 10*1024*1024),
 		CoverMaxPixels:            uint64(getEnvPositiveInt64("COVER_MAX_PIXELS", 24_000_000)),
 		NATSURL:                   getEnv("NATS_URL", "nats://localhost:4222"),
 		NATSUser:                  getEnv("NATS_USER", ""),
@@ -83,6 +88,9 @@ func Load() (*Config, error) {
 		NATSSubmissionStream:      getEnv("NATS_SUBMISSION_STREAM", "BOOK_SUBMISSIONS"),
 		NATSSubmissionSubject:     getEnv("NATS_SUBMISSION_SUBJECT", "book.submissions.moderate.v1"),
 		NATSSubmissionConsumer:    getEnv("NATS_SUBMISSION_CONSUMER", "book-submission-worker-v1"),
+		NATSImportStream:          getEnv("NATS_IMPORT_STREAM", "COVER_IMPORTS"),
+		NATSImportSubject:         getEnv("NATS_IMPORT_SUBJECT", "cover.imports.moderate.v1"),
+		NATSImportConsumer:        getEnv("NATS_IMPORT_CONSUMER", "cover-import-moderation-worker-v1"),
 		NSFWModerationEndpoint:    getEnv("NSFW_MODERATION_ENDPOINT", "http://nsfw-moderator:8090"),
 	}
 

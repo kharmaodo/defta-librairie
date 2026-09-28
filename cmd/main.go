@@ -98,6 +98,7 @@ func main() {
 	bookCoverHandler := handlers.NewBookCoverHandler(nil, false, cfg.CoverMaxBytes)
 	bookCoverReadHandler := handlers.NewBookCoverReadHandler(nil, false)
 	bookSubmissionHandler := handlers.NewBookSubmissionHandler(nil, false, cfg.CoverMaxBytes)
+	coverImportHandler := handlers.NewCoverImportHandler(nil, false, cfg.CoverMaxBytes)
 	if cfg.CoversEnabled {
 		coverStore, coverErr := covers.NewMinIOStore(
 			cfg.MinIOEndpoint, cfg.MinIOAccessKey, cfg.MinIOSecretKey,
@@ -122,6 +123,12 @@ func main() {
 		bookSubmissionHandler = handlers.NewBookSubmissionHandler(
 			services.NewBookSubmissionService(
 				true, bookService, repositories.NewBookSubmissionRepository(database.DB), coverUploader,
+			),
+			true, cfg.CoverMaxBytes,
+		)
+		coverImportHandler = handlers.NewCoverImportHandler(
+			services.NewCoverImportService(
+				true, bookService, repositories.NewCoverImportRepository(database.DB), coverUploader,
 			),
 			true, cfg.CoverMaxBytes,
 		)
@@ -227,6 +234,8 @@ func main() {
 	mux.Handle("POST /api/manage/book-submissions", bookManagers(http.HandlerFunc(bookSubmissionHandler.Create)))
 	mux.Handle("POST /api/manage/book-submissions/{id}/decision", rootOnly(http.HandlerFunc(bookSubmissionHandler.DecideReview)))
 	mux.Handle("POST /api/manage/book-submissions/{id}/retry", rootOnly(http.HandlerFunc(bookSubmissionHandler.RetryFailed)))
+	mux.Handle("GET /api/manage/cover-imports", bookManagers(http.HandlerFunc(coverImportHandler.List)))
+	mux.Handle("POST /api/manage/cover-imports", bookManagers(http.HandlerFunc(coverImportHandler.Create)))
 	mux.Handle("GET /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Get)))
 	mux.Handle("GET /api/manage/books/{id}/history", bookManagers(http.HandlerFunc(bookHandler.History)))
 	mux.Handle("PUT /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Update)))
@@ -309,6 +318,8 @@ func main() {
 	coverPublisherDone := make(chan struct{})
 	submissionPublisherDone := make(chan struct{})
 	submissionWorkerDone := make(chan struct{})
+	coverImportPublisherDone := make(chan struct{})
+	coverImportWorkerDone := make(chan struct{})
 	approvedCoverPromotionDone := make(chan struct{})
 	coverWorkerDone := make(chan struct{})
 	coverCleanupDone := make(chan struct{})
@@ -326,6 +337,14 @@ func main() {
 			runBookSubmissionWorker(signalContext, cfg, database.DB, slog.Default())
 		}()
 		go func() {
+			defer close(coverImportPublisherDone)
+			runCoverImportOutboxPublisher(signalContext, cfg, database.DB, slog.Default())
+		}()
+		go func() {
+			defer close(coverImportWorkerDone)
+			runCoverImportModerationWorker(signalContext, cfg, database.DB, slog.Default())
+		}()
+		go func() {
 			defer close(approvedCoverPromotionDone)
 			runApprovedCoverPromotionWorker(signalContext, cfg, database.DB, slog.Default())
 		}()
@@ -341,6 +360,8 @@ func main() {
 		close(coverPublisherDone)
 		close(submissionPublisherDone)
 		close(submissionWorkerDone)
+		close(coverImportPublisherDone)
+		close(coverImportWorkerDone)
 		close(approvedCoverPromotionDone)
 		close(coverWorkerDone)
 		close(coverCleanupDone)
@@ -363,7 +384,7 @@ func main() {
 	stop()
 	coverShutdownTimer := time.NewTimer(5 * time.Second)
 	defer coverShutdownTimer.Stop()
-	for coverPublisherDone != nil || submissionPublisherDone != nil || submissionWorkerDone != nil || approvedCoverPromotionDone != nil || coverWorkerDone != nil || coverCleanupDone != nil {
+	for coverPublisherDone != nil || submissionPublisherDone != nil || submissionWorkerDone != nil || coverImportPublisherDone != nil || coverImportWorkerDone != nil || approvedCoverPromotionDone != nil || coverWorkerDone != nil || coverCleanupDone != nil {
 		select {
 		case <-coverPublisherDone:
 			coverPublisherDone = nil
@@ -371,6 +392,10 @@ func main() {
 			submissionPublisherDone = nil
 		case <-submissionWorkerDone:
 			submissionWorkerDone = nil
+		case <-coverImportPublisherDone:
+			coverImportPublisherDone = nil
+		case <-coverImportWorkerDone:
+			coverImportWorkerDone = nil
 		case <-approvedCoverPromotionDone:
 			approvedCoverPromotionDone = nil
 		case <-coverWorkerDone:
@@ -386,6 +411,12 @@ func main() {
 			}
 			if submissionWorkerDone != nil {
 				slog.Warn("submission_worker_shutdown_timeout")
+			}
+			if coverImportPublisherDone != nil {
+				slog.Warn("cover_import_publisher_shutdown_timeout")
+			}
+			if coverImportWorkerDone != nil {
+				slog.Warn("cover_import_worker_shutdown_timeout")
 			}
 			if approvedCoverPromotionDone != nil {
 				slog.Warn("approved_cover_promotion_shutdown_timeout")
