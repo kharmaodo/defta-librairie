@@ -5,6 +5,7 @@ CREATE TABLE cover_imports (
     id TEXT PRIMARY KEY,
     library_id TEXT NOT NULL,
     actor_user_id TEXT NOT NULL,
+	 idempotency_key TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED')),
     total_files INTEGER NOT NULL CHECK (total_files BETWEEN 1 AND 100),
     accepted_files INTEGER NOT NULL DEFAULT 0 CHECK (accepted_files BETWEEN 0 AND total_files),
@@ -15,6 +16,9 @@ CREATE TABLE cover_imports (
     FOREIGN KEY (library_id) REFERENCES libraries(id),
     FOREIGN KEY (actor_user_id) REFERENCES users(id)
 );
+
+CREATE UNIQUE INDEX idx_cover_imports_library_idempotency
+    ON cover_imports(library_id, idempotency_key);
 
 CREATE INDEX idx_cover_imports_library_created
     ON cover_imports(library_id, created_at DESC);
