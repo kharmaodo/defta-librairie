@@ -88,9 +88,6 @@ services:
       NATS_COVERS_SUBJECT: ${NATS_COVERS_SUBJECT:-book.covers.process.v1}
       NATS_COVERS_CONSUMER: ${NATS_COVERS_CONSUMER:-cover-worker-v1}
       COVER_WORKER_MAX_DELIVER: ${COVER_WORKER_MAX_DELIVER:-5}
-      OCR_ENGINE: ${OCR_ENGINE:-tesseract}
-      OCR_LANGUAGE: ${OCR_LANGUAGE:-ara}
-      OCR_TIMEOUT_SECONDS: ${OCR_TIMEOUT_SECONDS:-20}
     volumes:
       - ../data:/app/data
     read_only: true
