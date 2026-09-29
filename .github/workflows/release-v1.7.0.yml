@@ -1,9 +1,10 @@
 name: Release v1.7.0 gate
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - feature/v1.7.0-us-1707-retention-gate
+      - develop
   pull_request:
     paths:
       - 'internal/migrations/**'
@@ -18,6 +19,10 @@ on:
       - 'cmd/cover_cleanup_runtime.go'
       - 'scripts/check-release-v1.7.0.sh'
       - '.github/workflows/release-v1.7.0.yml'
+      - 'BACKLOG.md'
+      - 'CHANGELOG.md'
+      - 'docs/RELEASE_V1_7_0.md'
+      - '.github/workflows/release-binaries.yml'
 
 jobs:
   verify:

@@ -262,13 +262,16 @@ un livre ou sa couverture : le rattachement final reste une décision humaine.
 
 | US | Livrable vérifiable | État | Preuve / reste à faire |
 |---|---|---|---|
-| US-1701 | Import groupé de 1 à 100 JPEG/PNG, quotas, idempotence, quarantaine privée et outbox SQLite | Réalisé sur la branche | Migration 032, routes `/api/manage/cover-imports`, validation MIME/magic bytes/dimensions/SHA-256, OpenAPI et tests Go verts. |
-| US-1702 | Worker de modération NSFW local : JetStream, ACK après persistance, `SAFE` → `OCR_PENDING`, `REVIEW` → quarantaine, `UNSAFE` → rejet | Réalisé sur la branche | Publisher/worker, audit et tests de transitions ; aucune mutation de `defta`. À fusionner après revue finale. |
-| US-1703 | Runtime OCR local CPU Tesseract 5 arabe | Réalisé sur la branche | Tesseract arabe local, timeout, outbox/worker JetStream, transition idempotente `OCR_PENDING` → `MATCHING`, audit et tests Go verts (`9028a42`, `437eb82`). À fusionner après revue finale. |
+| US-1701 | Import groupé de 1 à 100 JPEG/PNG, quotas, idempotence, quarantaine privée et outbox SQLite | Fusionné dans `develop` | Migration 032, routes `/api/manage/cover-imports`, validation MIME/magic bytes/dimensions/SHA-256, OpenAPI et tests Go verts. |
+| US-1702 | Worker de modération NSFW local : JetStream, ACK après persistance, `SAFE` → `OCR_PENDING`, `REVIEW` → quarantaine, `UNSAFE` → rejet | Fusionné dans `develop` | Publisher/worker, audit et tests de transitions ; aucune mutation de `defta`. |
+| US-1703 | Runtime OCR local CPU Tesseract 5 arabe | Fusionné dans `develop` | Tesseract arabe local, timeout, outbox/worker JetStream, transition idempotente `OCR_PENDING` → `MATCHING`, audit et tests Go verts (`9028a42`, `437eb82`). |
 | US-1704 | Normalisation OCR et candidats FTS5/BM25 | Fusionné dans `develop` | Normalisation arabe et requête FTS5 sûre (`4a00b4e`), worker JetStream/BM25 limité à `library_id`, 5 candidats maximum, audit et persistance idempotente (`c9caef4`, `2b11362`) ; PR #181 fusionnée et tests verts confirmés. Aucun OpenSearch. |
 | US-1705 | Revue propriétaire du rattachement SAFE et promotion humaine | Fusionné dans `develop` | API de candidats et source privée authentifiée ; décision SAFE bornée à `library_id`, couverture `PENDING` et outbox transactionnelle, quarantaine réservée au root ; PR #182 fusionnée. |
 | US-1706 | Interface React/TypeScript/Vite : dépôt, progression et revue | Fusionné dans `develop` | Page `/admin/cover-imports`, dépôt de 1 à 100 images, suivi des états par image, revue SAFE et quarantaine root ; JWT existant. 117 tests frontend, build Vite et scénarios Playwright verts ; PR #183 fusionnée. |
-| US-1707 | Rétention, nettoyage, tests d’intégration et gate de release | Réalisé sur la branche — en revue | Migration 033, échéances des originaux à 7/14/30/90 jours, file idempotente, purge des métadonnées/audits après 24 mois après suppression effective et sans retenue active ; API root auditée de pose/levée de retenue. Go, vet, race, React/Vite, Playwright, MinIO/JetStream sous Docker et contrat OpenAPI verts dans [CI #36599632064](https://github.com/kharmaodo/defta-librairie/actions/runs/36599632064). PR #184 à valider et fusionner. |
+| US-1707 | Rétention, nettoyage, tests d’intégration et gate de release | Fusionné dans `develop` | Migration 033, échéances des originaux à 7/14/30/90 jours, file idempotente, purge des métadonnées/audits après 24 mois sous conditions ; API root auditée de retenue. Gate Go, vet, race, React/Vite, Playwright, MinIO/JetStream et OpenAPI vert ; PR #184 fusionnée (`658d9b1`). |
+
+Les sept US sont fusionnées. La publication v1.7.0 attend la validation du commit
+candidat de `develop`, du gate de release, puis du tag et des artefacts.
 
 Règle de suivi v1.7.0 : à la clôture de chaque US, mettre à jour cette table
 avec l’état, les preuves (tests/commit) et le travail restant avant tout nouveau

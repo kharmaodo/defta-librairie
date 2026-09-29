@@ -2,6 +2,16 @@
 
 ## [À paraître]
 
+## [1.7.0] — candidate
+
+### Imports de couvertures
+
+- Dépôt groupé de 1 à 100 images JPEG/PNG dans une quarantaine privée, quotas et reprise idempotente via outbox SQLite et JetStream.
+- Modération NSFW locale, OCR arabe sur CPU avec Tesseract 5 et rapprochement de candidats FTS5/BM25 limité à la librairie ; aucun rattachement automatique.
+- Revue humaine des candidats et de la quarantaine, avec contrôle des rôles et suivi dans l’interface React/TypeScript/Vite de l’administration.
+- Rétention des originaux selon leur issue, retenue légale réservée au root, nettoyage rejouable et purge conditionnelle des métadonnées après 24 mois.
+- Gate Go, frontend, navigateur et intégration MinIO/JetStream pour le candidat de release. Le tag, les artefacts et la publication restent à valider.
+
 ## [1.6.0] — 2026-09-25
 
 ### Sécurité OWASP et résilience

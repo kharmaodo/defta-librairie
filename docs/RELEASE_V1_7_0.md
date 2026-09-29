@@ -1,7 +1,6 @@
 # Recette et rétention v1.7.0
 
-La branche `feature/v1.7.0-us-1707-retention-gate` ajoute la rétention des imports
-de couvertures. Le worker de nettoyage existant réconcilie les échéances toutes
+La v1.7.0 ajoute la rétention des imports de couvertures. Le worker de nettoyage réconcilie les échéances toutes
 les cinq minutes, place les objets en file SQLite et réessaie une suppression
 MinIO échouée. Une reprise ne crée pas de seconde tâche pour la même clé.
 
@@ -48,7 +47,35 @@ Le gate inclut les tests Go et de course, les tests frontend et navigateur,
 le build React/Vite, le contrat OpenAPI et la validation de la configuration
 Docker. Le workflow `Release v1.7.0 gate` lance ensuite MinIO et JetStream
 avec des identifiants temporaires et exécute les tests d'intégration existants
-contre ces services. Une CI verte est nécessaire avant la fusion dans `develop`.
+contre ces services. Une CI verte sur le commit candidat de `develop` est nécessaire avant le tag.
+
+## Publication du candidat
+
+Après fusion de la branche de clôture, noter le SHA exact de `develop` et vérifier
+que la CI `Release v1.7.0 gate` est verte pour ce SHA. Faire une sauvegarde SQLite
+et vérifier sa restauration sur une copie avant migration 032/033. Préparer la
+persistance de SQLite, MinIO et JetStream, ainsi que Tesseract 5 et la langue
+arabe dans le worker. Conserver les droits du worker sur SQLite et le bucket privé.
+
+Une fois le SHA et les résultats validés, créer le tag annoté sur ce SHA puis
+déclencher le workflow des exécutables :
+
+```sh
+git switch develop
+git pull --ff-only origin develop
+git rev-parse HEAD
+git tag -a v1.7.0 -m "Defta Librairie 1.7.0"
+git push origin v1.7.0
+gh workflow run release-binaries.yml --ref develop -f tag=v1.7.0
+```
+
+Vérifier les archives Windows/Linux AMD64, `SHA256SUMS`, `BUILD-INFO.txt`,
+l'image du worker, le SBOM et la provenance selon `docs/RELEASE_ARTIFACTS.md`.
+Contrôler un import SAFE, une revue, un rejet, un rattachement humain,
+l'isolation inter-librairies et une reprise après incident. En cas de retour
+arrière, arrêter les nouveaux imports et les workers, préserver base et objets,
+puis restaurer une sauvegarde SQLite et des artefacts compatibles. Ne pas déplacer
+un tag publié.
 
 Les images MinIO publiques utilisées par Compose proviennent de Chainguard.
 Les digests sont fixés dans le Compose ; `MINIO_SERVER_IMAGE` et
