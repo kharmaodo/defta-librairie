@@ -33,6 +33,7 @@ func openCoverCleanupTestDB(t *testing.T) *sql.DB {
 			last_error TEXT,
 			created_at TEXT NOT NULL
 		);
+		CREATE TABLE cover_import_legal_holds (job_id TEXT PRIMARY KEY, expires_at TEXT NOT NULL);
 
 		CREATE TABLE book_submissions (
 			id TEXT PRIMARY KEY,
@@ -276,7 +277,6 @@ func TestCoverCleanupReconcileIsIdempotentAndPreservesActiveVariants(t *testing.
 		t.Fatalf("active variant cleanup jobs=%d want=0", activeVariants)
 	}
 }
-
 
 func TestCoverCleanupReconcileQueuesRejectedAndExpiredSubmissions(t *testing.T) {
 	db := openCoverCleanupTestDB(t)

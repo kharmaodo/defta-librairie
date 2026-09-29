@@ -1,0 +1,31 @@
+name: Release v1.7.0 gate
+
+on:
+  push:
+    branches:
+      - feature/v1.7.0-us-1707-retention-gate
+  pull_request:
+    paths:
+      - 'internal/migrations/**'
+      - 'internal/repositories/cover_import_retention*'
+      - 'internal/repositories/cover_cleanup*'
+      - 'cmd/cover_cleanup_runtime.go'
+      - 'scripts/check-release-v1.7.0.sh'
+      - '.github/workflows/release-v1.7.0.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: sh scripts/check-release-v1.7.0.sh
