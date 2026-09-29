@@ -34,6 +34,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Inspect public MinIO image digests
+        run: |
+          docker pull cgr.dev/chainguard/minio:latest
+          docker pull cgr.dev/chainguard/minio-client:latest
+          docker image inspect --format '{{index .RepoDigests 0}}' cgr.dev/chainguard/minio:latest
+          docker image inspect --format '{{index .RepoDigests 0}}' cgr.dev/chainguard/minio-client:latest
       - run: sh scripts/check-release-v1.7.0.sh
       - name: Generate temporary Docker credentials
         run: |
