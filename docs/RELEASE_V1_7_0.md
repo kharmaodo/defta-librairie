@@ -49,3 +49,7 @@ le build React/Vite, le contrat OpenAPI et la validation de la configuration
 Docker. Le workflow `Release v1.7.0 gate` lance ensuite MinIO et JetStream
 avec des identifiants temporaires et exécute les tests d'intégration existants
 contre ces services. Une CI verte est nécessaire avant la fusion dans `develop`.
+
+Les images MinIO publiques utilisées par Compose proviennent de Chainguard.
+`MINIO_SERVER_IMAGE` et `MINIO_CLIENT_IMAGE` permettent au déploiement de figer
+des digests approuvés ; le gate d'intégration utilise des volumes jetables.
