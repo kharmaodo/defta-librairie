@@ -28,6 +28,11 @@ func (h *AdminUIHandler) Dashboard(w http.ResponseWriter, _ *http.Request) {
 	h.render(w, "admin.html", "Administration")
 }
 
+func (h *AdminUIHandler) CoverImports(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	http.ServeFile(w, r, "static/cover-imports/index.html")
+}
+
 func (h *AdminUIHandler) render(w http.ResponseWriter, name, title string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")

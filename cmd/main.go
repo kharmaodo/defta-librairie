@@ -468,6 +468,7 @@ func registerPublicRoutes(mux *http.ServeMux, adminUIHandler *handlers.AdminUIHa
 	mux.HandleFunc("GET /{$}", handlers.CatalogueHandler)
 	mux.HandleFunc("GET /login", adminUIHandler.Login)
 	mux.HandleFunc("GET /admin", adminUIHandler.Dashboard)
+	mux.HandleFunc("GET /admin/cover-imports", adminUIHandler.CoverImports)
 	mux.HandleFunc("GET /api/books", handlers.APIBooksHandler)
 	if publicCover != nil {
 		mux.Handle("GET /api/books/{id}/cover", http.HandlerFunc(publicCover))
