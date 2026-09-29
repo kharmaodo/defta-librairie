@@ -518,13 +518,13 @@ en production ni commitées :
 ```dotenv
 COVERS_ENABLED=true
 MINIO_ENDPOINT=127.0.0.1:9000
-MINIO_ACCESS_KEY=defta-minio-dev
-MINIO_SECRET_KEY=Defta-MinIO-Dev-2026!
+MINIO_ACCESS_KEY=<à-définir-en-local>
+MINIO_SECRET_KEY=<à-définir-en-local>
 MINIO_USE_SSL=false
 MINIO_BUCKET_COVERS=book-covers
 NATS_URL=nats://127.0.0.1:4222
-NATS_USER=defta-covers-dev
-NATS_PASSWORD=Defta-NATS-Dev-2026!
+NATS_USER=<à-définir-en-local>
+NATS_PASSWORD=<à-définir-en-local>
 NATS_COVERS_STREAM=BOOK_COVERS
 NATS_COVERS_SUBJECT=book.covers.process.v1
 ```
@@ -1680,3 +1680,7 @@ erreurs annoncées.
 La procédure de validation et de mise en production est consolidée dans
 [DELIVERY.md](docs/DELIVERY.md). Le contrôle complet s’exécute avec
 `./scripts/check-delivery.sh` avant de taguer une release.
+
+Pour les imports de couvertures v1.7.0, la rétention, les retenues légales
+réservées au root et le gate Go/React/Chromium/Docker sont décrits dans
+[RELEASE_V1_7_0.md](docs/RELEASE_V1_7_0.md).
