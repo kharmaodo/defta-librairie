@@ -109,6 +109,7 @@ func (r *CoverImportRetentionRepository) PurgeMetadata(ctx context.Context, now 
 			`DELETE FROM cover_import_legal_holds WHERE job_id=?`,
 			`DELETE FROM audit_logs WHERE resource_type='COVER_IMPORT_JOB' AND resource_id=? AND created_at <= ?`,
 			`DELETE FROM cover_import_jobs WHERE id=?`,
+			`DELETE FROM cover_object_cleanup_jobs WHERE cover_id='import:' || ? AND completed_at IS NOT NULL`,
 		} {
 			arguments := []any{id}
 			if query == `DELETE FROM audit_logs WHERE resource_type='COVER_IMPORT_JOB' AND resource_id=? AND created_at <= ?` {
@@ -119,12 +120,18 @@ func (r *CoverImportRetentionRepository) PurgeMetadata(ctx context.Context, now 
 			}
 		}
 	}
-	// The deletion record is kept as an operational trace; it carries no OCR
-	// text, image or user decision and proves when the object was deleted.
+	// Keep only the aggregate audit of the purge; the per-object queue row
+	// is also metadata and expires with the import job.
 	if _, err = tx.ExecContext(ctx, `DELETE FROM audit_logs WHERE resource_type='COVER_IMPORT' AND created_at <= ?
 		AND resource_id IN (SELECT id FROM cover_imports WHERE created_at <= ?
 		AND NOT EXISTS (SELECT 1 FROM cover_import_jobs WHERE import_id=cover_imports.id))`, cutoff, cutoff); err != nil {
 		return 0, fmt.Errorf("purge import audit: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM audit_logs WHERE created_at <= ? AND
+		(resource_type='COVER_IMPORT_RETENTION' OR
+		 (resource_type='COVER_IMPORT_JOB' AND NOT EXISTS
+		 (SELECT 1 FROM cover_import_jobs j WHERE j.id=audit_logs.resource_id)))`, cutoff); err != nil {
+		return 0, fmt.Errorf("purge expired retention audit: %w", err)
 	}
 	if _, err = tx.ExecContext(ctx, `DELETE FROM cover_imports WHERE created_at <= ?
 		AND NOT EXISTS (SELECT 1 FROM cover_import_jobs WHERE import_id=cover_imports.id)`, cutoff); err != nil {

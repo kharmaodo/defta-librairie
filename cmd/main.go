@@ -246,6 +246,11 @@ func main() {
 	mux.Handle("GET /api/manage/cover-imports/{id}/source", bookManagers(http.HandlerFunc(coverImportReviewHandler.Source)))
 	mux.Handle("POST /api/manage/cover-imports/{id}/decision", bookManagers(http.HandlerFunc(coverImportReviewHandler.Decide)))
 	mux.Handle("POST /api/manage/cover-imports/{id}/quarantine-decision", rootOnly(http.HandlerFunc(coverImportReviewHandler.DecideQuarantine)))
+	retentionHandler := handlers.NewCoverImportRetentionHandler(
+		services.NewCoverImportRetentionService(repositories.NewCoverImportRetentionRepository(database.DB)),
+	)
+	mux.Handle("POST /api/admin/cover-imports/{id}/legal-hold", rootOnly(http.HandlerFunc(retentionHandler.Hold)))
+	mux.Handle("DELETE /api/admin/cover-imports/{id}/legal-hold", rootOnly(http.HandlerFunc(retentionHandler.Release)))
 	mux.Handle("GET /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Get)))
 	mux.Handle("GET /api/manage/books/{id}/history", bookManagers(http.HandlerFunc(bookHandler.History)))
 	mux.Handle("PUT /api/manage/books/{id}", bookManagers(http.HandlerFunc(bookHandler.Update)))

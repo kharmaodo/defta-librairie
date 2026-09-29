@@ -196,4 +196,8 @@ func TestCoverImportMetadataPurgeWaitsForDeletionAndHold(t *testing.T) {
 	if err = db.QueryRow(`SELECT count(*) FROM audit_logs WHERE action='PURGE_COVER_IMPORT_METADATA'`).Scan(&audited); err != nil || audited != 1 {
 		t.Fatalf("purge audit=%d err=%v", audited, err)
 	}
+	var cleanupRows int
+	if err = db.QueryRow(`SELECT count(*) FROM cover_object_cleanup_jobs WHERE cover_id='import:purge'`).Scan(&cleanupRows); err != nil || cleanupRows != 0 {
+		t.Fatalf("expired object cleanup row=%d err=%v", cleanupRows, err)
+	}
 }

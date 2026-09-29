@@ -13541,6 +13541,25 @@
         ]
       }
     },
+    "/api/admin/cover-imports/{id}/legal-hold": {
+      "post": {
+        "operationId": "CoverImportRetentionHandler_Hold",
+        "summary": "Poser ou prolonger une retenue légale sur un original d'import (root)",
+        "tags": ["books_management"],
+        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}}],
+        "requestBody": {"required":true,"content":{"application/json":{"schema":{"type":"object","required":["reason","expiresAt"],"properties":{"reason":{"type":"string","maxLength":500},"expiresAt":{"type":"string","format":"date-time"}}}}}},
+        "responses": {"201":{"description":"Retenue active et auditée."},"403":{"description":"Root requis."},"404":{"description":"Import introuvable."},"409":{"description":"Suppression déjà commencée ou terminée."},"422":{"description":"Requête invalide."}},
+        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -X POST -H 'Authorization: Bearer ${TOKEN}' -H 'Content-Type: application/json' -d '{\"reason\":\"Litige en cours\",\"expiresAt\":\"2027-01-01T00:00:00Z\"}' '${BASE_URL}/api/admin/cover-imports/${JOB_ID}/legal-hold'"}]
+      },
+      "delete": {
+        "operationId": "CoverImportRetentionHandler_Release",
+        "summary": "Lever une retenue légale (root)",
+        "tags": ["books_management"],
+        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}}],
+        "responses": {"204":{"description":"Retenue levée et auditée."},"403":{"description":"Root requis."},"404":{"description":"Retenue introuvable."}},
+        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -X DELETE -H 'Authorization: Bearer ${TOKEN}' '${BASE_URL}/api/admin/cover-imports/${JOB_ID}/legal-hold'"}]
+      }
+    },
     "/api/manage/cover-imports": {
       "post": {
         "operationId": "CoverImportHandler_Create",
