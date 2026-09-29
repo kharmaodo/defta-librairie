@@ -359,15 +359,21 @@ func main() {
 		}()
 		go func() {
 			defer close(coverImportWorkerDone)
-			runCoverImportModerationWorker(signalContext, cfg, database.DB, slog.Default())
+			retryCoverImportConsumer(signalContext, "moderation", slog.Default(), func() {
+				runCoverImportModerationWorker(signalContext, cfg, database.DB, slog.Default())
+			})
 		}()
 		go func() {
 			defer close(coverImportOCRWorkerDone)
-			runCoverImportOCRWorker(signalContext, cfg, database.DB, slog.Default())
+			retryCoverImportConsumer(signalContext, "ocr", slog.Default(), func() {
+				runCoverImportOCRWorker(signalContext, cfg, database.DB, slog.Default())
+			})
 		}()
 		go func() {
 			defer close(coverImportMatchWorkerDone)
-			runCoverImportMatchWorker(signalContext, cfg, database.DB, slog.Default())
+			retryCoverImportConsumer(signalContext, "matching", slog.Default(), func() {
+				runCoverImportMatchWorker(signalContext, cfg, database.DB, slog.Default())
+			})
 		}()
 		go func() {
 			defer close(approvedCoverPromotionDone)
