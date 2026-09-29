@@ -1,9 +1,10 @@
 name: Release v1.7.0 gate
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - feature/v1.7.0-us-1707-retention-gate
+      - develop
   pull_request:
     paths:
       - 'internal/migrations/**'
@@ -18,6 +19,10 @@ on:
       - 'cmd/cover_cleanup_runtime.go'
       - 'scripts/check-release-v1.7.0.sh'
       - '.github/workflows/release-v1.7.0.yml'
+      - 'BACKLOG.md'
+      - 'CHANGELOG.md'
+      - 'docs/RELEASE_V1_7_0.md'
+      - '.github/workflows/release-binaries.yml'
 
 jobs:
   verify:
@@ -36,6 +41,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: sh scripts/check-release-v1.7.0.sh
       - name: Generate temporary Docker credentials
+        id: docker_credentials
         run: |
           for name in MINIO_ACCESS_KEY MINIO_SECRET_KEY NATS_USER NATS_PASSWORD; do
             case "$name" in
@@ -65,5 +71,5 @@ jobs:
           COVER_PIPELINE_INTEGRATION: '1'
         run: go test -count=1 -tags fts5 ./internal/covers ./internal/services
       - name: Stop Docker services
-        if: always()
+        if: always() && steps.docker_credentials.outcome == 'success'
         run: docker compose -f deploy/docker-compose.covers.yml down --volumes

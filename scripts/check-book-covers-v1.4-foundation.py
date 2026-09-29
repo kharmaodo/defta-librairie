@@ -22,6 +22,7 @@ backlog = read("BACKLOG.md")
 compose = read("deploy/docker-compose.covers.yml")
 nats = read("deploy/nats/nats-server.conf")
 minio_init = read("deploy/minio/init-bucket.sh")
+minio_init_image = read("deploy/Dockerfile.minio-init")
 env_example = read(".env.example")
 
 required_architecture = (
@@ -50,15 +51,15 @@ for volume in ("minio-covers-data", "nats-jetstream-data"):
 if ":latest" in compose or "image: latest" in compose:
     errors.append("tag Docker latest interdit")
 
-for image in (
-    "cgr.dev/chainguard/minio@sha256:71674988a1c7ddd5724928633199152b11e4ddefd6c6ce2d60772ff4a8f22ca9",
-    "cgr.dev/chainguard/minio-client@sha256:be51ef820151a708a8e140037e3746862a8c1dd5e624f84b404a1d71bcefb167",
-):
-    if image not in compose:
-        errors.append(f"image MinIO épinglée absente : {image}")
+server_image = "cgr.dev/chainguard/minio@sha256:71674988a1c7ddd5724928633199152b11e4ddefd6c6ce2d60772ff4a8f22ca9"
+client_image = "cgr.dev/chainguard/minio-client@sha256:be51ef820151a708a8e140037e3746862a8c1dd5e624f84b404a1d71bcefb167"
+if server_image not in compose:
+    errors.append(f"image MinIO épinglée absente : {server_image}")
+if client_image not in minio_init_image or "dockerfile: deploy/Dockerfile.minio-init" not in compose:
+    errors.append(f"image MinIO cliente épinglée absente : {client_image}")
 
-if "healthcheck:" not in compose:
-    errors.append("health checks Docker absents")
+if "healthcheck:" not in compose or "service_completed_successfully" not in compose:
+    errors.append("sonde NATS ou initialisation MinIO contrôlée absente")
 
 for token in ("jetstream", "store_dir", "max_file_store"):
     if token not in nats:
