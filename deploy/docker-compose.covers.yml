@@ -17,7 +17,9 @@ services:
       - covers
 
   minio-init:
-    image: ${MINIO_CLIENT_IMAGE:-cgr.dev/chainguard/minio-client@sha256:be51ef820151a708a8e140037e3746862a8c1dd5e624f84b404a1d71bcefb167}
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.minio-init
     depends_on:
       minio:
         condition: service_started
@@ -28,6 +30,10 @@ services:
       MINIO_BUCKET_COVERS: ${MINIO_BUCKET_COVERS:-book-covers}
     volumes:
       - ./minio/init-bucket.sh:/opt/defta/init-bucket.sh:ro
+    user: "65532:65532"
+    read_only: true
+    tmpfs:
+      - /tmp
     entrypoint: ["/bin/sh", "/opt/defta/init-bucket.sh"]
     restart: "no"
     networks:
