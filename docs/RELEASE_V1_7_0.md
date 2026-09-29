@@ -56,6 +56,12 @@ que la CI `Release v1.7.0 gate` est verte pour ce SHA. Faire une sauvegarde SQLi
 et vérifier sa restauration sur une copie avant migration 032/033. Préparer la
 persistance de SQLite, MinIO et JetStream, ainsi que Tesseract 5 et la langue
 arabe dans le worker. Conserver les droits du worker sur SQLite et le bucket privé.
+Si le backend tourne sur l'hôte et le worker sous Docker avec `../data:/app/data`,
+définir `COVER_WORKER_UID` et `COVER_WORKER_GID` dans `.env` avec les résultats
+de `id -u` et `id -g` du compte propriétaire de `data/defta.db`. Le dossier
+`data/backups` doit être accessible en écriture à cette identité ; la sauvegarde
+SQLite est obligatoire avant les migrations. Ne pas modifier les droits de la
+base pour tous les utilisateurs.
 
 Une fois le SHA et les résultats validés, créer le tag annoté sur ce SHA puis
 déclencher le workflow des exécutables :

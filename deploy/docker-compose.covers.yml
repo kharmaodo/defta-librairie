@@ -96,6 +96,8 @@ services:
       OCR_TIMEOUT_SECONDS: ${OCR_TIMEOUT_SECONDS:-20}
     volumes:
       - ../data:/app/data
+    # The API and this worker share the same host SQLite database and backups.
+    user: "${COVER_WORKER_UID:-1000}:${COVER_WORKER_GID:-1000}"
     read_only: true
     tmpfs:
       - /tmp
