@@ -51,5 +51,6 @@ avec des identifiants temporaires et exécute les tests d'intégration existants
 contre ces services. Une CI verte est nécessaire avant la fusion dans `develop`.
 
 Les images MinIO publiques utilisées par Compose proviennent de Chainguard.
-`MINIO_SERVER_IMAGE` et `MINIO_CLIENT_IMAGE` permettent au déploiement de figer
-des digests approuvés ; le gate d'intégration utilise des volumes jetables.
+Les digests sont fixés dans le Compose ; `MINIO_SERVER_IMAGE` et
+`MINIO_CLIENT_IMAGE` permettent une mise à jour contrôlée. Le gate d'intégration
+utilise la configuration du déploiement et des volumes jetables.

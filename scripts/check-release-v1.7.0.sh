@@ -17,7 +17,4 @@ command -v docker >/dev/null 2>&1 || { echo 'Docker requis pour le gate v1.7.0' 
 MINIO_ACCESS_KEY=release-gate MINIO_SECRET_KEY=release-gate-secret \
 NATS_USER=release-gate NATS_PASSWORD=release-gate-secret \
     docker compose -f deploy/docker-compose.covers.yml --profile worker config --quiet
-MINIO_ACCESS_KEY=release-gate MINIO_SECRET_KEY=release-gate-secret \
-NATS_USER=release-gate NATS_PASSWORD=release-gate-secret \
-    docker compose -f deploy/docker-compose.covers.yml -f deploy/docker-compose.ci.yml --profile worker config --quiet
 echo 'OK : gate v1.7.0 terminé.'

@@ -1,8 +1,0 @@
-services:
-  minio:
-    image: cgr.dev/chainguard/minio:latest
-    # The CI volume is disposable; the starter image runs as an unprivileged
-    # user and the mounted Docker volume is initially owned by root.
-    user: "0:0"
-    healthcheck:
-      disable: true
