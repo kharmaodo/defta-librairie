@@ -124,11 +124,16 @@ func (r *CoverCleanupRepository) ClaimNext(
 			WHERE completed_at IS NULL
 			  AND available_at <= ?
 			  AND (locked_until IS NULL OR locked_until <= ?)
+			  AND NOT EXISTS (
+			    SELECT 1 FROM cover_import_legal_holds h
+			    WHERE cover_object_cleanup_jobs.cover_id = 'import:' || h.job_id
+			      AND h.expires_at > ?
+			  )
 			ORDER BY available_at, id
 			LIMIT 1
 		)
 		RETURNING id, cover_id, library_id, object_key, object_kind, attempts
-	`, workerID, leaseText, nowText, nowText).Scan(
+	`, workerID, leaseText, nowText, nowText, nowText).Scan(
 		&job.ID,
 		&job.CoverID,
 		&job.LibraryID,

@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	coverCleanupBatchSize    = 16
+	coverCleanupBatchSize         = 16
 	coverCleanupPollInterval      = 2 * time.Second
 	coverCleanupReconcileInterval = 5 * time.Minute
 )
@@ -56,12 +56,25 @@ func runCoverCleanup(
 	cleaner.WithSourceRetention(
 		time.Duration(cfg.MinIOSourceRetentionHours) * time.Hour,
 	)
+	importRetention := repositories.NewCoverImportRetentionRepository(db)
 	logger.Info("cover_cleanup_worker_started", "worker_id", workerID)
 
 	nextReconciliation := time.Time{}
 	for ctx.Err() == nil {
 		now := time.Now().UTC()
 		if !now.Before(nextReconciliation) {
+			importJobs, importErr := importRetention.Reconcile(ctx, now)
+			if importErr != nil && ctx.Err() == nil {
+				logger.Warn("cover_import_retention_failed", "error", importErr, "worker_id", workerID)
+			} else if importJobs > 0 {
+				logger.Info("cover_import_retention_enqueued", "jobs", importJobs, "worker_id", workerID)
+			}
+			purged, purgeErr := importRetention.PurgeMetadata(ctx, now)
+			if purgeErr != nil && ctx.Err() == nil {
+				logger.Warn("cover_import_metadata_purge_failed", "error", purgeErr, "worker_id", workerID)
+			} else if purged > 0 {
+				logger.Info("cover_import_metadata_purged", "jobs", purged, "worker_id", workerID)
+			}
 			reconciled, reconcileErr := cleaner.Reconcile(ctx)
 			if reconcileErr != nil && ctx.Err() == nil {
 				logger.Warn(
