@@ -12,12 +12,6 @@ services:
     ports:
       - "${MINIO_API_BIND:-127.0.0.1:9000}:9000"
       - "${MINIO_CONSOLE_BIND:-127.0.0.1:9001}:9001"
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 10s
     restart: unless-stopped
     networks:
       - covers
@@ -26,7 +20,7 @@ services:
     image: ${MINIO_CLIENT_IMAGE:-cgr.dev/chainguard/minio-client@sha256:be51ef820151a708a8e140037e3746862a8c1dd5e624f84b404a1d71bcefb167}
     depends_on:
       minio:
-        condition: service_healthy
+        condition: service_started
     environment:
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}
@@ -68,7 +62,7 @@ services:
       dockerfile: deploy/Dockerfile.cover-worker
     depends_on:
       minio:
-        condition: service_healthy
+        condition: service_started
       minio-init:
         condition: service_completed_successfully
       nats:
