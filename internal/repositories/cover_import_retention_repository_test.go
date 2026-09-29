@@ -108,3 +108,92 @@ func TestCoverImportHoldBlocksAlreadyQueuedCleanup(t *testing.T) {
 		t.Fatalf("expired hold blocked: %v", err)
 	}
 }
+
+func TestCoverImportMetadataPurgeWaitsForDeletionAndHold(t *testing.T) {
+	db, err := sql.Open("sqlite3", filepath.Join(t.TempDir(), "metadata.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+	_, err = db.Exec(`PRAGMA foreign_keys=ON;
+	CREATE TABLE cover_imports(id TEXT PRIMARY KEY, created_at TEXT NOT NULL);
+	CREATE TABLE cover_import_jobs(id TEXT PRIMARY KEY,import_id TEXT REFERENCES cover_imports(id),source_object_key TEXT NOT NULL,status TEXT NOT NULL,created_at TEXT NOT NULL);
+	CREATE TABLE cover_import_candidate_matches(job_id TEXT REFERENCES cover_import_jobs(id));
+	CREATE TABLE cover_import_review_decisions(job_id TEXT REFERENCES cover_import_jobs(id));
+	CREATE TABLE cover_import_ocr_results(job_id TEXT REFERENCES cover_import_jobs(id),text_raw TEXT);
+	CREATE TABLE cover_import_outbox(job_id TEXT REFERENCES cover_import_jobs(id));
+	CREATE TABLE cover_import_legal_holds(job_id TEXT REFERENCES cover_import_jobs(id),expires_at TEXT NOT NULL);
+	CREATE TABLE cover_object_cleanup_jobs(cover_id TEXT,object_key TEXT,completed_at TEXT);
+	CREATE TABLE audit_logs(id TEXT PRIMARY KEY,action TEXT,resource_type TEXT,resource_id TEXT,new_values TEXT,success INTEGER,created_at TEXT);`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 9, 29, 12, 0, 0, 0, time.UTC)
+	old := now.AddDate(-2, 0, -1).Format(time.RFC3339Nano)
+	recent := now.AddDate(-1, -11, 0).Format(time.RFC3339Nano)
+	for _, entry := range []struct {
+		id, created   string
+		deleted, held bool
+	}{
+		{"purge", old, true, false}, {"retry", old, false, false}, {"hold", old, true, true}, {"young", recent, true, false},
+	} {
+		_, err = db.Exec(`INSERT INTO cover_imports VALUES (?,?);`, "batch-"+entry.id, entry.created)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`INSERT INTO cover_import_jobs VALUES (?,?,?,?,?)`, entry.id, "batch-"+entry.id, "imports/"+entry.id, "READY", entry.created)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`INSERT INTO cover_import_ocr_results VALUES (?,?)`, entry.id, "نص عربي خاص")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if entry.deleted {
+			_, err = db.Exec(`INSERT INTO cover_object_cleanup_jobs VALUES (?,?,?)`, "import:"+entry.id, "imports/"+entry.id, now.Format(time.RFC3339Nano))
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		if entry.held {
+			_, err = db.Exec(`INSERT INTO cover_import_legal_holds VALUES (?,?)`, entry.id, now.Add(time.Hour).Format(time.RFC3339Nano))
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		_, err = db.Exec(`INSERT INTO audit_logs(id,action,resource_type,resource_id,created_at) VALUES (?,'CREATE_COVER_IMPORT','COVER_IMPORT',?,?)`, "audit-"+entry.id, "batch-"+entry.id, entry.created)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	repo := NewCoverImportRetentionRepository(db)
+	count, err := repo.PurgeMetadata(context.Background(), now)
+	if err != nil || count != 1 {
+		t.Fatalf("first purge: %d %v", count, err)
+	}
+	count, err = repo.PurgeMetadata(context.Background(), now)
+	if err != nil || count != 0 {
+		t.Fatalf("replay purge: %d %v", count, err)
+	}
+	for _, id := range []string{"purge", "retry", "hold", "young"} {
+		var n int
+		if err = db.QueryRow(`SELECT count(*) FROM cover_import_jobs WHERE id=?`, id).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		want := 1
+		if id == "purge" {
+			want = 0
+		}
+		if n != want {
+			t.Fatalf("job %s retained=%d want=%d", id, n, want)
+		}
+		if err = db.QueryRow(`SELECT count(*) FROM cover_import_ocr_results WHERE job_id=?`, id).Scan(&n); err != nil || n != want {
+			t.Fatalf("OCR %s retained=%d err=%v", id, n, err)
+		}
+	}
+	var audited int
+	if err = db.QueryRow(`SELECT count(*) FROM audit_logs WHERE action='PURGE_COVER_IMPORT_METADATA'`).Scan(&audited); err != nil || audited != 1 {
+		t.Fatalf("purge audit=%d err=%v", audited, err)
+	}
+}

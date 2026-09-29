@@ -69,6 +69,12 @@ func runCoverCleanup(
 			} else if importJobs > 0 {
 				logger.Info("cover_import_retention_enqueued", "jobs", importJobs, "worker_id", workerID)
 			}
+			purged, purgeErr := importRetention.PurgeMetadata(ctx, now)
+			if purgeErr != nil && ctx.Err() == nil {
+				logger.Warn("cover_import_metadata_purge_failed", "error", purgeErr, "worker_id", workerID)
+			} else if purged > 0 {
+				logger.Info("cover_import_metadata_purged", "jobs", purged, "worker_id", workerID)
+			}
 			reconciled, reconcileErr := cleaner.Reconcile(ctx)
 			if reconcileErr != nil && ctx.Err() == nil {
 				logger.Warn(

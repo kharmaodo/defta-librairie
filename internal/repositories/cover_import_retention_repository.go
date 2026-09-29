@@ -61,3 +61,83 @@ func (r *CoverImportRetentionRepository) Reconcile(ctx context.Context, now time
 	}
 	return count, nil
 }
+
+// PurgeMetadata removes at most 100 old terminal jobs per pass. The source
+// deletion must already be acknowledged; a failed object deletion retains its
+// metadata for retry and investigation. The batch row is removed only after
+// all of its jobs have been purged.
+func (r *CoverImportRetentionRepository) PurgeMetadata(ctx context.Context, now time.Time) (int, error) {
+	cutoff := now.UTC().AddDate(-2, 0, 0).Format(time.RFC3339Nano)
+	nowText := now.UTC().Format(time.RFC3339Nano)
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("begin import metadata purge: %w", err)
+	}
+	defer tx.Rollback()
+	rows, err := tx.QueryContext(ctx, `SELECT j.id FROM cover_import_jobs j
+		JOIN cover_object_cleanup_jobs c ON c.cover_id='import:' || j.id AND c.object_key=j.source_object_key
+		WHERE j.created_at <= ? AND j.status IN ('READY','REJECTED','FAILED','CANCELLED')
+		AND c.completed_at IS NOT NULL
+		AND NOT EXISTS (SELECT 1 FROM cover_import_legal_holds h WHERE h.job_id=j.id AND h.expires_at > ?)
+		ORDER BY j.created_at,j.id LIMIT 100`, cutoff, nowText)
+	if err != nil {
+		return 0, fmt.Errorf("select expired import metadata: %w", err)
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			break
+		}
+		ids = append(ids, id)
+	}
+	if err == nil {
+		err = rows.Err()
+	}
+	if closeErr := rows.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return 0, fmt.Errorf("read expired import metadata: %w", err)
+	}
+	for _, id := range ids {
+		for _, query := range []string{
+			`DELETE FROM cover_import_candidate_matches WHERE job_id=?`,
+			`DELETE FROM cover_import_review_decisions WHERE job_id=?`,
+			`DELETE FROM cover_import_ocr_results WHERE job_id=?`,
+			`DELETE FROM cover_import_outbox WHERE job_id=?`,
+			`DELETE FROM cover_import_legal_holds WHERE job_id=?`,
+			`DELETE FROM audit_logs WHERE resource_type='COVER_IMPORT_JOB' AND resource_id=? AND created_at <= ?`,
+			`DELETE FROM cover_import_jobs WHERE id=?`,
+		} {
+			arguments := []any{id}
+			if query == `DELETE FROM audit_logs WHERE resource_type='COVER_IMPORT_JOB' AND resource_id=? AND created_at <= ?` {
+				arguments = append(arguments, cutoff)
+			}
+			if _, err = tx.ExecContext(ctx, query, arguments...); err != nil {
+				return 0, fmt.Errorf("purge import job %s: %w", id, err)
+			}
+		}
+	}
+	// The deletion record is kept as an operational trace; it carries no OCR
+	// text, image or user decision and proves when the object was deleted.
+	if _, err = tx.ExecContext(ctx, `DELETE FROM audit_logs WHERE resource_type='COVER_IMPORT' AND created_at <= ?
+		AND resource_id IN (SELECT id FROM cover_imports WHERE created_at <= ?
+		AND NOT EXISTS (SELECT 1 FROM cover_import_jobs WHERE import_id=cover_imports.id))`, cutoff, cutoff); err != nil {
+		return 0, fmt.Errorf("purge import audit: %w", err)
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM cover_imports WHERE created_at <= ?
+		AND NOT EXISTS (SELECT 1 FROM cover_import_jobs WHERE import_id=cover_imports.id)`, cutoff); err != nil {
+		return 0, fmt.Errorf("purge empty import batches: %w", err)
+	}
+	if len(ids) > 0 {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,action,resource_type,new_values,success,created_at)
+			VALUES(lower(hex(randomblob(16))),'PURGE_COVER_IMPORT_METADATA','COVER_IMPORT_RETENTION',json_object('purgedJobs',?),1,?)`, len(ids), nowText); err != nil {
+			return 0, fmt.Errorf("audit import metadata purge: %w", err)
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return 0, fmt.Errorf("commit import metadata purge: %w", err)
+	}
+	return len(ids), nil
+}
