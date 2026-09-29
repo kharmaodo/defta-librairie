@@ -1,0 +1,37 @@
+name: Cover import UI
+
+on:
+  push:
+    branches:
+      - feature/v1.7.0-us-1706-import-ui
+  pull_request:
+    paths:
+      - 'frontend/cover-imports/**'
+      - 'static/cover-imports/**'
+      - 'internal/repositories/cover_import*'
+      - 'tests/browser/cover-imports.spec.cjs'
+      - '.github/workflows/cover-import-ui.yml'
+      - 'cmd/main.go'
+      - 'internal/handlers/admin_ui.go'
+      - 'templates/admin.html'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm ci --prefix frontend/cover-imports
+      - run: npm run build --prefix frontend/cover-imports
+      - run: git diff --exit-code -- static/cover-imports
+      - run: go test -tags fts5 ./...
+      - run: go vet -tags fts5 ./...
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser -- --grep 'cover import UI'
