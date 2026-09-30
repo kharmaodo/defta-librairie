@@ -11,6 +11,9 @@
   const sessionMessage = 'Session expirée : reconnectez-vous puis actualisez cette page.';
   // Only known status/code pairs produce business messages; never display server text.
   const businessMessages = {
+    "429": {
+      "cover_import_quota_exceeded": "Limite d’import atteinte : deux lots actifs au maximum et 500 images sur sept jours. Terminez la revue des lots en cours ou attendez le renouvellement du quota."
+    },
     "409": {
       "insufficient_stock": "Stock insuffisant pour cette opération.",
       "sale_not_editable": "L’état actuel de la vente ne permet pas cette opération.",

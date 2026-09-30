@@ -311,8 +311,8 @@ Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186
 
 | US | Livrable | État | Validation attendue |
 |---|---|---|---|
-| US-1710 | Contrat, mapping SQLite et plan de comparaison | Documenté, en revue | Lecture du contrat et vérification du patch documentaire. |
-| US-1711 | Quotas et erreurs d'import explicites | À développer | Quota HTTP 429, validation conservée, compensation testée. |
+| US-1710 | Contrat, mapping SQLite et plan de comparaison | Fusionné dans develop | PR #187 ; contrat et contrôles documentaires validés. |
+| US-1711 | Quotas et erreurs d'import explicites | Réalisé, en revue | Cause conservée après rollback ; HTTP 429/422/413, panne stockage 503, compensation et message français testés. Go/FTS5, vet et suites frontend verts. Test navigateur ajouté ; exécution locale bloquée par téléchargement Chromium, validation CI requise. |
 | US-1712 | Cœur OCR CPU et CLI de comparaison | À développer | Tests et corpus annoté, SQLite read-only. |
 | US-1713 | FastAPI interne et Docker | À développer | Limites, readiness, timeout et concurrence bornés. |
 | US-1714 | Adaptateur Go derrière feature flag | À développer | Off/on, erreurs, persistance et reprise idempotente. |

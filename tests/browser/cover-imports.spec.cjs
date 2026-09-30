@@ -79,3 +79,21 @@ test('cover import UI reports a review loading failure inside the review panel',
   await expect(panel.getByRole('alert')).toBeVisible();
   await expect(panel.getByText('Chargement de la revue…')).toHaveCount(0);
 });
+
+
+test('cover import UI explains an import quota instead of suggesting a service outage', async ({page}) => {
+  await page.addInitScript(() => sessionStorage.setItem('defta.accessToken', 'browser-test-token'));
+  await page.route('**/api/auth/me', route => route.fulfill({json:{id:'owner-test',role:'OWNER_LIBRARY',libraryId:'library-a',passwordChangeRequired:false}}));
+  await page.route('**/api/manage/cover-imports**', route => {
+    if (route.request().method() === 'POST') {
+      return route.fulfill({status:429,json:{error:'cover_import_quota_exceeded',message:'Cover import quota exceeded'}});
+    }
+    return route.fulfill({json:{results:[],total:0}});
+  });
+  await page.goto('/admin/cover-imports');
+  await page.locator('#cover-files').setInputFiles({name:'couverture.png',mimeType:'image/png',buffer:pixel});
+  await page.getByRole('button',{name:'Importer les couvertures'}).click();
+  await expect(page.getByRole('alert')).toContainText('Limite d’import atteinte');
+  await expect(page.getByRole('alert')).toContainText('Terminez la revue');
+  await expect(page.getByText('Service temporairement indisponible. Réessayez plus tard.')).toHaveCount(0);
+});
