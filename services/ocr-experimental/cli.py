@@ -30,9 +30,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--format", choices=("json", "csv"), default="json")
     parser.add_argument("--timeout-seconds", type=float, default=30)
     parser.add_argument("--tesseract", default="tesseract")
+    parser.add_argument(
+        "--color-diagnostics",
+        action="store_true",
+        help="Compare extra central color passes; selection stays unchanged",
+    )
     args = parser.parse_args(argv)
     try:
-        settings = Settings(timeout_seconds=args.timeout_seconds)
+        settings = Settings(
+            timeout_seconds=args.timeout_seconds,
+            color_diagnostics=args.color_diagnostics,
+        )
         if args.target.is_dir():
             paths = sorted(
                 path
@@ -67,6 +75,14 @@ def main(argv: list[str] | None = None) -> int:
                         result.baseline.text_raw
                     )
                     record["candidates"] = catalogue.search(result.selected.text_raw)
+                    record["pass_candidates"] = [
+                        {
+                            "preprocessing": item.preprocessing,
+                            "psm": item.psm,
+                            "candidates": catalogue.search(item.text_raw),
+                        }
+                        for item in result.passes
+                    ]
                 except (OCRError, OSError) as exc:
                     failed = True
                     record["error"] = (
@@ -97,6 +113,7 @@ def main(argv: list[str] | None = None) -> int:
                         "selected",
                         "baseline_candidates",
                         "candidates",
+                        "pass_candidates",
                         "duration_ms",
                         "error",
                     ],

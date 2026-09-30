@@ -13,7 +13,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Protocol
 
-from PIL import Image, ImageOps, UnidentifiedImageError
+from PIL import Image, ImageChops, ImageOps, UnidentifiedImageError
 
 
 class OCRError(Exception):
@@ -28,6 +28,7 @@ class Settings:
     max_bytes: int = 10 * 1024 * 1024
     max_pixels: int = 24_000_000
     max_output_bytes: int = 1024 * 1024
+    color_diagnostics: bool = False
 
     def __post_init__(self) -> None:
         if (
@@ -219,6 +220,39 @@ def extract(
                 ImageOps.autocontrast(ImageOps.grayscale(image)),
             ),
         ]
+        if settings.color_diagnostics:
+            # Generic central window: a diagnostic, not title localization.
+            width, height = image.size
+            central = image.crop(
+                (
+                    int(width * 0.15),
+                    int(height * 0.25),
+                    max(int(width * 0.15) + 1, int(width * 0.70)),
+                    max(int(height * 0.25) + 1, int(height * 0.65)),
+                )
+            )
+            red, _, blue = central.split()
+            for name, channel in (
+                ("central-red", red),
+                ("central-red-minus-blue", ImageChops.subtract(red, blue)),
+            ):
+                contrast = ImageOps.invert(ImageOps.autocontrast(channel))
+                # Include the white border in the temporary pixel budget.
+                scale = min(
+                    3.0,
+                    max(
+                        1.0, (math.sqrt(settings.max_pixels) - 60) / max(contrast.size)
+                    ),
+                )
+                resized = contrast.resize(
+                    (
+                        max(1, int(contrast.width * scale)),
+                        max(1, int(contrast.height * scale)),
+                    )
+                )
+                bordered = ImageOps.expand(resized, 30, fill=255)
+                if bordered.width * bordered.height <= settings.max_pixels:
+                    variants.append((name, bordered))
         for name, variant in variants:
             path = Path(folder) / "input.png"
             variant.save(path, format="PNG")
@@ -232,7 +266,7 @@ def extract(
                 passes.append(parse_tsv(tsv, psm, name))
     # A diagnostic heuristic only. All passes remain available for comparison.
     selected = max(
-        passes,
+        passes[:4],
         key=lambda item: (
             bool(item.text_raw),
             item.confidence if item.confidence is not None else -1,

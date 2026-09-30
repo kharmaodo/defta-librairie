@@ -86,3 +86,23 @@ cette mesure.
 
 FastAPI/Docker : US-1713. Adaptateur Go et flag off/on : US-1714. Aucune API
 publique ou autorisation utilisateur supplémentaire n'est introduite ici.
+
+## Comparaison couleur explicite
+
+Ajouter `--color-diagnostics` pour comparer huit passes au lieu de quatre.
+Les quatre passes supplémentaires utilisent une fenêtre centrale fixe, le canal
+rouge et la différence rouge/bleu, avec PSM 6/11. Ce recadrage n'est pas une
+détection automatique du titre et peut exclure certains titres. Le budget global
+de temps et la limite de pixels restent applicables.
+
+`pass_candidates` contient les candidats FTS5 de chaque passe, filtrés par
+`library_id`, dans les exports JSON et CSV. `selected` et `candidates` conservent
+la sélection des quatre passes initiales : aucun résultat diagnostic ne remplace
+implicitement la politique par défaut.
+
+Sur une couverture arabe dorée sur fond bleu fournie pour le benchmark, une
+passe couleur a reconnu le mot « الفارض », absent des quatre passes initiales.
+C'est une observation sur une image, pas une validation du titre complet, du
+matching sur le catalogue réel ni un gain général mesuré. Les images privées
+ne sont pas ajoutées au dépôt. Comparer plusieurs couvertures avec leurs titres
+vérifiés avant de modifier la sélection ou d'activer ces passes en production.

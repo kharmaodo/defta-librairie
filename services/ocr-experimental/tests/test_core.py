@@ -79,6 +79,24 @@ class PipelineTests(unittest.TestCase):
         self.assertLess(result.selected.confidence or 0, 0.95)
         self.assertTrue(all(not path.parent.exists() for path, _ in runner.calls))
 
+    def test_color_diagnostics_preserve_default_selection_and_budget(self) -> None:
+        runner = FakeRunner()
+        result = extract(image_bytes(), runner, Settings(color_diagnostics=True))
+        self.assertEqual(len(result.passes), 8)
+        self.assertEqual(result.selected.preprocessing, "original")
+        self.assertEqual(result.baseline.preprocessing, "original")
+        self.assertEqual(
+            {p.preprocessing for p in result.passes[4:]},
+            {"central-red", "central-red-minus-blue"},
+        )
+        self.assertTrue(all(not path.parent.exists() for path, _ in runner.calls))
+        bounded = extract(
+            image_bytes(),
+            FakeRunner(),
+            Settings(color_diagnostics=True, max_pixels=1200),
+        )
+        self.assertEqual(len(bounded.passes), 4)
+
     def test_invalid_and_oversized_images_before_runner(self) -> None:
         runner = FakeRunner()
         cases = [
