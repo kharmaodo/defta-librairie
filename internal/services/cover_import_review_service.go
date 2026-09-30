@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -83,17 +84,15 @@ func (s *CoverImportReviewService) Decide(ctx context.Context, claims *auth.Clai
 		return job, repositories.ErrCoverImportReviewState
 	}
 	if action == "ACCEPT" {
-		found := false
-		for _, candidate := range job.Candidates {
-			if candidate.BookID == bookID {
-				found = true
-				break
-			}
+		found, err := s.repository.ReviewCandidateAllowed(ctx, job, bookID)
+		if err != nil {
+			return job, err
 		}
 		if !found {
 			return job, repositories.ErrCoverImportCandidateNotFound
 		}
 	}
+
 	auditID, err := s.newID()
 	if err != nil {
 		return job, err
@@ -172,4 +171,36 @@ func (s *CoverImportReviewService) DecideQuarantine(ctx context.Context, claims 
 		job.NSFWDecision = "SAFE"
 	}
 	return job, nil
+}
+
+func (s *CoverImportReviewService) SearchCandidates(ctx context.Context, claims *auth.Claims, jobID, libraryID, query string) ([]repositories.CoverImportReviewCandidate, error) {
+	query = strings.TrimSpace(query)
+	if len([]rune(query)) < 2 || len([]rune(query)) > 200 {
+		return nil, ErrInvalidBook
+	}
+	job, err := s.Job(ctx, claims, jobID, libraryID)
+	if err != nil {
+		return nil, err
+	}
+	if job.Status != "REVIEW_REQUIRED" || job.NSFWDecision != "SAFE" {
+		return nil, repositories.ErrCoverImportReviewState
+	}
+	return s.repository.SearchReviewBooks(ctx, job, query, claims.Subject, s.now().UTC().Format(time.RFC3339Nano))
+}
+func (s *CoverImportReviewService) DismissCandidate(ctx context.Context, claims *auth.Claims, jobID, libraryID string, bookID int) error {
+	if bookID < 1 {
+		return ErrInvalidBook
+	}
+	job, err := s.Job(ctx, claims, jobID, libraryID)
+	if err != nil {
+		return err
+	}
+	if job.Status != "REVIEW_REQUIRED" || job.NSFWDecision != "SAFE" {
+		return repositories.ErrCoverImportReviewState
+	}
+	auditID, err := s.newID()
+	if err != nil {
+		return err
+	}
+	return s.repository.DismissReviewCandidate(ctx, job, bookID, claims.Subject, string(claims.Role), auditID, s.now().UTC().Format(time.RFC3339Nano))
 }

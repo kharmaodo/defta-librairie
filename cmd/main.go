@@ -243,6 +243,8 @@ func main() {
 	mux.Handle("GET /api/manage/cover-imports", bookManagers(http.HandlerFunc(coverImportHandler.List)))
 	mux.Handle("POST /api/manage/cover-imports", bookManagers(http.HandlerFunc(coverImportHandler.Create)))
 	mux.Handle("GET /api/manage/cover-imports/{id}", bookManagers(http.HandlerFunc(coverImportReviewHandler.Job)))
+	mux.Handle("POST /api/manage/cover-imports/{id}/candidate-search", bookManagers(http.HandlerFunc(coverImportReviewHandler.SearchCandidates)))
+	mux.Handle("POST /api/manage/cover-imports/{id}/candidate-dismiss", bookManagers(http.HandlerFunc(coverImportReviewHandler.DismissCandidate)))
 	mux.Handle("GET /api/manage/cover-imports/{id}/source", bookManagers(http.HandlerFunc(coverImportReviewHandler.Source)))
 	mux.Handle("POST /api/manage/cover-imports/{id}/decision", bookManagers(http.HandlerFunc(coverImportReviewHandler.Decide)))
 	mux.Handle("POST /api/manage/cover-imports/{id}/quarantine-decision", rootOnly(http.HandlerFunc(coverImportReviewHandler.DecideQuarantine)))

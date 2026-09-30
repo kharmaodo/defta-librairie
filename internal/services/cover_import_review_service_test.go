@@ -36,7 +36,8 @@ func reviewServiceDB(t *testing.T) *sql.DB {
 	t.Cleanup(func() { _ = db.Close() })
 	_, err = db.Exec(`
       CREATE TABLE libraries(id TEXT PRIMARY KEY,status TEXT);
-      CREATE TABLE defta(id INTEGER PRIMARY KEY,library_id TEXT,title TEXT,deleted_at TEXT);
+      CREATE TABLE defta(id INTEGER PRIMARY KEY,library_id TEXT,title TEXT,deleted_at TEXT,auteur TEXT);
+      CREATE TABLE cover_import_review_suggestions(job_id TEXT,book_id INTEGER,origin TEXT,rejected INTEGER DEFAULT 0,actor_user_id TEXT,updated_at TEXT,PRIMARY KEY(job_id,book_id));
       CREATE TABLE cover_import_jobs(id TEXT PRIMARY KEY,library_id TEXT,status TEXT,nsfw_decision TEXT,nsfw_policy_version TEXT,source_object_key TEXT,source_content_type TEXT,source_format TEXT,source_width INTEGER,source_height INTEGER,source_size INTEGER,target_book_id INTEGER,decision_code TEXT,terminal_at TEXT,updated_at TEXT);
       CREATE TABLE cover_import_candidate_matches(job_id TEXT,book_id INTEGER,rank INTEGER,fts_score REAL);
       CREATE TABLE cover_import_review_decisions(job_id TEXT PRIMARY KEY,actor_user_id TEXT,action TEXT,book_id INTEGER,reason TEXT,created_at TEXT);
@@ -45,7 +46,7 @@ func reviewServiceDB(t *testing.T) *sql.DB {
       CREATE TABLE cover_import_outbox(event_id TEXT PRIMARY KEY,job_id TEXT,library_id TEXT,event_type TEXT,schema_version INTEGER,payload TEXT,attempts INTEGER,available_at TEXT,created_at TEXT);
       CREATE TABLE audit_logs(id TEXT PRIMARY KEY,actor_user_id TEXT,action TEXT,resource_type TEXT,resource_id TEXT,new_values TEXT,success INTEGER,created_at TEXT);
       INSERT INTO libraries VALUES('library-a','ACTIVE'),('library-b','ACTIVE');
-      INSERT INTO defta VALUES(1,'library-a','Book A',NULL);
+      INSERT INTO defta(id,library_id,title,deleted_at) VALUES(1,'library-a','Book A',NULL);
       INSERT INTO cover_import_jobs(id,library_id,status,nsfw_decision,source_object_key,source_content_type,source_format,source_width,source_height,source_size,updated_at) VALUES('safe','library-a','REVIEW_REQUIRED','SAFE','private/source','image/jpeg','jpeg',10,10,200,'before'),('quarantine','library-a','QUARANTINED','REVIEW','private/quarantine','image/jpeg','jpeg',10,10,200,'before');
       INSERT INTO cover_import_candidate_matches VALUES('safe',1,1,0.4);
     `)

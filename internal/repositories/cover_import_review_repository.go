@@ -19,10 +19,14 @@ type CoverImportReviewJob struct {
 }
 
 type CoverImportReviewCandidate struct {
-	BookID int     `json:"bookId"`
-	Rank   int     `json:"rank"`
-	Title  string  `json:"title"`
-	Score  float64 `json:"ftsScore"`
+	BookID         int     `json:"bookId"`
+	Author         string  `json:"author"`
+	HasActiveCover bool    `json:"hasActiveCover"`
+	ISBN13         string  `json:"isbn13,omitempty"`
+	Origin         string  `json:"origin"`
+	Rank           int     `json:"rank"`
+	Title          string  `json:"title"`
+	Score          float64 `json:"ftsScore"`
 }
 
 func (r *CoverImportRepository) ReviewJob(ctx context.Context, jobID, libraryID string) (CoverImportReviewJob, error) {
@@ -37,7 +41,7 @@ func (r *CoverImportRepository) ReviewJob(ctx context.Context, jobID, libraryID 
 	if err != nil {
 		return job, fmt.Errorf("read review job: %w", err)
 	}
-	rows, err := r.db.QueryContext(ctx, `SELECT c.book_id,c.rank,d.title,c.fts_score FROM cover_import_candidate_matches c JOIN defta d ON d.id=c.book_id AND d.library_id=? AND d.deleted_at IS NULL WHERE c.job_id=? ORDER BY c.rank`, libraryID, jobID)
+	rows, err := r.db.QueryContext(ctx, `SELECT c.book_id,c.rank,d.title,c.fts_score,COALESCE(d.auteur,''),EXISTS(SELECT 1 FROM book_covers b WHERE b.book_id=d.id AND b.library_id=d.library_id AND b.active=1 AND b.status='READY') FROM cover_import_candidate_matches c JOIN defta d ON d.id=c.book_id AND d.library_id=? AND d.deleted_at IS NULL WHERE c.job_id=? AND NOT EXISTS(SELECT 1 FROM cover_import_review_suggestions s WHERE s.job_id=c.job_id AND s.book_id=c.book_id AND s.rejected=1) ORDER BY c.rank`, libraryID, jobID)
 	if err != nil {
 		return job, err
 	}
@@ -45,9 +49,10 @@ func (r *CoverImportRepository) ReviewJob(ctx context.Context, jobID, libraryID 
 	job.Candidates = []CoverImportReviewCandidate{}
 	for rows.Next() {
 		var item CoverImportReviewCandidate
-		if err = rows.Scan(&item.BookID, &item.Rank, &item.Title, &item.Score); err != nil {
+		if err = rows.Scan(&item.BookID, &item.Rank, &item.Title, &item.Score, &item.Author, &item.HasActiveCover); err != nil {
 			return job, err
 		}
+		item.Origin = "OCR"
 		job.Candidates = append(job.Candidates, item)
 	}
 	return job, rows.Err()
@@ -67,7 +72,7 @@ func (r *CoverImportRepository) DecideReview(ctx context.Context, job CoverImpor
 	defer tx.Rollback()
 	if action == "ACCEPT" {
 		var count int
-		err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM cover_import_candidate_matches c JOIN defta d ON d.id=c.book_id AND d.library_id=? AND d.deleted_at IS NULL WHERE c.job_id=? AND c.book_id=?`, job.LibraryID, job.ID, bookID).Scan(&count)
+		err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM defta d WHERE d.library_id=? AND d.deleted_at IS NULL AND d.id=? AND NOT EXISTS(SELECT 1 FROM cover_import_review_suggestions s WHERE s.job_id=? AND s.book_id=d.id AND s.rejected=1) AND (EXISTS(SELECT 1 FROM cover_import_candidate_matches c WHERE c.job_id=? AND c.book_id=d.id) OR EXISTS(SELECT 1 FROM cover_import_review_suggestions s WHERE s.job_id=? AND s.book_id=d.id AND s.origin='MANUAL'))`, job.LibraryID, bookID, job.ID, job.ID, job.ID).Scan(&count)
 		if err != nil {
 			return err
 		}
@@ -105,7 +110,17 @@ func (r *CoverImportRepository) DecideReview(ctx context.Context, job CoverImpor
 			return err
 		}
 	}
-	values, _ := json.Marshal(map[string]any{"action": action, "bookId": reviewBookID(action, bookID), "libraryId": job.LibraryID, "actorRole": actorRole, "correlationId": auditID, "nsfwPolicyVersion": job.NSFWPolicyVersion})
+	selectionMethod := "OCR"
+	if action == "ACCEPT" {
+		var manual int
+		if err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM cover_import_review_suggestions WHERE job_id=? AND book_id=? AND origin='MANUAL'`, job.ID, bookID).Scan(&manual); err != nil {
+			return err
+		}
+		if manual > 0 {
+			selectionMethod = "MANUAL"
+		}
+	}
+	values, _ := json.Marshal(map[string]any{"selectionMethod": selectionMethod, "action": action, "bookId": reviewBookID(action, bookID), "libraryId": job.LibraryID, "actorRole": actorRole, "correlationId": auditID, "nsfwPolicyVersion": job.NSFWPolicyVersion})
 	_, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at) VALUES(?,?,'DECIDE_COVER_IMPORT_REVIEW','COVER_IMPORT_JOB',?,?,1,?)`, auditID, actorID, job.ID, string(values), now)
 	if err != nil {
 		return err

@@ -58,6 +58,7 @@ test('cover import UI uses the shared session, uploads, follows progress and com
   await expect(page.getByAltText('Couverture importée à examiner')).toBeVisible();
   await page.getByRole('radio',{name:/Le livre voulu/}).check();
   await page.getByRole('button',{name:'Rattacher au livre choisi'}).click();
+  await page.getByRole('button',{name:'Confirmer',exact:true}).click();
   await expect(page.getByText('Rattachement validé')).toBeVisible();
   expect(accepted).toBe(true);
 });
@@ -101,4 +102,47 @@ test('cover import UI explains an import quota instead of suggesting a service o
   await expect(page.getByRole('alert')).toContainText('Limite d’import atteinte');
   await expect(page.getByRole('alert')).toContainText('Terminez la revue');
   await expect(page.getByText('Service temporairement indisponible. Réessayez plus tard.')).toHaveCount(0);
+});
+
+test('cover import UI searches three manual suggestions, dismisses one and confirms replacement', async ({page}) => {
+  await page.addInitScript(() => sessionStorage.setItem('defta.accessToken', 'browser-test-token'));
+  await page.route('**/api/auth/me', route => route.fulfill({json:{id:'owner',role:'OWNER_LIBRARY',libraryId:'library-a',passwordChangeRequired:false}}));
+  let dismissed = false, accepted = false, status = 'REVIEW_REQUIRED';
+  await page.route('**/api/manage/books/22/cover?**', route => route.fulfill({body:pixel,contentType:'image/png'}));
+  await page.route('**/api/manage/cover-imports**', async route => {
+    const request=route.request(), path=new URL(request.url()).pathname;
+    if (path === '/api/manage/cover-imports') return route.fulfill({json:{results:[{id:'batch',libraryId:'library-a',createdAt:'2026-09-30T10:00:00Z',totalFiles:1,jobs:[{id:'manual-job',status,contentType:'image/png'}]}]}});
+    if (path.endsWith('/source')) return route.fulfill({body:pixel,contentType:'image/png'});
+    if (path.endsWith('/candidate-search')) {
+      expect(request.postDataJSON()).toEqual({libraryId:'',query:'Guide'});
+      return route.fulfill({json:{results:[...(!dismissed ? [{bookId:21,title:'Guide incorrect',rank:1,author:'Auteur A'}] : []),{bookId:22,title:'Guide voulu',rank:2,author:'Auteur B',hasActiveCover:true},{bookId:23,title:'Guide autre',rank:3,author:'Auteur C'}]}});
+    }
+    if (path.endsWith('/candidate-dismiss')) {
+      expect(request.postDataJSON()).toEqual({libraryId:'',bookId:21}); dismissed=true;
+      return route.fulfill({json:{status:'DISMISSED'}});
+    }
+    if (path.endsWith('/decision')) {
+      expect(request.postDataJSON()).toEqual({libraryId:'',action:'ACCEPT',bookId:22});accepted=true;status='READY';
+      return route.fulfill({status:202,json:{id:'manual-job',status}});
+    }
+    return route.fulfill({json:{id:'manual-job',libraryId:'library-a',status,nsfwDecision:'SAFE',candidates:[]}});
+  });
+  await page.goto('/admin/cover-imports');
+  await page.getByRole('button',{name:'Revoir',exact:true}).click();
+  await expect(page.getByText('Aucun candidat trouvé. Recherchez le livre à rattacher.')).toBeVisible();
+  await page.getByLabel('Rechercher un livre par titre, auteur ou ISBN').fill('Guide');
+  await page.getByRole('button',{name:'Rechercher',exact:true}).click();
+  const results=page.getByRole('group',{name:'Résultats de recherche manuelle'});
+  await expect(results.locator('.candidate')).toHaveCount(3);
+  await results.locator('.candidate').filter({hasText:'Guide incorrect'}).getByRole('button',{name:'Rejeter la solution'}).click();
+  await expect(results.locator('.candidate')).toHaveCount(2);
+  expect(accepted).toBe(false);
+  await results.locator('.candidate').filter({hasText:'Guide voulu'}).getByRole('button',{name:'Résoudre'}).click();
+  await expect(page.getByRole('dialog')).toContainText('Sa couverture actuelle sera remplacée');
+  await page.getByRole('button',{name:'Annuler',exact:true}).click();
+  expect(accepted).toBe(false);
+  await results.locator('.candidate').filter({hasText:'Guide voulu'}).getByRole('button',{name:'Résoudre'}).click();
+  await page.getByRole('button',{name:'Confirmer',exact:true}).click();
+  await expect(page.getByText('Rattachement validé',{exact:true})).toBeVisible();
+  expect(accepted).toBe(true);
 });

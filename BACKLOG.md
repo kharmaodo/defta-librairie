@@ -347,3 +347,17 @@ absente, provoquant une erreur `replaceChildren` lors du rafraîchissement des
 tags (notamment à l'ouverture du formulaire root). Ce code obsolète est retiré.
 Le faux DOM des tests renvoie maintenant `null` pour cet élément, comme le
 vrai template ; rechargement root/propriétaire et rendu des tags restent testés.
+
+### US-1717 — Recherche manuelle et résolution des couvertures SAFE
+
+Branche feature/v1.7.1-manual-cover-matching : recherche limitée à trois livres
+de la bibliothèque, suggestions persistées, aperçu privé, confirmation de
+résolution/remplacement, rejet d'une solution distinct du rejet du rattachement,
+audit et idempotence. Migration 034, API/OpenAPI et revue React.
+ISBN : recherche exacte des ISBN issus des OCR déjà rattachés ; defta n'a pas
+de champ ISBN dédié. Voir [contrat et recette](docs/MANUAL_COVER_MATCHING.md).
+Validation locale : Go/FTS5, vet, race sur services/repositories/handlers,
+125 tests frontend, TypeScript/Vite et contrat OpenAPI verts. Scénarios
+Playwright adaptés/ajoutés ; téléchargement Chromium local tronqué, exécution
+navigateur à confirmer en CI. État : implémenté, validation CI et recette
+locale requises avant clôture.

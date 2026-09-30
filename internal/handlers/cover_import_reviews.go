@@ -136,3 +136,53 @@ func writeCoverImportReviewError(w http.ResponseWriter, err error) {
 		writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "cover_import_review_unavailable"})
 	}
 }
+
+type manualCoverReviewer interface {
+	SearchCandidates(context.Context, *auth.Claims, string, string, string) ([]repositories.CoverImportReviewCandidate, error)
+	DismissCandidate(context.Context, *auth.Claims, string, string, int) error
+}
+
+func (h *CoverImportReviewHandler) SearchCandidates(w http.ResponseWriter, r *http.Request) {
+	svc, ok := h.service.(manualCoverReviewer)
+	if !h.enabled || !ok {
+		writeCoverImportReviewError(w, services.ErrCoversDisabled)
+		return
+	}
+	var request struct {
+		LibraryID string `json:"libraryId"`
+		Query     string `json:"query"`
+	}
+	if err := decodeOwnerJSON(w, r, &request); err != nil {
+		writeCoverImportReviewError(w, services.ErrInvalidBook)
+		return
+	}
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	result, err := svc.SearchCandidates(r.Context(), claims, r.PathValue("id"), request.LibraryID, request.Query)
+	if err != nil {
+		writeCoverImportReviewError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeAuthJSON(w, http.StatusOK, map[string]any{"results": result})
+}
+func (h *CoverImportReviewHandler) DismissCandidate(w http.ResponseWriter, r *http.Request) {
+	svc, ok := h.service.(manualCoverReviewer)
+	if !h.enabled || !ok {
+		writeCoverImportReviewError(w, services.ErrCoversDisabled)
+		return
+	}
+	var request struct {
+		LibraryID string `json:"libraryId"`
+		BookID    int    `json:"bookId"`
+	}
+	if err := decodeOwnerJSON(w, r, &request); err != nil {
+		writeCoverImportReviewError(w, services.ErrInvalidBook)
+		return
+	}
+	claims, _ := auth.ClaimsFromContext(r.Context())
+	if err := svc.DismissCandidate(r.Context(), claims, r.PathValue("id"), request.LibraryID, request.BookID); err != nil {
+		writeCoverImportReviewError(w, err)
+		return
+	}
+	writeAuthJSON(w, http.StatusOK, map[string]string{"status": "DISMISSED"})
+}
