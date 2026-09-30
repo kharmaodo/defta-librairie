@@ -53,6 +53,13 @@ class PipelineTests(unittest.TestCase):
         self.assertAlmostEqual(result.confidence or 0, 0.7)
         self.assertIsNone(parse_tsv(HEADER, 6, "original").confidence)
 
+    def test_literal_quotes_do_not_swallow_tsv_records(self) -> None:
+        value = HEADER + '5\t1\t1\t1\t80\t"\n5\t1\t1\t1\t60\tكتاب\n'
+        result = parse_tsv(value, 11, "original")
+        self.assertEqual(result.text_raw, '" كتاب')
+        self.assertNotIn("\t", result.text_raw)
+        self.assertAlmostEqual(result.confidence or 0, 0.64)
+
     def test_invalid_tsv_and_confidence(self) -> None:
         for value in (
             "broken",

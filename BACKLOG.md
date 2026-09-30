@@ -313,7 +313,7 @@ Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186
 |---|---|---|---|
 | US-1710 | Contrat, mapping SQLite et plan de comparaison | Fusionné dans develop | PR #187 ; contrat et contrôles documentaires validés. |
 | US-1711 | Quotas et erreurs d'import explicites | Fusionné dans develop (PR #188) | Cause conservée après rollback ; HTTP 429/422/413, panne stockage 503, compensation et message français testés. Go/FTS5, vet et suites frontend verts. Test navigateur ajouté ; exécution locale bloquée par téléchargement Chromium, validation CI requise. |
-| US-1712 | Cœur OCR CPU et CLI de comparaison | Réalisé, en revue | 17 tests dont Tesseract arabe réel sur fixture synthétique ; lint/typage verts ; SQLite mode=ro, library_id, baseline/4 passes et exports privés JSON/CSV. Gain sur couvertures réelles non mesuré. |
+| US-1712 | Cœur OCR CPU et CLI de comparaison | Réalisé, en revue | 18 tests dont guillemets TSV littéraux et Tesseract arabe réel sur fixture synthétique ; lint/typage verts ; SQLite mode=ro, library_id, baseline/4 passes et exports privés JSON/CSV. Gain sur couvertures réelles non mesuré. |
 | US-1713 | FastAPI interne et Docker | À développer | Limites, readiness, timeout et concurrence bornés. |
 | US-1714 | Adaptateur Go derrière feature flag | À développer | Off/on, erreurs, persistance et reprise idempotente. |
 | US-1715 | Matching de qualité et isolation | À développer | Titre après bruit, correction prudente et recall@1/5. |

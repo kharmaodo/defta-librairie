@@ -138,7 +138,7 @@ class TesseractRunner:
 
 
 def parse_tsv(text: str, psm: int, preprocessing: str) -> PassResult:
-    reader = csv.DictReader(io.StringIO(text), delimiter="\t")
+    reader = csv.DictReader(io.StringIO(text), delimiter="\t", quoting=csv.QUOTE_NONE)
     expected = {"level", "block_num", "par_num", "line_num", "conf", "text"}
     if not expected.issubset(set(reader.fieldnames or [])):
         raise OCRError("OCR_INVALID_OUTPUT", "Tesseract TSV header is invalid")
