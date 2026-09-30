@@ -102,6 +102,7 @@ func (r *CoverImportRetentionRepository) PurgeMetadata(ctx context.Context, now 
 	}
 	for _, id := range ids {
 		for _, query := range []string{
+			`DELETE FROM cover_import_review_suggestions WHERE job_id=?`,
 			`DELETE FROM cover_import_candidate_matches WHERE job_id=?`,
 			`DELETE FROM cover_import_review_decisions WHERE job_id=?`,
 			`DELETE FROM cover_import_ocr_results WHERE job_id=?`,

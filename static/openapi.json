@@ -13545,19 +13545,102 @@
       "post": {
         "operationId": "CoverImportRetentionHandler_Hold",
         "summary": "Poser ou prolonger une retenue légale sur un original d'import (root)",
-        "tags": ["books_management"],
-        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}}],
-        "requestBody": {"required":true,"content":{"application/json":{"schema":{"type":"object","required":["reason","expiresAt"],"properties":{"reason":{"type":"string","maxLength":500},"expiresAt":{"type":"string","format":"date-time"}}}}}},
-        "responses": {"201":{"description":"Retenue active et auditée."},"403":{"description":"Root requis."},"404":{"description":"Import introuvable."},"409":{"description":"Suppression déjà commencée ou terminée."},"422":{"description":"Requête invalide."}},
-        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -X POST -H 'Authorization: Bearer ${TOKEN}' -H 'Content-Type: application/json' -d '{\"reason\":\"Litige en cours\",\"expiresAt\":\"2027-01-01T00:00:00Z\"}' '${BASE_URL}/api/admin/cover-imports/${JOB_ID}/legal-hold'"}]
+        "tags": [
+          "books_management"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "reason",
+                  "expiresAt"
+                ],
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 500
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Retenue active et auditée."
+          },
+          "403": {
+            "description": "Root requis."
+          },
+          "404": {
+            "description": "Import introuvable."
+          },
+          "409": {
+            "description": "Suppression déjà commencée ou terminée."
+          },
+          "422": {
+            "description": "Requête invalide."
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl -X POST -H 'Authorization: Bearer ${TOKEN}' -H 'Content-Type: application/json' -d '{\"reason\":\"Litige en cours\",\"expiresAt\":\"2027-01-01T00:00:00Z\"}' '${BASE_URL}/api/admin/cover-imports/${JOB_ID}/legal-hold'"
+          }
+        ]
       },
       "delete": {
         "operationId": "CoverImportRetentionHandler_Release",
         "summary": "Lever une retenue légale (root)",
-        "tags": ["books_management"],
-        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}}],
-        "responses": {"204":{"description":"Retenue levée et auditée."},"403":{"description":"Root requis."},"404":{"description":"Retenue introuvable."}},
-        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -X DELETE -H 'Authorization: Bearer ${TOKEN}' '${BASE_URL}/api/admin/cover-imports/${JOB_ID}/legal-hold'"}]
+        "tags": [
+          "books_management"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Retenue levée et auditée."
+          },
+          "403": {
+            "description": "Root requis."
+          },
+          "404": {
+            "description": "Retenue introuvable."
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl -X DELETE -H 'Authorization: Bearer ${TOKEN}' '${BASE_URL}/api/admin/cover-imports/${JOB_ID}/legal-hold'"
+          }
+        ]
       }
     },
     "/api/manage/cover-imports": {
@@ -13658,43 +13741,393 @@
       "get": {
         "operationId": "CoverImportReviewHandler_Job",
         "summary": "Consulter les candidats de revue d'un import",
-        "tags": ["books_management"],
-        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}},{"name":"libraryId","in":"query","required":false,"schema":{"type":"string"}}],
-        "responses": {"200":{"description":"Import et candidats limités à la bibliothèque autorisée, sans clé d'objet privé."},"403":{"description":"Accès interdit."},"404":{"description":"Import introuvable."}},
-        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -H 'Authorization: Bearer ${TOKEN}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}'"}]
+        "tags": [
+          "books_management"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "libraryId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Import et candidats limités à la bibliothèque autorisée, sans clé d'objet privé."
+          },
+          "403": {
+            "description": "Accès interdit."
+          },
+          "404": {
+            "description": "Import introuvable."
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl -H 'Authorization: Bearer ${TOKEN}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}'"
+          }
+        ]
       }
     },
     "/api/manage/cover-imports/{id}/source": {
       "get": {
         "operationId": "CoverImportReviewHandler_Source",
         "summary": "Afficher la source privée pour la revue humaine",
-        "tags": ["books_management"],
+        "tags": [
+          "books_management"
+        ],
         "description": "Réservé au propriétaire pour un import SAFE à revoir, ou au root pour une quarantaine ambiguë. Aucun cache ni URL publique.",
-        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}},{"name":"libraryId","in":"query","required":false,"schema":{"type":"string"}}],
-        "responses": {"200":{"description":"Image JPEG ou PNG privée."},"403":{"description":"Accès interdit."},"404":{"description":"Import introuvable."},"409":{"description":"Source non révisable."}},
-        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -H 'Authorization: Bearer ${TOKEN}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}/source' -o source.jpg"}]
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "libraryId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image JPEG ou PNG privée."
+          },
+          "403": {
+            "description": "Accès interdit."
+          },
+          "404": {
+            "description": "Import introuvable."
+          },
+          "409": {
+            "description": "Source non révisable."
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl -H 'Authorization: Bearer ${TOKEN}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}/source' -o source.jpg"
+          }
+        ]
       }
     },
     "/api/manage/cover-imports/{id}/decision": {
       "post": {
         "operationId": "CoverImportReviewHandler_Decide",
         "summary": "Accepter un candidat SAFE ou rejeter le rattachement",
-        "tags": ["books_management"],
-        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}}],
-        "requestBody": {"required":true,"content":{"application/json":{"schema":{"type":"object","required":["action"],"properties":{"libraryId":{"type":"string"},"action":{"type":"string","enum":["ACCEPT","REJECT"]},"bookId":{"type":"integer"},"reason":{"type":"string"}}}}}},
-        "responses": {"202":{"description":"Décision persistée ; en cas d'acceptation, couverture en attente de traitement."},"403":{"description":"Accès interdit."},"404":{"description":"Candidat introuvable."},"409":{"description":"Décision déjà prise ou état incompatible."}},
-        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -X POST -H 'Authorization: Bearer ${TOKEN}' -H 'Content-Type: application/json' -d '{\"action\":\"ACCEPT\",\"bookId\":123}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}/decision'"}]
+        "tags": [
+          "books_management"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "action"
+                ],
+                "properties": {
+                  "libraryId": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "ACCEPT",
+                      "REJECT"
+                    ]
+                  },
+                  "bookId": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Décision persistée ; en cas d'acceptation, couverture en attente de traitement."
+          },
+          "403": {
+            "description": "Accès interdit."
+          },
+          "404": {
+            "description": "Candidat introuvable."
+          },
+          "409": {
+            "description": "Décision déjà prise ou état incompatible."
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl -X POST -H 'Authorization: Bearer ${TOKEN}' -H 'Content-Type: application/json' -d '{\"action\":\"ACCEPT\",\"bookId\":123}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}/decision'"
+          }
+        ]
       }
     },
     "/api/manage/cover-imports/{id}/quarantine-decision": {
       "post": {
         "operationId": "CoverImportReviewHandler_DecideQuarantine",
         "summary": "Décision root sur une quarantaine NSFW ambiguë",
-        "tags": ["books_management"],
-        "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}}],
-        "requestBody": {"required":true,"content":{"application/json":{"schema":{"type":"object","required":["libraryId","decision"],"properties":{"libraryId":{"type":"string"},"decision":{"type":"string","enum":["APPROVE","REJECT"]}}}}}},
-        "responses": {"202":{"description":"Décision persistée ; OCR remis en file en cas d'approbation."},"403":{"description":"Root requis."},"404":{"description":"Import introuvable."},"409":{"description":"Décision déjà prise ou état incompatible."}},
-        "x-codeSamples": [{"lang":"Shell","label":"curl","source":"curl -X POST -H 'Authorization: Bearer ${TOKEN}' -H 'Content-Type: application/json' -d '{\"libraryId\":\"${LIBRARY_ID}\",\"decision\":\"APPROVE\"}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}/quarantine-decision'"}]
+        "tags": [
+          "books_management"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "libraryId",
+                  "decision"
+                ],
+                "properties": {
+                  "libraryId": {
+                    "type": "string"
+                  },
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "APPROVE",
+                      "REJECT"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Décision persistée ; OCR remis en file en cas d'approbation."
+          },
+          "403": {
+            "description": "Root requis."
+          },
+          "404": {
+            "description": "Import introuvable."
+          },
+          "409": {
+            "description": "Décision déjà prise ou état incompatible."
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "label": "curl",
+            "source": "curl -X POST -H 'Authorization: Bearer ${TOKEN}' -H 'Content-Type: application/json' -d '{\"libraryId\":\"${LIBRARY_ID}\",\"decision\":\"APPROVE\"}' '${BASE_URL}/api/manage/cover-imports/${JOB_ID}/quarantine-decision'"
+          }
+        ]
+      }
+    },
+    "/api/manage/cover-imports/{id}/candidate-search": {
+      "post": {
+        "operationId": "coverImportCandidateSearch",
+        "summary": "Recherche manuelle (3 résultats)",
+        "tags": [
+          "books_management"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "query"
+                ],
+                "properties": {
+                  "libraryId": {
+                    "type": "string"
+                  },
+                  "query": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 200
+                  }
+                }
+              },
+              "example": {
+                "query": "العذب",
+                "libraryId": "library-a"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Suggestions persistées et bornées par bibliothèque",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "results"
+                  ],
+                  "properties": {
+                    "results": {
+                      "type": "array",
+                      "maxItems": 3,
+                      "items": {
+                        "$ref": "#/components/schemas/CoverReviewSuggestion"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête invalide"
+          },
+          "403": {
+            "description": "Accès interdit"
+          },
+          "404": {
+            "description": "Image ou proposition introuvable"
+          },
+          "409": {
+            "description": "Image non SAFE ou revue déjà terminée"
+          },
+          "503": {
+            "description": "Service indisponible"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "source": "curl -X POST /api/manage/cover-imports/JOB_ID/candidate-search"
+          }
+        ]
+      }
+    },
+    "/api/manage/cover-imports/{id}/candidate-dismiss": {
+      "post": {
+        "operationId": "coverImportCandidateDismiss",
+        "summary": "Écarter une proposition sans rejeter le rattachement",
+        "tags": [
+          "books_management"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "bookId"
+                ],
+                "properties": {
+                  "libraryId": {
+                    "type": "string"
+                  },
+                  "bookId": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                }
+              },
+              "example": {
+                "bookId": 470,
+                "libraryId": "library-a"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Proposition écartée de façon idempotente"
+          },
+          "400": {
+            "description": "Requête invalide"
+          },
+          "403": {
+            "description": "Accès interdit"
+          },
+          "404": {
+            "description": "Image ou proposition introuvable"
+          },
+          "409": {
+            "description": "Image non SAFE ou revue déjà terminée"
+          },
+          "503": {
+            "description": "Service indisponible"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "Shell",
+            "source": "curl -X POST /api/manage/cover-imports/JOB_ID/candidate-dismiss"
+          }
+        ]
       }
     }
   },
@@ -17161,6 +17594,46 @@
           },
           "en": {
             "type": "string"
+          }
+        }
+      },
+      "CoverReviewSuggestion": {
+        "type": "object",
+        "required": [
+          "bookId",
+          "title",
+          "rank",
+          "hasActiveCover",
+          "origin"
+        ],
+        "properties": {
+          "bookId": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "author": {
+            "type": "string"
+          },
+          "isbn13": {
+            "type": "string"
+          },
+          "rank": {
+            "type": "integer"
+          },
+          "hasActiveCover": {
+            "type": "boolean"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "MANUAL",
+              "OCR"
+            ]
+          },
+          "ftsScore": {
+            "type": "number"
           }
         }
       }

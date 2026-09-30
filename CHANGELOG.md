@@ -176,3 +176,10 @@ Première version fonctionnelle complète du périmètre défini dans `BACKLOG.m
 
 - Retrait du remplissage de la datalist de tags supprimée : le rechargement des
   tags et l'ouverture du formulaire livre n'échouent plus sur un élément absent.
+
+### v1.7.1 — Rattachement manuel (US-1717)
+
+- Recherche de trois livres par bibliothèque pour une couverture SAFE, même
+  sans proposition OCR, avec aperçu privé et confirmation de remplacement.
+- Rejet persistant et audité d'une solution sans rejeter l'image ; promotion
+  humaine utilisant la couverture différée et l'outbox existantes.
