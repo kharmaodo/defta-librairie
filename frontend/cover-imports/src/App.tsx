@@ -33,10 +33,20 @@ export default function App() {
   const [notice, setNotice] = useState('');
   const [selected, setSelected] = useState<Job | null>(null);
   const [detail, setDetail] = useState<Review | null>(null);
+  const [reviewError, setReviewError] = useState('');
+  const reviewPanel = useRef<HTMLElement | null>(null);
+  const reviewHeading = useRef<HTMLHeadingElement | null>(null);
   const [image, setImage] = useState('');
   const [chosen, setChosen] = useState<number | null>(null);
   const [deciding, setDeciding] = useState(false);
   const isRoot = user?.role === 'SUPER_ADMIN_ROOT';
+
+  useEffect(() => {
+    if (selected) {
+      reviewHeading.current?.focus();
+      reviewPanel.current?.scrollIntoView({block: 'start'});
+    }
+  }, [selected]);
 
   useEffect(() => {
     http.enableSessionRefresh();
@@ -72,13 +82,14 @@ export default function App() {
     let cancelled = false;
     let objectURL = '';
     setChosen(null);
+    setReviewError('');
     setDetail(null);
     setImage('');
     const scoped = isRoot ? libraryId : '';
     Promise.all([review(selected.id, scoped), preview(selected.id, scoped)]).then(([result, url]) => {
       if (cancelled) {URL.revokeObjectURL(url); return;}
       objectURL = url; setDetail(result); setImage(url);
-    }).catch(err => {if (!cancelled) onError(err, setError);});
+    }).catch(err => {if (!cancelled) onError(err, setReviewError);});
     return () => {cancelled = true; if (objectURL) URL.revokeObjectURL(objectURL);};
   }, [selected, libraryId, isRoot]);
 
@@ -155,8 +166,8 @@ export default function App() {
           </article>;
         })}
       </section>
-      {selected && <section className="panel review" aria-labelledby="review-title"><div className="section-heading"><h2 id="review-title">Revue de l’image</h2><button type="button" onClick={() => setSelected(null)}>Fermer</button></div>
-        {!detail ? <p role="status">Chargement de la revue…</p> : <div className="review-grid">
+      {selected && <section ref={reviewPanel} className="panel review" aria-labelledby="review-title"><div className="section-heading"><h2 ref={reviewHeading} tabIndex={-1} id="review-title">Revue de l’image</h2><button type="button" onClick={() => setSelected(null)}>Fermer</button></div>
+        {reviewError ? <p className="alert" role="alert">{reviewError}</p> : !detail ? <p role="status">Chargement de la revue…</p> : <div className="review-grid">
           <div className="preview">{image && <img src={image} alt="Couverture importée à examiner"/>}</div>
           {selected.status === 'QUARANTINED' ? <div><p>Contenu ambigu : seule une décision root peut poursuivre l’OCR.</p><div className="actions"><button className="primary" type="button" disabled={deciding} onClick={() => void decideSelected('APPROVE')}>Autoriser l’OCR</button><button type="button" disabled={deciding} onClick={() => void decideSelected('REJECT')}>Rejeter</button></div></div>
             : <div><h3>Livres proposés</h3>{!detail.candidates.length ? <p>Aucun candidat : rejetez le rattachement.</p> : <fieldset><legend>Choisissez un livre de cette librairie</legend>{detail.candidates.map((candidate: Candidate) => <label className="candidate" key={candidate.bookId}><input type="radio" name="candidate" value={candidate.bookId} checked={chosen === candidate.bookId} onChange={() => setChosen(candidate.bookId)}/><span>{candidate.title}<small>Livre n°{candidate.bookId} · proposition {candidate.rank}</small></span></label>)}</fieldset>}
