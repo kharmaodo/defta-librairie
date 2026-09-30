@@ -34,7 +34,6 @@ export default function App() {
   const [selected, setSelected] = useState<Job | null>(null);
   const [detail, setDetail] = useState<Review | null>(null);
   const [reviewError, setReviewError] = useState('');
-  const reviewPanel = useRef<HTMLElement | null>(null);
   const reviewHeading = useRef<HTMLHeadingElement | null>(null);
   const [image, setImage] = useState('');
   const [chosen, setChosen] = useState<number | null>(null);
@@ -43,8 +42,8 @@ export default function App() {
 
   useEffect(() => {
     if (selected) {
-      reviewHeading.current?.focus();
-      reviewPanel.current?.scrollIntoView({block: 'start'});
+      reviewHeading.current?.focus({preventScroll: true});
+      reviewHeading.current?.scrollIntoView({block: 'nearest'});
     }
   }, [selected]);
 
@@ -133,6 +132,15 @@ export default function App() {
   }
 
   if (!user) return <main className="wrap"><h1>Imports de couvertures</h1><p role="status">Vérification de la session…</p>{error && <p role="alert">{error}</p>}</main>;
+  const reviewContent = selected && <section className="panel review" aria-labelledby="review-title"><div className="section-heading"><h2 ref={reviewHeading} tabIndex={-1} id="review-title">Revue de l’image</h2><button type="button" onClick={() => setSelected(null)}>Fermer</button></div>
+        {reviewError ? <p className="alert" role="alert">{reviewError}</p> : !detail ? <p role="status">Chargement de la revue…</p> : <div className="review-grid">
+          <div className="preview">{image && <img src={image} alt="Couverture importée à examiner"/>}</div>
+          {selected.status === 'QUARANTINED' ? <div><p>Contenu ambigu : seule une décision root peut poursuivre l’OCR.</p><div className="actions"><button className="primary" type="button" disabled={deciding} onClick={() => void decideSelected('APPROVE')}>Autoriser l’OCR</button><button type="button" disabled={deciding} onClick={() => void decideSelected('REJECT')}>Rejeter</button></div></div>
+            : <div><h3>Livres proposés</h3>{!detail.candidates.length ? <p>Aucun candidat : rejetez le rattachement.</p> : <fieldset><legend>Choisissez un livre de cette librairie</legend>{detail.candidates.map((candidate: Candidate) => <label className="candidate" key={candidate.bookId}><input type="radio" name="candidate" value={candidate.bookId} checked={chosen === candidate.bookId} onChange={() => setChosen(candidate.bookId)}/><span>{candidate.title}<small>Livre n°{candidate.bookId} · proposition {candidate.rank}</small></span></label>)}</fieldset>}
+              <div className="actions"><button className="primary" type="button" disabled={deciding || !chosen} onClick={() => void decideSelected('ACCEPT')}>Rattacher au livre choisi</button><button type="button" disabled={deciding} onClick={() => void decideSelected('REJECT')}>Rejeter le rattachement</button></div>
+            </div>}
+        </div>}
+      </section>;
   return <>
     <a className="skip" href="#content">Aller au contenu</a>
     <header className="top"><a href="/admin">← Administration</a><strong>Defta · Imports de couvertures</strong><button type="button" onClick={logout}>Se déconnecter</button></header>
@@ -162,19 +170,12 @@ export default function App() {
             <ul className="jobs">{batch.jobs.map((job, index) => <li key={job.id}>
               <span><strong>Image {index + 1}</strong> <small>{jobLabel(job)}</small></span>
               {(job.status === 'REVIEW_REQUIRED' || (isRoot && job.status === 'QUARANTINED')) && <button type="button" onClick={() => setSelected(job)}>Revoir</button>}
+              {selected?.id === job.id && reviewContent}
             </li>)}</ul>
           </article>;
         })}
       </section>
-      {selected && <section ref={reviewPanel} className="panel review" aria-labelledby="review-title"><div className="section-heading"><h2 ref={reviewHeading} tabIndex={-1} id="review-title">Revue de l’image</h2><button type="button" onClick={() => setSelected(null)}>Fermer</button></div>
-        {reviewError ? <p className="alert" role="alert">{reviewError}</p> : !detail ? <p role="status">Chargement de la revue…</p> : <div className="review-grid">
-          <div className="preview">{image && <img src={image} alt="Couverture importée à examiner"/>}</div>
-          {selected.status === 'QUARANTINED' ? <div><p>Contenu ambigu : seule une décision root peut poursuivre l’OCR.</p><div className="actions"><button className="primary" type="button" disabled={deciding} onClick={() => void decideSelected('APPROVE')}>Autoriser l’OCR</button><button type="button" disabled={deciding} onClick={() => void decideSelected('REJECT')}>Rejeter</button></div></div>
-            : <div><h3>Livres proposés</h3>{!detail.candidates.length ? <p>Aucun candidat : rejetez le rattachement.</p> : <fieldset><legend>Choisissez un livre de cette librairie</legend>{detail.candidates.map((candidate: Candidate) => <label className="candidate" key={candidate.bookId}><input type="radio" name="candidate" value={candidate.bookId} checked={chosen === candidate.bookId} onChange={() => setChosen(candidate.bookId)}/><span>{candidate.title}<small>Livre n°{candidate.bookId} · proposition {candidate.rank}</small></span></label>)}</fieldset>}
-              <div className="actions"><button className="primary" type="button" disabled={deciding || !chosen} onClick={() => void decideSelected('ACCEPT')}>Rattacher au livre choisi</button><button type="button" disabled={deciding} onClick={() => void decideSelected('REJECT')}>Rejeter le rattachement</button></div>
-            </div>}
-        </div>}
-      </section>}
+
     </main>
   </>;
 }

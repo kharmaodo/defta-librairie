@@ -312,9 +312,13 @@ Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186
 | US | Livrable | État | Validation attendue |
 |---|---|---|---|
 | US-1710 | Contrat, mapping SQLite et plan de comparaison | Fusionné dans develop | PR #187 ; contrat et contrôles documentaires validés. |
-| US-1711 | Quotas et erreurs d'import explicites | Réalisé, en revue | Cause conservée après rollback ; HTTP 429/422/413, panne stockage 503, compensation et message français testés. Go/FTS5, vet et suites frontend verts. Test navigateur ajouté ; exécution locale bloquée par téléchargement Chromium, validation CI requise. |
+| US-1711 | Quotas et erreurs d'import explicites | Fusionné dans develop (PR #188) | Cause conservée après rollback ; HTTP 429/422/413, panne stockage 503, compensation et message français testés. Go/FTS5, vet et suites frontend verts. Test navigateur ajouté ; exécution locale bloquée par téléchargement Chromium, validation CI requise. |
 | US-1712 | Cœur OCR CPU et CLI de comparaison | À développer | Tests et corpus annoté, SQLite read-only. |
 | US-1713 | FastAPI interne et Docker | À développer | Limites, readiness, timeout et concurrence bornés. |
 | US-1714 | Adaptateur Go derrière feature flag | À développer | Off/on, erreurs, persistance et reprise idempotente. |
 | US-1715 | Matching de qualité et isolation | À développer | Titre après bruit, correction prudente et recall@1/5. |
 | US-1716 | Recette et gate v1.7.1 | À développer | Benchmark local, rollback et validation de l'activation. |
+
+### Ajustement UX de recette v1.7.1
+
+Revue ouverte directement sous la ligne de l’image choisie, avant la suivante, avec focus accessible et déplacement minimal. Build TypeScript/Vite et contrôle du patch réussis ; test navigateur adapté pour vérifier la position du panneau dans une liste de deux images avec historique long. En revue avant validation CI et recette locale.

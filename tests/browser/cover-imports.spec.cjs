@@ -17,7 +17,7 @@ test('cover import UI uses the shared session, uploads, follows progress and com
     const request = route.request();
     const url = new URL(request.url());
     if (url.pathname === '/api/manage/cover-imports' && request.method() === 'GET') {
-      return route.fulfill({json:{results: uploaded ? [{id:'batch-1',libraryId:'library-a',createdAt:'2026-09-28T10:00:00Z',totalFiles:1,jobs:[{id:'job-1',status:jobStatus,contentType:'image/png'}]}, ...history] : [],total:uploaded ? 16 : 0}});
+      return route.fulfill({json:{results: uploaded ? [{id:'batch-1',libraryId:'library-a',createdAt:'2026-09-28T10:00:00Z',totalFiles:2,jobs:[{id:'job-1',status:jobStatus,contentType:'image/png'},{id:'job-2',status:'FAILED',contentType:'image/png'}]}, ...history] : [],total:uploaded ? 16 : 0}});
     }
     if (url.pathname === '/api/manage/cover-imports' && request.method() === 'POST') {
       key = request.headers()['idempotency-key'];
@@ -50,6 +50,11 @@ test('cover import UI uses the shared session, uploads, follows progress and com
   await page.getByRole('button',{name:'Revoir'}).click();
   await expect(page.getByRole('heading',{name:'Revue de l’image'})).toBeInViewport();
   await expect(page.getByRole('heading',{name:'Revue de l’image'})).toBeFocused();
+  const reviewPanel = page.getByRole('region',{name:'Revue de l’image'});
+  const selectedRow = page.locator('.jobs > li').filter({has:reviewPanel});
+  await expect(selectedRow).toHaveCount(1);
+  await expect(selectedRow.locator(':scope > span > strong')).toHaveText('Image 1');
+  await expect(selectedRow.locator('xpath=following-sibling::li[1]').locator('strong')).toHaveText('Image 2');
   await expect(page.getByAltText('Couverture importée à examiner')).toBeVisible();
   await page.getByRole('radio',{name:/Le livre voulu/}).check();
   await page.getByRole('button',{name:'Rattacher au livre choisi'}).click();
