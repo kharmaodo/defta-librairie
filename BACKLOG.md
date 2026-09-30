@@ -303,3 +303,18 @@ l’état d’avancement et l’ordre des priorités.
 À chaque fusion vérifiée dans `origin/develop`, mettre à jour le commit de
 référence, la ligne concernée et le prochain incrément dans le patch suivant.
 Une fusion partielle conserve le statut Partiel et détaille les éléments restants.
+
+
+## v1.7.1 — OCR expérimental local (cadrage du 30 septembre 2026)
+
+Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186 fusionné dans develop. Le service expérimental n'est pas implémenté ; flag proposé désactivé par défaut. La qualité OCR reste une limite connue de v1.7.0.
+
+| US | Livrable | État | Validation attendue |
+|---|---|---|---|
+| US-1710 | Contrat, mapping SQLite et plan de comparaison | Documenté, en revue | Lecture du contrat et vérification du patch documentaire. |
+| US-1711 | Quotas et erreurs d'import explicites | À développer | Quota HTTP 429, validation conservée, compensation testée. |
+| US-1712 | Cœur OCR CPU et CLI de comparaison | À développer | Tests et corpus annoté, SQLite read-only. |
+| US-1713 | FastAPI interne et Docker | À développer | Limites, readiness, timeout et concurrence bornés. |
+| US-1714 | Adaptateur Go derrière feature flag | À développer | Off/on, erreurs, persistance et reprise idempotente. |
+| US-1715 | Matching de qualité et isolation | À développer | Titre après bruit, correction prudente et recall@1/5. |
+| US-1716 | Recette et gate v1.7.1 | À développer | Benchmark local, rollback et validation de l'activation. |
