@@ -173,3 +173,6 @@ Première version fonctionnelle complète du périmètre défini dans `BACKLOG.m
   persistante et conservation des filtres.
 - Messages précis pour couvertures invalides/non approuvées et sauvegarde
   partielle des champs du livre lors d'un échec de remplacement.
+
+- Retrait du remplissage de la datalist de tags supprimée : le rechargement des
+  tags et l'ouverture du formulaire livre n'échouent plus sur un élément absent.

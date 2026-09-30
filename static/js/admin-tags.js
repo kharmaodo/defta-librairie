@@ -13,10 +13,7 @@
         const chip = document.createElement("span"); chip.className = "tag-chip"; chip.append(document.createTextNode(tag.name));
         const remove = document.createElement("button"); remove.type = "button"; remove.dataset.id = tag.id; remove.setAttribute("aria-label", `Supprimer ${tag.name}`); remove.textContent = "×"; chip.append(remove); list.append(chip);
       });
-      const suggestions = document.querySelector("#tag-suggestions");
-      suggestions.replaceChildren(...payload.results.map((tag) => {
-        const option = document.createElement("option"); option.value = tag.name; return option;
-      }));
+
     }
 
     async function reloadTags() {

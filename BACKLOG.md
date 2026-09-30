@@ -338,3 +338,12 @@ Validation : tests frontend sur fermeture/suivi/approbation, compensation UI
 d'un échec de couverture et messages HTTP ; scénario Playwright dédié ajouté.
 La cause exacte de l'erreur de modification signalée reste à confirmer avec
 sa réponse HTTP ; aucun contournement de la modération n'est introduit.
+
+### Correctif — datalist de tags supprimée
+
+Le formulaire utilise des tags relationnels (`tagIds`) et n'a plus de datalist
+`tag-suggestions`. Le module des tags tentait encore de remplir cette datalist
+absente, provoquant une erreur `replaceChildren` lors du rafraîchissement des
+tags (notamment à l'ouverture du formulaire root). Ce code obsolète est retiré.
+Le faux DOM des tests renvoie maintenant `null` pour cet élément, comme le
+vrai template ; rechargement root/propriétaire et rendu des tags restent testés.
