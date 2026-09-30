@@ -1684,3 +1684,8 @@ La procédure de validation et de mise en production est consolidée dans
 Pour les imports de couvertures v1.7.0, la rétention, les retenues légales
 réservées au root et le gate Go/React/Chromium/Docker sont décrits dans
 [RELEASE_V1_7_0.md](docs/RELEASE_V1_7_0.md).
+
+
+### Diagnostic OCR expérimental v1.7.1
+
+Le [cœur CPU et CLI de comparaison](services/ocr-experimental/README.md) permet de tester Tesseract arabe et les candidats sur une copie SQLite en lecture seule, bornée par bibliothèque. Il n’active pas le nouveau moteur dans le worker Go. La qualité sur les couvertures réelles reste à mesurer avant activation.
