@@ -8,12 +8,16 @@ test('cover import UI uses the shared session, uploads, follows progress and com
   let uploaded = false;
   let accepted = false;
   let key = '';
+  const history = Array.from({length: 15}, (_, index) => ({
+    id:`older-${index}`, libraryId:'library-a', createdAt:'2026-09-27T10:00:00Z', totalFiles:1,
+    jobs:[{id:`old-job-${index}`,status:'FAILED',contentType:'image/png'}]
+  }));
   await page.route('**/api/admin/owners?**', route => route.fulfill({json:{results:[{username:'owner-a',library:{id:'library-a',name:'Librairie A',status:'ACTIVE'}}],total:1}}));
   await page.route('**/api/manage/cover-imports**', async route => {
     const request = route.request();
     const url = new URL(request.url());
     if (url.pathname === '/api/manage/cover-imports' && request.method() === 'GET') {
-      return route.fulfill({json:{results: uploaded ? [{id:'batch-1',libraryId:'library-a',createdAt:'2026-09-28T10:00:00Z',totalFiles:1,jobs:[{id:'job-1',status:jobStatus,contentType:'image/png'}]}] : [],total:uploaded ? 1 : 0}});
+      return route.fulfill({json:{results: uploaded ? [{id:'batch-1',libraryId:'library-a',createdAt:'2026-09-28T10:00:00Z',totalFiles:1,jobs:[{id:'job-1',status:jobStatus,contentType:'image/png'}]}, ...history] : [],total:uploaded ? 16 : 0}});
     }
     if (url.pathname === '/api/manage/cover-imports' && request.method() === 'POST') {
       key = request.headers()['idempotency-key'];
@@ -44,6 +48,8 @@ test('cover import UI uses the shared session, uploads, follows progress and com
   await expect(page.getByText('Rattachement à revoir')).toBeVisible();
   expect(key).toMatch(/^[0-9a-f-]{36}$/);
   await page.getByRole('button',{name:'Revoir'}).click();
+  await expect(page.getByRole('heading',{name:'Revue de l’image'})).toBeInViewport();
+  await expect(page.getByRole('heading',{name:'Revue de l’image'})).toBeFocused();
   await expect(page.getByAltText('Couverture importée à examiner')).toBeVisible();
   await page.getByRole('radio',{name:/Le livre voulu/}).check();
   await page.getByRole('button',{name:'Rattacher au livre choisi'}).click();
@@ -55,4 +61,21 @@ test('cover import UI redirects an expired session to the existing login', async
   await page.route('**/api/auth/refresh', route => route.fulfill({status:401,json:{error:'invalid_refresh_token'}}));
   await page.goto('/admin/cover-imports');
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test('cover import UI reports a review loading failure inside the review panel', async ({page}) => {
+  await page.addInitScript(() => sessionStorage.setItem('defta.accessToken', 'browser-test-token'));
+  await page.route('**/api/auth/me', route => route.fulfill({json:{id:'owner-test',role:'OWNER_LIBRARY',libraryId:'library-a',passwordChangeRequired:false}}));
+  await page.route('**/api/manage/cover-imports**', route => {
+    const pathname = new URL(route.request().url()).pathname;
+    if (pathname === '/api/manage/cover-imports') {
+      return route.fulfill({json:{results:[{id:'batch-1',libraryId:'library-a',createdAt:'2026-09-28T10:00:00Z',totalFiles:1,jobs:[{id:'job-1',status:'REVIEW_REQUIRED',contentType:'image/png'}]}],total:1}});
+    }
+    return route.fulfill({status:503,json:{error:'cover_import_review_unavailable'}});
+  });
+  await page.goto('/admin/cover-imports');
+  await page.getByRole('button',{name:'Revoir'}).click();
+  const panel = page.getByRole('region',{name:'Revue de l’image'});
+  await expect(panel.getByRole('alert')).toBeVisible();
+  await expect(panel.getByText('Chargement de la revue…')).toHaveCount(0);
 });
