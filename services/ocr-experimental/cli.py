@@ -11,7 +11,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from ocr_core.catalogue import Catalogue, normalize
+from ocr_core.catalogue import Catalogue, combine_candidates, normalize
 from ocr_core.pipeline import OCRError, Settings, TesseractRunner, extract
 
 
@@ -75,6 +75,9 @@ def main(argv: list[str] | None = None) -> int:
                         result.baseline.text_raw
                     )
                     record["candidates"] = catalogue.search(result.selected.text_raw)
+                    record["combined_candidates"] = combine_candidates(
+                        catalogue, result.passes
+                    )
                     record["pass_candidates"] = [
                         {
                             "preprocessing": item.preprocessing,
@@ -114,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
                         "baseline_candidates",
                         "candidates",
                         "pass_candidates",
+                        "combined_candidates",
                         "duration_ms",
                         "error",
                     ],

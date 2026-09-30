@@ -14,8 +14,15 @@ from unittest.mock import patch
 from PIL import Image, ImageDraw, ImageFont
 
 from cli import main
-from ocr_core.catalogue import Catalogue, normalize, query_tokens
-from ocr_core.pipeline import OCRError, Settings, TesseractRunner, extract, parse_tsv
+from ocr_core.catalogue import Catalogue, combine_candidates, normalize, query_tokens
+from ocr_core.pipeline import (
+    OCRError,
+    PassResult,
+    Settings,
+    TesseractRunner,
+    extract,
+    parse_tsv,
+)
 
 
 HEADER = "level\tblock_num\tpar_num\tline_num\tconf\ttext\n"
@@ -248,6 +255,53 @@ class CatalogueTests(unittest.TestCase):
         self.assertEqual([row["rank"] for row in result], [1, 2, 3, 4, 5])
         self.assertEqual([row["book_id"] for row in result], [1, 4, 5, 6, 7])
 
+    def test_combined_evidence_deduplicates_sources_and_keeps_scope(self) -> None:
+        before = hashlib.sha256(self.path.read_bytes()).hexdigest()
+        good = PassResult("عَرَبِي", 0.3, 6, "central-red-minus-blue")
+        noise = PassResult("1 2 3", 0.9, 11, "original")
+        with Catalogue(self.path, "a") as catalogue:
+            result = combine_candidates(catalogue, (noise, good, good))
+            self.assertEqual([r["book_id"] for r in result], [1])
+            self.assertEqual(result[0]["support_count"], 1)
+            self.assertTrue(result[0]["review_required"])
+            self.assertEqual(
+                result[0]["sources"],
+                [
+                    {
+                        "preprocessing": "central-red-minus-blue",
+                        "psm": 6,
+                        "rank": 1,
+                        "fts_score": catalogue.search(good.text_raw)[0]["fts_score"],
+                        "title_words": ["عربي"],
+                    }
+                ],
+            )
+            self.assertEqual(combine_candidates(catalogue, (noise,)), [])
+        self.assertEqual(hashlib.sha256(self.path.read_bytes()).hexdigest(), before)
+
+    def test_combined_limit_order_and_metadata_only_evidence(self) -> None:
+        with sqlite3.connect(self.path) as db:
+            for book_id in range(4, 12):
+                db.execute(
+                    "INSERT INTO defta(id,library_id,title,auteur) VALUES(?,'a','other','كاتب')",
+                    (book_id,),
+                )
+                db.execute(
+                    "INSERT INTO defta_fts(rowid,title,auteur) VALUES(?,'other','كاتب')",
+                    (book_id,),
+                )
+        passes = (
+            PassResult("كاتب", 0.4, 6, "original"),
+            PassResult("كاتب", 0.5, 11, "original"),
+        )
+        with Catalogue(self.path, "a") as catalogue:
+            result = combine_candidates(catalogue, passes)
+            self.assertEqual([r["book_id"] for r in result], [4, 5, 6, 7, 8])
+            self.assertEqual([r["rank"] for r in result], [1, 2, 3, 4, 5])
+            self.assertEqual(result[0]["support_count"], 2)
+            self.assertIn('"title_words": []', json.dumps(result))
+            self.assertEqual(result, combine_candidates(catalogue, passes))
+
     def test_cli_json_csv_failure_and_no_overwrite(self) -> None:
         target = self.path.parent / "cover.png"
         target.write_bytes(image_bytes())
@@ -272,6 +326,9 @@ class CatalogueTests(unittest.TestCase):
                 self.assertEqual(main(args), 0)
             if fmt == "json":
                 payload = json.loads(output.read_text())
+                self.assertEqual(
+                    payload["results"][0]["combined_candidates"][0]["book_id"], 1
+                )
                 self.assertEqual(payload["results"][0]["candidates"][0]["book_id"], 1)
             else:
                 self.assertIn("baseline_candidates", output.read_text())

@@ -12,7 +12,7 @@ Depuis la racine du dépôt :
 sudo apt-get update
 sudo apt-get install -y python3-venv tesseract-ocr tesseract-ocr-ara fonts-dejavu-core
 python3 -m venv services/ocr-experimental/.venv
-services/ocr-experimental/.venv/bin/python -m pip install +  -r services/ocr-experimental/requirements-dev.txt
+services/ocr-experimental/.venv/bin/python -m pip install -r services/ocr-experimental/requirements-dev.txt
 tesseract --version
 tesseract --list-langs
 ```
@@ -29,7 +29,7 @@ ouvert avec son WAL ignoré) :
 mkdir -p data/ocr-benchmark
 sqlite3 data/defta.db ".backup 'data/ocr-benchmark/catalogue.db'"
 
-services/ocr-experimental/.venv/bin/python services/ocr-experimental/cli.py +  /chemin/vers/couvertures +  --db data/ocr-benchmark/catalogue.db +  --library-id ID_DE_LA_LIBRAIRIE +  --output data/ocr-benchmark/comparaison.json +  --timeout-seconds 30
+services/ocr-experimental/.venv/bin/python services/ocr-experimental/cli.py /chemin/vers/couvertures --db data/ocr-benchmark/catalogue.db --library-id ID_DE_LA_LIBRAIRIE --output data/ocr-benchmark/comparaison.json --timeout-seconds 30
 ```
 
 Le chemin cible accepte une image ou un dossier, jusqu'à 100 JPEG/PNG. Le CLI
@@ -106,3 +106,19 @@ C'est une observation sur une image, pas une validation du titre complet, du
 matching sur le catalogue réel ni un gain général mesuré. Les images privées
 ne sont pas ajoutées au dépôt. Comparer plusieurs couvertures avec leurs titres
 vérifiés avant de modifier la sélection ou d'activer ces passes en production.
+
+## Candidats combinés pour revue
+
+`combined_candidates` expose au plus cinq livres issus de toutes les passes
+activées, dédupliqués par livre. Chaque source distincte `(preprocessing, psm)`
+apparaît avec son rang FTS5, son score BM25 et les `title_words` communs exacts
+après normalisation. Une correspondance sur auteur/éditeur peut avoir une liste
+de mots du titre vide. Le tri utilise le nombre de passes sources décroissant,
+le meilleur rang puis l'identifiant du livre. Les passes sont corrélées : ce
+nombre n'est ni une probabilité ni une validation du titre.
+
+La sélection OCR initiale et `candidates` restent disponibles pour comparaison.
+Cette union diagnostique ne rattache aucun livre, n'écrit pas dans SQLite et
+porte `review_required: true`. Elle conserve le filtrage par bibliothèque et
+l'exclusion des livres supprimés. Les quatre passes couleur nécessitent toujours
+`--color-diagnostics`.

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import sqlite3
 import unicodedata
 from pathlib import Path
+from .pipeline import PassResult
 
 
 def normalize(text: str) -> str:
@@ -66,3 +68,56 @@ class Catalogue:
             (query, self.library_id),
         ).fetchall()
         return [dict(row) | {"rank": rank} for rank, row in enumerate(rows, 1)]
+
+
+@dataclass
+class _Evidence:
+    book_id: int
+    title: str
+    best_rank: int
+    sources: list[dict[str, object]] = field(default_factory=list)
+
+
+def combine_candidates(
+    catalogue: Catalogue, passes: tuple[PassResult, ...]
+) -> list[dict[str, object]]:
+    """Diagnostic union: support is not calibrated confidence or permission."""
+    found: dict[int, _Evidence] = {}
+    seen: set[tuple[str, int]] = set()
+    for item in passes:
+        source = (item.preprocessing, item.psm)
+        if source in seen:
+            continue
+        seen.add(source)
+        tokens = set(query_tokens(item.text_raw))
+        for candidate in catalogue.search(item.text_raw):
+            book_id = int(str(candidate["book_id"]))
+            rank = int(str(candidate["rank"]))
+            title = str(candidate["title"])
+            evidence = found.setdefault(book_id, _Evidence(book_id, title, rank))
+            evidence.best_rank = min(evidence.best_rank, rank)
+            # Exact normalized title overlap only; matching author/publisher may
+            # return a candidate without any title overlap. Do not invent words.
+            evidence.sources.append(
+                {
+                    "preprocessing": item.preprocessing,
+                    "psm": item.psm,
+                    "rank": rank,
+                    "fts_score": candidate["fts_score"],
+                    "title_words": sorted(tokens & set(query_tokens(title))),
+                }
+            )
+    ordered = sorted(
+        found.values(), key=lambda e: (-len(e.sources), e.best_rank, e.book_id)
+    )[:5]
+    return [
+        {
+            "book_id": item.book_id,
+            "title": item.title,
+            "rank": rank,
+            "support_count": len(item.sources),
+            "sources": item.sources,
+            "review_required": True,
+        }
+        for rank, item in enumerate(ordered, 1)
+    ]
