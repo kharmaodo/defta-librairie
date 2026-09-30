@@ -35,6 +35,8 @@ for (const [status, code, match] of [
   [401,'unauthorized',/reconnectez/], [403,'forbidden',/droits/],
   [403,'password_change_required',/mot de passe/], [409,'version_conflict',/rechargez/],
   [422,'export_too_large',/10 000/], [422,'other',/Données invalides/],
+  [422,'invalid_cover',/couverture est invalide/],
+  [422,'cover_moderation_rejected',/revue nécessaire ou refus/],
   [400,'invalid_settings',/champs/], [404,'missing',/introuvable/],
   [429,'cover_import_quota_exceeded',/Limite d’import atteinte/], [429,'limited',/patientez/], [503,'session_validation_failed',/indisponible/]
 ]) test(`HTTP ${status} ${code}`, async () => {
