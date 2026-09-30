@@ -24,7 +24,9 @@ function setup(api) {
   DeftaHTTP:{request:async()=>{h.coverRequests=(h.coverRequests||0)+1;throw Object.assign(new Error('No cover'),{status:404});}}
  };
  const element=tag=>({tagName:tag.toUpperCase(),append(...children){this.children=children;}});
- vm.runInNewContext(source,{window,document:{querySelector:get,createElement:element},URLSearchParams,Intl,FormData,clearTimeout,setTimeout});
+ h.document=get("document");
+ const document={querySelector:get,createElement:element,addEventListener:(event,fn)=>h.document.addEventListener(event,fn),dispatchEvent(event){h.dispatched=event;for(const fn of h.document.handlers[event.type]||[])fn(event);}};
+ vm.runInNewContext(source,{window,document,CustomEvent:class {constructor(type,options){this.type=type;this.detail=options.detail;}},URLSearchParams,Intl,FormData,clearTimeout,setTimeout});
  h.get=get;h.errorBox={};
  h.module=window.DeftaBooks.create({
   apiFetch:async(url,options)=>{
@@ -72,18 +74,17 @@ test('editing keeps version and locks library field',async()=>{
  await h.event('#book-form','submit');assert.equal(h.calls[0].options.method,'PUT');assert.equal(h.calls[0].url,'/api/manage/books/12');
  assert.equal(JSON.parse(h.calls[0].options.body).version,3);
 });
-test('accepted cover submission locks saving until the dialog is cancelled',async()=>{
+test('accepted cover submission closes dialog and starts persistent tracking',async()=>{
  const h=setup(async url=>url==='/api/manage/book-submissions'?{id:'submission-1'}:page());
  h.module.init();
  const form=h.get('#book-form').elements;
  form.cover.files=[{type:'image/jpeg',size:1}];
  await h.event('#book-form','submit');
- await h.event('#book-form','submit');
  assert.equal(h.calls.filter(call=>call.url==='/api/manage/book-submissions').length,1);
- assert.equal(h.get('#book-form button[type=submit]').disabled,true);
- assert.equal(form.cover.disabled,true);
- assert.match(h.get('#book-form-error').textContent,/Annulez/);
- h.get('#book-dialog').close();
+ assert.equal(h.get('#book-dialog').closed,1);
+ assert.equal(h.dispatched.type,'defta:book-submission-accepted');
+ assert.equal(h.dispatched.detail.id,'submission-1');
+ assert.match(h.get('#book-submission-notice').textContent,/Modération/);
  assert.equal(h.get('#book-form button[type=submit]').disabled,false);
 });
 test('failed mutation keeps dialog open and does not refresh stock',async()=>{
@@ -129,4 +130,26 @@ test('dashboard integrates module and retains independent sales catalogue',()=>{
  const template=read('templates/admin.html');assert.ok(template.indexOf('/static/js/admin-books.js')<template.indexOf('/static/js/admin-auth.js'));
  assert.doesNotMatch(read('templates/login.html'),/admin-books/);
  const auth=read('static/js/admin-auth.js');assert.match(auth,/const reloadBooks = \(\) => books.reload\(\)/);assert.match(read('static/js/admin-sales.js'),/async function loadSaleBooks\(/);
+});
+
+test('approved submission refreshes books and inventory after dialog closure',async()=>{
+ const h=setup();h.module.init();
+ const handler=h.document.handlers['defta:book-submission-created'][0];
+ await handler({detail:{bookId:480}});
+ assert.equal(h.stocks,1);
+ assert.ok(h.calls.some(c=>c.url.startsWith('/api/manage/books?')));
+ assert.match(h.get('#book-submission-notice').textContent,/Livre 480 créé/);
+});
+test('failed cover replacement explains that book information was already saved',async()=>{
+ const h=setup(async(url,options)=>{
+  if(options?.method==='PUT')return {...book,version:4};
+  if(options?.method==='POST')throw new Error('Couverture non approuvée');
+  return page();
+ });h.module.init();
+ const f=h.get('#book-form').elements;f.id.value='12';f.version.value='3';
+ f.cover.files=[{type:'image/jpeg',size:1}];
+ await h.event('#book-form','submit');
+ assert.match(h.get('#book-form-error').textContent,/informations du livre ont été enregistrées.*non approuvée/);
+ assert.equal(f.version.value,4);
+ assert.equal(h.get('#book-dialog').closed,0);
 });

@@ -51,7 +51,8 @@
       "purchase_unavailable": "Cet achat est indisponible pour un retour fournisseur.",
       "sale_unavailable": "Cette vente est indisponible pour un retour client.",
       "return_settlement_unavailable": "Le contexte du retour ne permet pas ce règlement.",
-      "cover_moderation_rejected": "Cette image ne respecte pas la politique de contenu. La couverture n’a pas été modifiée."
+      "invalid_cover": "La couverture est invalide : vérifiez son format JPEG/PNG, ses dimensions et son contenu.",
+      "cover_moderation_rejected": "Cette couverture n’a pas été approuvée par la modération (revue nécessaire ou refus). La couverture existante est conservée."
     },
     "400": {
       "invalid_purchase_book": "Un livre de cet achat est invalide ou inaccessible.",
