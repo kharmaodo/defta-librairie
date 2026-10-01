@@ -2,6 +2,8 @@
 
 ## [À paraître]
 
+- Le test navigateur de suppression attend le module de confirmation après la navigation vers `/admin` et vérifie le parcours avec son chargement volontairement retardé.
+
 ## [1.7.0] — candidate
 
 ### Imports de couvertures
