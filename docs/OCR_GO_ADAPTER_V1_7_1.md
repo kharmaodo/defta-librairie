@@ -1,6 +1,6 @@
 # Adaptateur Go OCR expérimental — US-1714
 
-Le runner local reste actif par défaut. Ce lot ne change ni le matching, ni
+Le runner local reste actif par défaut. L’adaptateur US-1714 ne change ni le matching, ni
 l’authentification, ni les décisions humaines. La qualité et l’activation de
 recette restent à valider dans US-1715 et US-1716.
 
@@ -82,3 +82,5 @@ NULL et rollback transactionnel. La CI OCR compile un binaire de test Go puis
 l’exécute dans le conteneur Python réel isolé pour vérifier le contrat et les
 métadonnées Tesseract arabe. Les suites existantes Go/FTS5, vet, frontend et
 navigateur restent requises. Aucun gain de qualité n’est revendiqué par ce lot.
+
+US-1715 branche également le [matching v2](OCR_MATCHING_QUALITY_V1_7_1.md) sur ce flag. Off conserve la politique de matching existante ; on applique le dictionnaire et le classement isolés par bibliothèque.

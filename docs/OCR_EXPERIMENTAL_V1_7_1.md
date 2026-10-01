@@ -11,7 +11,7 @@ Le nouveau cœur Python doit être partagé par CLI et FastAPI, fonctionner sur 
 - Import, revue et rejet fonctionnent après le correctif du panneau.
 - Sur le lot de douze images, quatre jobs ont un candidat ; leur pertinence n'est pas démontrée.
 - Les textes fournis sont fortement bruités. Le runner Tesseract actuel impose PSM 6.
-- Le matching actuel tronque aux douze premiers tokens : un titre situé après le bruit peut être exclu.
+- Le matching v1 tronque aux douze premiers tokens : un titre situé après le bruit peut être exclu. Le [matching v2 US-1715](OCR_MATCHING_QUALITY_V1_7_1.md), sous le flag expérimental, exploite les mots utiles de tout le texte.
 - Le rollback d'import masque notamment l'erreur de quota en 503 ; conserver les erreurs métier pour produire 429.
 - La colonne confidence existe mais n'est pas alimentée par le runner actuel.
 
