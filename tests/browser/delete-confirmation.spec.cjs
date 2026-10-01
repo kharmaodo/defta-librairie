@@ -11,6 +11,7 @@ async function login(page) {
 }
 
 async function openConfirmation(page, expected = 'Livre Exact') {
+  await page.waitForFunction(() => typeof window.DeftaDeleteConfirmation?.run === 'function');
   await page.evaluate(value => {
     const trigger = document.querySelector('#add-book-button');
     window.DeftaDeleteConfirmation.run({
@@ -23,7 +24,18 @@ async function openConfirmation(page, expected = 'Livre Exact') {
 }
 
 test('destructive confirmation requires exact text and resets accessibly', async ({page}) => {
-  await login(page);
+  let releaseScript;
+  const scriptReady = new Promise(resolve => { releaseScript = resolve; });
+  await page.route('**/static/js/admin-delete-confirmation.js', async route => {
+    await scriptReady;
+    await route.continue();
+  });
+  const loginFinished = login(page);
+  await expect(page).toHaveURL(/\/admin$/);
+  // The URL changes before deferred scripts execute on a slow connection.
+  await expect.poll(() => page.evaluate(() => typeof window.DeftaDeleteConfirmation)).toBe('undefined');
+  releaseScript();
+  await loginFinished;
   const trigger = page.locator('#add-book-button');
   const dialog = page.locator('#delete-confirmation-dialog');
   const input = dialog.locator('[name=confirmation]');
