@@ -1688,3 +1688,8 @@ réservées au root et le gate Go/React/Chromium/Docker sont décrits dans
 Le [parcours de rattachement manuel SAFE](docs/MANUAL_COVER_MATCHING.md) permet
 une recherche de trois suggestions sans candidat OCR, avec résolution humaine
 et rejet persistant des propositions.
+
+
+### Diagnostic OCR expérimental v1.7.1
+
+Le [cœur CPU et CLI de comparaison](services/ocr-experimental/README.md) permet de tester Tesseract arabe et les candidats sur une copie SQLite en lecture seule, bornée par bibliothèque. Il n’active pas le nouveau moteur dans le worker Go. La qualité sur les couvertures réelles reste à mesurer avant activation.

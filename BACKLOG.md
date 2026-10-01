@@ -313,7 +313,7 @@ Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186
 |---|---|---|---|
 | US-1710 | Contrat, mapping SQLite et plan de comparaison | Fusionné dans develop | PR #187 ; contrat et contrôles documentaires validés. |
 | US-1711 | Quotas et erreurs d'import explicites | Fusionné dans develop (PR #188) | Cause conservée après rollback ; HTTP 429/422/413, panne stockage 503, compensation et message français testés. Go/FTS5, vet et suites frontend verts. Test navigateur ajouté ; exécution locale bloquée par téléchargement Chromium, validation CI requise. |
-| US-1712 | Cœur OCR CPU et CLI de comparaison | À développer | Tests et corpus annoté, SQLite read-only. |
+| US-1712 | Cœur OCR CPU et CLI de comparaison | Réalisé, en revue | 21 tests dont agrégation avec preuves, isolation et variantes couleur bornées et guillemets TSV littéraux et Tesseract arabe réel sur fixture synthétique ; lint/typage verts ; SQLite mode=ro, library_id, baseline/4 passes, option CLI couleur/8 passes, candidats par passe et combinés pour revue, exports privés JSON/CSV. Fragment de titre observé sur une couverture réelle ; gain global et matching réel non validés. |
 | US-1713 | FastAPI interne et Docker | À développer | Limites, readiness, timeout et concurrence bornés. |
 | US-1714 | Adaptateur Go derrière feature flag | À développer | Off/on, erreurs, persistance et reprise idempotente. |
 | US-1715 | Matching de qualité et isolation | À développer | Titre après bruit, correction prudente et recall@1/5. |
@@ -321,7 +321,7 @@ Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186
 
 ### Ajustement UX de recette v1.7.1
 
-Revue ouverte directement sous la ligne de l’image choisie, avant la suivante, avec focus accessible et déplacement minimal. Build TypeScript/Vite et contrôle du patch réussis ; test navigateur adapté pour vérifier la position du panneau dans une liste de deux images avec historique long. En revue avant validation CI et recette locale.
+Revue ouverte directement sous la ligne de l’image choisie, avant la suivante, avec focus accessible et déplacement minimal. Build TypeScript/Vite et contrôle du patch réussis ; test navigateur adapté pour vérifier la position du panneau dans une liste de deux images avec historique long. Fusionné via PR #189 ; CI et recette locale validées par le propriétaire.
 
 ### Régression de recette — création et remplacement de couverture
 
