@@ -8,6 +8,7 @@ import (
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
 	"testing"
+	"time"
 )
 
 func TestManualCoverSearchScopeDismissAndPromotion(t *testing.T) {
@@ -100,5 +101,98 @@ func TestManualCoverSearchScopeDismissAndPromotion(t *testing.T) {
 	db.QueryRow(`SELECT json_extract(new_values,'$.selectionMethod') FROM audit_logs WHERE action='DECIDE_COVER_IMPORT_REVIEW'`).Scan(&method)
 	if method != "MANUAL" {
 		t.Fatalf("audit method %s", method)
+	}
+}
+
+func TestManualCoverSearchZeroOneAndDeletedSuggestions(t *testing.T) {
+	db := reviewServiceDB(t)
+	if _, err := db.Exec(`CREATE VIRTUAL TABLE defta_fts USING fts5(title,auteur);
+ INSERT INTO defta(id,library_id,title,auteur,deleted_at)VALUES(2,'library-a','Unique guide','Author',NULL),(3,'library-b','Unique guide','Author',NULL),(4,'library-a','Unique guide','Author','deleted');
+ INSERT INTO defta_fts(rowid,title,auteur) SELECT id,title,auteur FROM defta;`); err != nil {
+		t.Fatal(err)
+	}
+	store := &reviewMemoryStore{}
+	service := NewCoverImportReviewService(NewBookService(repositories.NewBookRepository(db)), repositories.NewCoverImportRepository(db), store)
+	owner := &auth.Claims{Role: models.RoleOwnerLibrary, LibraryID: "library-a", RegisteredClaims: jwt.RegisteredClaims{Subject: "owner"}}
+	ctx := context.Background()
+	for _, query := range []string{"inexistant", "NEAR OR NOT"} {
+		result, err := service.SearchCandidates(ctx, owner, "safe", "", query)
+		if err != nil || len(result) != 0 {
+			t.Fatalf("zero/literal query: %v %v", result, err)
+		}
+	}
+	result, err := service.SearchCandidates(ctx, owner, "safe", "", "Unique")
+	if err != nil || len(result) != 1 || result[0].BookID != 2 {
+		t.Fatalf("single eligible result: %v %v", result, err)
+	}
+	if _, err = db.Exec(`UPDATE defta SET deleted_at='after-search' WHERE id=2`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = service.Decide(ctx, owner, "safe", "", "ACCEPT", "", 2); !errors.Is(err, repositories.ErrCoverImportCandidateNotFound) {
+		t.Fatalf("deleted suggestion accepted: %v", err)
+	}
+	if store.copied != 0 {
+		t.Fatal("deleted suggestion copied source")
+	}
+	var status string
+	if err = db.QueryRow(`SELECT status FROM cover_import_jobs WHERE id='safe'`).Scan(&status); err != nil || status != "REVIEW_REQUIRED" {
+		t.Fatalf("failed selection terminated job: %s %v", status, err)
+	}
+}
+
+func TestManualCoverReplacementFailureKeepsExistingCover(t *testing.T) {
+	imports, owner, db := importErrorFixture(t, &importErrorStore{})
+	ctx := context.Background()
+	if _, err := imports.Create(ctx, owner, "", "manual-replacement-final", []CoverImportFile{importPNGFile(t)}); err != nil {
+		t.Fatal(err)
+	}
+	var jobID string
+	if err := db.QueryRow(`SELECT id FROM cover_import_jobs`).Scan(&jobID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`UPDATE cover_import_jobs SET status='REVIEW_REQUIRED',nsfw_decision='SAFE';
+ INSERT INTO defta(id,library_id,title) VALUES(1,'library-a','Guide manuel');
+ INSERT INTO book_covers(id,book_id,library_id,status,source_object_key,source_content_type,source_format,source_width,source_height,source_size,large_jpeg_object_key,active,created_at,updated_at)
+ VALUES('existing-cover',1,'library-a','READY','old-private-source','image/png','png',1,1,1,'old-private-preview',1,'before','before');`); err != nil {
+		t.Fatal(err)
+	}
+	store := &reviewMemoryStore{}
+	service := NewCoverImportReviewService(NewBookService(repositories.NewBookRepository(db)), repositories.NewCoverImportRepository(db), store)
+	suggestions, err := service.SearchCandidates(ctx, owner, jobID, "", "Guide manuel")
+	if err != nil || len(suggestions) != 1 || !suggestions[0].HasActiveCover {
+		t.Fatalf("replacement not advertised: %v %v", suggestions, err)
+	}
+	if _, err = service.Decide(ctx, owner, jobID, "", "ACCEPT", "", 1); err != nil {
+		t.Fatal(err)
+	}
+	var newCoverID string
+	if err = db.QueryRow(`SELECT cover_id FROM cover_processing_outbox`).Scan(&newCoverID); err != nil {
+		t.Fatal(err)
+	}
+	if err = repositories.NewCoverProcessingRepository(db).MarkFailed(ctx, newCoverID, "MAX_DELIVERIES", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	var oldActive, newActive int
+	var oldStatus, newStatus, preview string
+	if err = db.QueryRow(`SELECT status,active,large_jpeg_object_key FROM book_covers WHERE id='existing-cover'`).Scan(&oldStatus, &oldActive, &preview); err != nil {
+		t.Fatal(err)
+	}
+	if err = db.QueryRow(`SELECT status,active FROM book_covers WHERE id=?`, newCoverID).Scan(&newStatus, &newActive); err != nil {
+		t.Fatal(err)
+	}
+	if oldStatus != "READY" || oldActive != 1 || preview != "old-private-preview" || newStatus != "FAILED" || newActive != 0 {
+		t.Fatal("failed derivative replaced the existing cover")
+	}
+	if _, err = service.Decide(ctx, owner, jobID, "", "ACCEPT", "", 1); !errors.Is(err, repositories.ErrCoverImportReviewState) {
+		t.Fatalf("replayed decision: %v", err)
+	}
+	for _, query := range []string{`SELECT COUNT(*) FROM cover_processing_outbox`, `SELECT COUNT(*) FROM audit_logs WHERE action='DECIDE_COVER_IMPORT_REVIEW'`} {
+		var count int
+		if err = db.QueryRow(query).Scan(&count); err != nil || count != 1 {
+			t.Fatalf("replay duplicated durable write: count=%d err=%v", count, err)
+		}
+	}
+	if store.copied != 1 {
+		t.Fatal("source copied more than once")
 	}
 }
