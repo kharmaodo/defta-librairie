@@ -118,3 +118,7 @@ Les originaux restent privés dans MinIO. Aucun cloud ni GPU. Temporaires suppri
 - Go : go test -tags fts5 ./... ; go vet -tags fts5 ./... ; git diff --check.
 - Python : tests unitaires/intégration, lint et typage ; Docker Compose et parcours navigateur off/on.
 - Adoption : gain de qualité mesuré et absence de régression d'isolation/idempotence ; budgets chiffrés de qualité et de latence à fixer après baseline, avant activation par défaut.
+
+## Outillage de recette US-1716
+
+Le [guide de recette](OCR_ACCEPTANCE_V1_7_1.md) et le comparateur Go évaluent les runtimes et matching effectivement branchés, avec corpus annoté, empreintes, seuils explicites et preuves mémoire. Les seuils exemples restent une proposition à valider avant mesure. Le gate technique/synthétique est distinct de la recette réelle ; aucun flag n’est activé automatiquement.

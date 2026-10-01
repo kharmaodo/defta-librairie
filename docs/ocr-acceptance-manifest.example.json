@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "kind": "real",
+  "limits": {
+    "minCases": 20,
+    "minPositives": 10,
+    "minNegatives": 5,
+    "minTranscriptions": 5,
+    "minRecall1": 0.75,
+    "minRecall5": 0.90,
+    "minRecall5Gain": 0.05,
+    "maxNegativeCandidateRate": 0,
+    "maxCER": 0.20,
+    "maxWER": 0.35,
+    "maxP95Milliseconds": 60000,
+    "maxMemoryBytes": 1073741824
+  },
+  "cases": [
+    {
+      "id": "cover-positive-01",
+      "image": "images/cover-positive-01.jpeg",
+      "sha256": "REMPLACER_PAR_SHA256_REEL",
+      "libraryId": "REMPLACER_PAR_BIBLIOTHEQUE",
+      "expectedBookId": 1,
+      "referenceText": "REMPLACER_PAR_TRANSCRIPTION_COMPLETE"
+    },
+    {
+      "id": "cover-absent-01",
+      "image": "images/cover-absent-01.png",
+      "sha256": "REMPLACER_PAR_SHA256_REEL",
+      "libraryId": "REMPLACER_PAR_BIBLIOTHEQUE",
+      "expectedAbsent": true
+    }
+  ]
+}
