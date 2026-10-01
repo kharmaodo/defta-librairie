@@ -1697,3 +1697,5 @@ Le [cœur CPU et CLI de comparaison](services/ocr-experimental/README.md) permet
 Le [service FastAPI OCR interne](services/ocr-experimental/README.md#service-fastapi-interne-us-1713) partage ce cœur CPU et fournit un contrat multipart borné, des sondes de santé et un conteneur sans accès au catalogue. Son [adaptateur Go US-1714](docs/OCR_GO_ADAPTER_V1_7_1.md) est disponible derrière un flag désactivé par défaut, avec persistance transactionnelle et reprise bornée.
 
 Le [matching de qualité US-1715](docs/OCR_MATCHING_QUALITY_V1_7_1.md) utilise le même flag expérimental, off par défaut : tokens utiles de tout le texte, corrections non ambiguës et classement FTS5/BM25 isolé par bibliothèque. Le gain sur images réelles reste à valider lors de la recette.
+
+La [recette US-1716](docs/OCR_ACCEPTANCE_V1_7_1.md) fournit un comparateur Go et un gate qualité/mémoire avec preuves privées. Les contrôles synthétiques ne valent pas validation sur couvertures réelles ; le flag reste désactivé et toute activation exige la revue prévue par le contrat.

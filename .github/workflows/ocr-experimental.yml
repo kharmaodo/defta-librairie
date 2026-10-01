@@ -5,6 +5,10 @@ on:
     paths:
       - 'services/ocr-experimental/**'
       - 'internal/ocr/**'
+      - 'internal/ocracceptance/**'
+      - 'cmd/ocr-acceptance/**'
+      - 'scripts/check-ocr-acceptance.sh'
+      - 'scripts/check-release-v1.7.1.sh'
       - 'internal/config/**'
       - 'internal/services/cover_import_ocr*'
       - 'internal/repositories/cover_import_ocr*'
@@ -15,6 +19,10 @@ on:
     paths:
       - 'services/ocr-experimental/**'
       - 'internal/ocr/**'
+      - 'internal/ocracceptance/**'
+      - 'cmd/ocr-acceptance/**'
+      - 'scripts/check-ocr-acceptance.sh'
+      - 'scripts/check-release-v1.7.1.sh'
       - 'internal/config/**'
       - 'internal/services/cover_import_ocr*'
       - 'internal/repositories/cover_import_ocr*'
@@ -53,4 +61,6 @@ jobs:
         run: |
           CGO_ENABLED=0 go test -c -o "$RUNNER_TEMP/ocr-adapter.test" ./internal/ocr
           OCR_ADAPTER_TEST_BINARY="$RUNNER_TEMP/ocr-adapter.test" sh services/ocr-experimental/check-container.sh
+      - name: Verify acceptance tool with real local runners
+        run: sh scripts/check-ocr-acceptance.sh
       - run: git diff --check
