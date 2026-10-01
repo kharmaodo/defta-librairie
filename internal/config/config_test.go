@@ -61,3 +61,34 @@ func TestCoverLimitsRejectInvalidValues(t *testing.T) {
 		t.Fatalf("unexpected cover defaults: bytes=%d pixels=%d", cfg.CoverMaxBytes, cfg.CoverMaxPixels)
 	}
 }
+
+func TestExperimentalOCRConfiguration(t *testing.T) {
+	t.Setenv("OCR_EXPERIMENTAL_ENABLED", "false")
+	t.Setenv("OCR_EXPERIMENTAL_ENDPOINT", "invalid")
+	t.Setenv("OCR_EXPERIMENTAL_TIMEOUT_SECONDS", "invalid")
+	cfg, err := Load()
+	if err != nil || cfg.OCRExperimentalEnabled {
+		t.Fatalf("off configuration: %v", err)
+	}
+	t.Setenv("OCR_EXPERIMENTAL_ENABLED", "true")
+	if _, err = Load(); err == nil {
+		t.Fatal("invalid endpoint accepted")
+	}
+	t.Setenv("OCR_EXPERIMENTAL_ENDPOINT", "http://127.0.0.1:8091")
+	if _, err = Load(); err == nil {
+		t.Fatal("invalid timeout accepted")
+	}
+	t.Setenv("OCR_EXPERIMENTAL_TIMEOUT_SECONDS", "60")
+	cfg, err = Load()
+	if err != nil || !cfg.OCRExperimentalEnabled || cfg.OCRExperimentalTimeout.Seconds() != 60 {
+		t.Fatalf("on configuration: %v", err)
+	}
+	t.Setenv("OCR_EXPERIMENTAL_TIMEOUT_SECONDS", "181")
+	if _, err = Load(); err == nil {
+		t.Fatal("unbounded timeout accepted")
+	}
+	t.Setenv("OCR_EXPERIMENTAL_ENABLED", "typo")
+	if _, err = Load(); err == nil {
+		t.Fatal("invalid flag silently disabled")
+	}
+}

@@ -2,7 +2,7 @@
 
 ## Objectif et état
 
-Cadrage du 30 septembre 2026, après fusion du PR #186. Le cœur CPU/CLI (US-1712, PR #190) est fusionné. Le service FastAPI/Docker (US-1713) est implémenté sur sa branche dédiée ; son intégration Go et son activation relèvent de US-1714. La qualité OCR de la v1.7.0 reste une limite connue. Aucun tag ou artefact v1.7.0 n'est publié par ce cadrage.
+Cadrage du 30 septembre 2026, après fusion du PR #186. Le cœur CPU/CLI (US-1712, PR #190) est fusionné. Le service FastAPI/Docker (US-1713) est fusionné (PR #195). L’adaptateur Go US-1714 est implémenté derrière un flag désactivé ; l’activation de recette reste soumise à US-1716. La qualité OCR de la v1.7.0 reste une limite connue. Aucun tag ou artefact v1.7.0 n'est publié par ce cadrage.
 
 Le nouveau cœur Python doit être partagé par CLI et FastAPI, fonctionner sur CPU et rester local. Go conserve l'authentification, les autorisations, les états, la persistance, l'outbox JetStream et les décisions humaines.
 
@@ -93,10 +93,10 @@ GET /health/live : processus vivant. GET /health/ready : Tesseract, langue ara e
 ```dotenv
 OCR_EXPERIMENTAL_ENABLED=false
 OCR_EXPERIMENTAL_ENDPOINT=http://ocr-experimental:8091
-OCR_EXPERIMENTAL_TIMEOUT_SECONDS=30
+OCR_EXPERIMENTAL_TIMEOUT_SECONDS=60
 ```
 
-Ces variables sont proposées, pas encore consommées par le code. Off : runner actuel sans appel réseau expérimental. On : endpoint requis, validé au démarrage, timeout global bornant toutes les passes. Aucun fallback silencieux.
+Ces variables sont consommées par la configuration Go ; le timeout accepte 1 à 180 secondes. Voir [guide US-1714](OCR_GO_ADAPTER_V1_7_1.md). Off : runner actuel sans appel réseau expérimental. On : endpoint requis, validé au démarrage, timeout global bornant toutes les passes. Aucun fallback silencieux.
 Le service est accessible sur réseau Docker interne ; l'accès CLI/REST de diagnostic est lié à 127.0.0.1. Le navigateur continue de passer par Go et les rôles JWT existants. Ne pas créer de comptes ou sessions Python.
 
 ## Qualité et confidentialité
