@@ -2,6 +2,10 @@
 
 ## [À paraître]
 
+## [1.7.1] — candidate
+
+- Préparation de release : gate complet v1.7.1 (delivery, OCR CPU réel, conteneur privé et intégration MinIO/JetStream), publication worker compatible avec les tags v1.7 et guide de publication/rollback. Tag, artefacts et déploiement restent à valider.
+
 - US-1717 finalisée : recherche manuelle SAFE fusionnée via PR #193, recette automatisée et preuves CI confirmées. Tests supplémentaires sur zéro/un résultat, exclusions après recherche et conservation de l’ancienne couverture après échec différé, sans doublons.
 
 - US-1716 clôturée en périmètre expérimental sur décision du propriétaire (2026-10-01), PR #198 : comparateur des runners Go et politiques de matching sur corpus annoté privé, mesures de qualité/latence et gate avec preuve mémoire, copie SQLite en lecture seule et rapports privés. Smoke synthétique avec runtimes réels ; recette arabe réelle et activation générale reportées à un suivi distinct ; flag off par défaut et gate inchangés.

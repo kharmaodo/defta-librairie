@@ -31,6 +31,7 @@ on:
   push:
     tags:
       - "v1.6.*"
+      - "v1.7.*"
 
 permissions:
   contents: read
@@ -56,7 +57,7 @@ jobs:
         run: |
           set -euo pipefail
           case "$IMAGE_TAG" in
-            v1.6.*) ;;
+            v1.6.*|v1.7.*) ;;
             *) echo "Tag invalide: $IMAGE_TAG" >&2; exit 1 ;;
           esac
           test "$(git describe --tags --exact-match)" = "$IMAGE_TAG"
@@ -83,4 +84,4 @@ jobs:
           sbom: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-            ${{ env.IMAGE_NAME }}:1.6
+            ${{ env.IMAGE_NAME }}:${{ startsWith(env.IMAGE_TAG, 'v1.7.') && '1.7' || '1.6' }}

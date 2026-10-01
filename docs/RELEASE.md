@@ -1,3 +1,7 @@
+# Procédures de release
+
+La préparation actuelle est le [candidat v1.7.1](RELEASE_V1_7_1.md), avec OCR expérimental désactivé par défaut. La procédure historique v1.6.0 ci-dessous reste une référence pour ses artefacts.
+
 # Préparation de la version 1.6.0
 
 Cette procédure prépare la release à partir de `develop`. Le tag et la release
