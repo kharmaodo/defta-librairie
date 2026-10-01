@@ -1694,4 +1694,4 @@ et rejet persistant des propositions.
 
 Le [cœur CPU et CLI de comparaison](services/ocr-experimental/README.md) permet de tester Tesseract arabe et les candidats sur une copie SQLite en lecture seule, bornée par bibliothèque. Il n’active pas le nouveau moteur dans le worker Go. La qualité sur les couvertures réelles reste à mesurer avant activation.
 
-Le [service FastAPI OCR interne](services/ocr-experimental/README.md#service-fastapi-interne-us-1713) partage ce cœur CPU et fournit un contrat multipart borné, des sondes de santé et un conteneur sans accès au catalogue. Son intégration au worker Go reste prévue par US-1714.
+Le [service FastAPI OCR interne](services/ocr-experimental/README.md#service-fastapi-interne-us-1713) partage ce cœur CPU et fournit un contrat multipart borné, des sondes de santé et un conteneur sans accès au catalogue. Son [adaptateur Go US-1714](docs/OCR_GO_ADAPTER_V1_7_1.md) est disponible derrière un flag désactivé par défaut, avec persistance transactionnelle et reprise bornée.

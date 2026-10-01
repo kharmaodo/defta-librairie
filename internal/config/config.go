@@ -1,6 +1,8 @@
 package config
 
 import (
+	"defta-librairie/internal/ocr"
+	"fmt"
 	"log"
 	"os"
 	"strconv"
@@ -53,6 +55,9 @@ type Config struct {
 	OCREngine                 string
 	OCRLanguage               string
 	OCRTimeout                time.Duration
+	OCRExperimentalEnabled    bool
+	OCRExperimentalEndpoint   string
+	OCRExperimentalTimeout    time.Duration
 	NSFWModerationEndpoint    string
 }
 
@@ -108,6 +113,29 @@ func Load() (*Config, error) {
 		NSFWModerationEndpoint: getEnv("NSFW_MODERATION_ENDPOINT", "http://nsfw-moderator:8090"),
 	}
 
+	flag, err := strconv.ParseBool(getEnv("OCR_EXPERIMENTAL_ENABLED", "false"))
+	if err != nil {
+		return nil, fmt.Errorf("OCR_EXPERIMENTAL_ENABLED must be a boolean")
+	}
+	cfg.OCRExperimentalEnabled = flag
+	cfg.OCRExperimentalEndpoint = getEnv("OCR_EXPERIMENTAL_ENDPOINT", "")
+	cfg.OCRExperimentalTimeout = 60 * time.Second
+	if flag {
+		if cfg.OCRLanguage != "ara" {
+			return nil, fmt.Errorf("experimental OCR requires OCR_LANGUAGE=ara")
+		}
+		if cfg.CoverWorkerMaxDeliver > 100 {
+			return nil, fmt.Errorf("COVER_WORKER_MAX_DELIVER must not exceed 100 for experimental OCR")
+		}
+		if ocr.ValidateEndpoint(cfg.OCRExperimentalEndpoint) != nil {
+			return nil, fmt.Errorf("OCR_EXPERIMENTAL_ENDPOINT must be a private HTTP(S) origin without credentials or path")
+		}
+		seconds, err := strconv.Atoi(getEnv("OCR_EXPERIMENTAL_TIMEOUT_SECONDS", "60"))
+		if err != nil || seconds < 1 || seconds > 180 {
+			return nil, fmt.Errorf("OCR_EXPERIMENTAL_TIMEOUT_SECONDS must be between 1 and 180")
+		}
+		cfg.OCRExperimentalTimeout = time.Duration(seconds) * time.Second
+	}
 	return cfg, nil
 }
 

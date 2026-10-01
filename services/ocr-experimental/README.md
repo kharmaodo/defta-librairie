@@ -84,7 +84,7 @@ privé avec book_id attendu ou absence réelle, puis comparer recall@1/5, erreur
 de transcription, latence et mémoire. Le service reste expérimental jusqu'à
 cette mesure.
 
-FastAPI/Docker est livré par US-1713 ci-dessous. Adaptateur Go et flag off/on : US-1714. Aucune API
+FastAPI/Docker est livré par US-1713 ci-dessous. Adaptateur Go et flag off/on : [guide US-1714](../../docs/OCR_GO_ADAPTER_V1_7_1.md). Aucune API
 publique ou autorisation utilisateur supplémentaire n'est introduite ici.
 
 ## Comparaison couleur explicite
@@ -127,7 +127,7 @@ l'exclusion des livres supprimés. Les quatre passes couleur nécessitent toujou
 
 Le service ne lit ni n’écrit le catalogue : aucun volume SQLite, aucun candidat,
 aucun rattachement et aucun compte utilisateur Python. Le navigateur conserve
-les routes Go et JWT existants. Le worker Go actuel n’est pas modifié par ce lot.
+les routes Go et JWT existants. Le worker Go peut utiliser ce service via le flag US-1714, désactivé par défaut.
 
 ### Exécution CPU locale
 
@@ -188,7 +188,7 @@ aucune file d’attente OCR illimitée. Une déconnexion ne libère pas un trait
 encore actif : le timeout du cœur tue le sous-processus et ses temporaires sont
 nettoyés avant de rendre le créneau. Les uploads multipart sont toujours fermés.
 Le temps maximal normal comprend le budget upload puis le budget OCR ; le
-client Go devra configurer son propre délai en conséquence dans US-1714.
+client Go configure son propre délai (60 secondes par défaut) via US-1714.
 Une configuration invalide empêche le démarrage.
 
 ### Conteneur privé
@@ -199,7 +199,7 @@ docker compose -f services/ocr-experimental/compose.ocr-experimental.yaml up -d 
 
 Pas de port publié par défaut : réseau Docker `internal`, sans egress, exposé
 uniquement en 8091 aux services joints à ce réseau. L’intégration réseau avec
-Go relève de US-1714. Pour un diagnostic sur la machine uniquement :
+Go est documentée dans le [guide US-1714](../../docs/OCR_GO_ADAPTER_V1_7_1.md). Pour un diagnostic sur la machine uniquement :
 
 ```bash
 docker compose -f services/ocr-experimental/compose.ocr-experimental.yaml \
