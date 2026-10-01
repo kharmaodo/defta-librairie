@@ -4,7 +4,7 @@ const read=n=>fs.readFileSync(path.join(__dirname,'..',n),'utf8');
 const source=read('static/js/admin-tags.js');
 function setup(api) {
  const node=()=>({children:[],handlers:{},dataset:{},elements:{},value:'',append(...items){this.children.push(...items);},replaceChildren(...items){this.children=items;},setAttribute(k,v){this[k]=v;},addEventListener(e,f){(this.handlers[e]||=[]).push(f);}});
- const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);};
+ const nodes=new Map(),get=id=>{if(id==='#tag-suggestions')return null;if(!nodes.has(id))nodes.set(id,node());return nodes.get(id);};
  const h={calls:[],audits:0,root:false,confirmed:true,get};
  get('#tag-form').elements={name:{value:''},libraryId:{value:''}};
  const window={DeftaDeleteConfirmation:{run:async({execute})=>h.confirmed?execute():false}};vm.runInNewContext(source,{window,document:{querySelector:get,createElement:node,createTextNode:text=>({textContent:text})},URLSearchParams});
@@ -12,8 +12,8 @@ function setup(api) {
  h.event=async(id,event='click',tag='tag')=>{for(const fn of get(id).handlers[event]||[])await fn({preventDefault(){},currentTarget:get(id),target:{closest:()=>({dataset:{id:tag}})}});};return h;
 }
 test('load is inert',()=>{const window={};vm.runInNewContext(source,{window});assert.equal(typeof window.DeftaTags.create,'function');});
-test('root requires selected library for listing and clears suggestions',async()=>{
- const h=setup();h.root=true;await h.module.reload();assert.equal(h.calls.length,0);assert.equal(h.get('#tag-suggestions').children.length,0);
+test('root requires selected library and renders without legacy suggestions',async()=>{
+ const h=setup();h.root=true;await h.module.reload();assert.equal(h.calls.length,0);assert.equal(h.get('#tags-list').children[0].textContent,'Aucun tag défini');
  h.get('#tag-library').value='A & B';await h.module.reload();assert.equal(new URL(h.calls[0].url,'https://example.test').searchParams.get('libraryId'),'A & B');
 });
 test('owner listing omits supplied library',async()=>{
@@ -22,7 +22,7 @@ test('owner listing omits supplied library',async()=>{
 test('render preserves text and accessible remove name',()=>{
  const h=setup();h.module.render({results:[{id:'tag',name:'<b>Roman</b>'}]});const chip=h.get('#tags-list').children[0];
  assert.equal(chip.children[0].textContent,'<b>Roman</b>');assert.equal(chip.children[1]['aria-label'],'Supprimer <b>Roman</b>');
- assert.equal(h.get('#tag-suggestions').children[0].value,'<b>Roman</b>');
+ assert.equal(h.get('#tag-suggestions'),null);
 });
 test('create trims name, refreshes audit; init once',async()=>{
  const h=setup();h.module.init();h.module.init();h.get('#tag-form').elements.name.value=' Roman ';
@@ -43,4 +43,10 @@ test('dashboard keeps books callbacks and excludes script from login',()=>{
  assert.match(read('static/js/admin-auth.js'),/const renderTags = payload => tags.render\(payload\)/);
  assert.doesNotMatch(read('templates/login.html'),/admin-tags/);
  const t=read('templates/admin.html');assert.ok(t.indexOf('/static/js/admin-tags.js')<t.indexOf('/static/js/admin-auth.js'));
+});
+
+test('current template and tags module have no legacy suggestion dependency',()=>{
+ assert.doesNotMatch(read('templates/admin.html'),/id="tag-suggestions"/);
+ assert.doesNotMatch(source,/#tag-suggestions/);
+ assert.match(read('templates/admin.html'),/name="tagIds"/);
 });

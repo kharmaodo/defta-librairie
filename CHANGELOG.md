@@ -164,3 +164,22 @@ Première version fonctionnelle complète du périmètre défini dans `BACKLOG.m
 - Avoirs émis mais non imputables sur une nouvelle vente.
 - Aucun prestataire externe de paiement intégré.
 - Objectifs de reprise, rétentions et seuils d’exploitation à définir par environnement.
+
+### Correctif de recette v1.7.1 — suivi des soumissions de livres
+
+- Actualisation immédiate de la modération après soumission et suivi borné
+  des analyses, même après fermeture du formulaire.
+- Rafraîchissement des livres et du stock après création approuvée, notification
+  persistante et conservation des filtres.
+- Messages précis pour couvertures invalides/non approuvées et sauvegarde
+  partielle des champs du livre lors d'un échec de remplacement.
+
+- Retrait du remplissage de la datalist de tags supprimée : le rechargement des
+  tags et l'ouverture du formulaire livre n'échouent plus sur un élément absent.
+
+### v1.7.1 — Rattachement manuel (US-1717)
+
+- Recherche de trois livres par bibliothèque pour une couverture SAFE, même
+  sans proposition OCR, avec aperçu privé et confirmation de remplacement.
+- Rejet persistant et audité d'une solution sans rejeter l'image ; promotion
+  humaine utilisant la couverture différée et l'outbox existantes.

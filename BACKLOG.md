@@ -322,3 +322,42 @@ Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186
 ### Ajustement UX de recette v1.7.1
 
 Revue ouverte directement sous la ligne de l’image choisie, avant la suivante, avec focus accessible et déplacement minimal. Build TypeScript/Vite et contrôle du patch réussis ; test navigateur adapté pour vérifier la position du panneau dans une liste de deux images avec historique long. Fusionné via PR #189 ; CI et recette locale validées par le propriétaire.
+
+### Régression de recette — création et remplacement de couverture
+
+Branche `fix/v1.7.1-book-cover-feedback` : après acceptation d'une soumission,
+le formulaire se ferme, la liste de modération est actualisée immédiatement
+et les analyses en cours sont suivies toutes les trois secondes, pendant
+six minutes maximum. La création déclenche le rafraîchissement des livres et
+du stock, indépendamment de la fermeture du formulaire. Les filtres de recherche
+sont conservés avec une indication quand ils peuvent masquer le nouveau livre.
+Les erreurs de couverture invalide ou non approuvée sont explicites ; un échec
+après sauvegarde des champs indique que ces champs ont déjà été enregistrés.
+
+Validation : tests frontend sur fermeture/suivi/approbation, compensation UI
+d'un échec de couverture et messages HTTP ; scénario Playwright dédié ajouté.
+La cause exacte de l'erreur de modification signalée reste à confirmer avec
+sa réponse HTTP ; aucun contournement de la modération n'est introduit.
+
+### Correctif — datalist de tags supprimée
+
+Le formulaire utilise des tags relationnels (`tagIds`) et n'a plus de datalist
+`tag-suggestions`. Le module des tags tentait encore de remplir cette datalist
+absente, provoquant une erreur `replaceChildren` lors du rafraîchissement des
+tags (notamment à l'ouverture du formulaire root). Ce code obsolète est retiré.
+Le faux DOM des tests renvoie maintenant `null` pour cet élément, comme le
+vrai template ; rechargement root/propriétaire et rendu des tags restent testés.
+
+### US-1717 — Recherche manuelle et résolution des couvertures SAFE
+
+Branche feature/v1.7.1-manual-cover-matching : recherche limitée à trois livres
+de la bibliothèque, suggestions persistées, aperçu privé, confirmation de
+résolution/remplacement, rejet d'une solution distinct du rejet du rattachement,
+audit et idempotence. Migration 034, API/OpenAPI et revue React.
+ISBN : recherche exacte des ISBN issus des OCR déjà rattachés ; defta n'a pas
+de champ ISBN dédié. Voir [contrat et recette](docs/MANUAL_COVER_MATCHING.md).
+Validation locale : Go/FTS5, vet, race sur services/repositories/handlers,
+125 tests frontend, TypeScript/Vite et contrat OpenAPI verts. Scénarios
+Playwright adaptés/ajoutés ; téléchargement Chromium local tronqué, exécution
+navigateur à confirmer en CI. État : implémenté, validation CI et recette
+locale requises avant clôture.

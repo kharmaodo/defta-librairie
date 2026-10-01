@@ -119,7 +119,8 @@ func TestCoverImportMetadataPurgeWaitsForDeletionAndHold(t *testing.T) {
 	_, err = db.Exec(`PRAGMA foreign_keys=ON;
 	CREATE TABLE cover_imports(id TEXT PRIMARY KEY, created_at TEXT NOT NULL);
 	CREATE TABLE cover_import_jobs(id TEXT PRIMARY KEY,import_id TEXT REFERENCES cover_imports(id),source_object_key TEXT NOT NULL,status TEXT NOT NULL,created_at TEXT NOT NULL);
-	CREATE TABLE cover_import_candidate_matches(job_id TEXT REFERENCES cover_import_jobs(id));
+	CREATE TABLE cover_import_review_suggestions(job_id TEXT REFERENCES cover_import_jobs(id));
+ CREATE TABLE cover_import_candidate_matches(job_id TEXT REFERENCES cover_import_jobs(id));
 	CREATE TABLE cover_import_review_decisions(job_id TEXT REFERENCES cover_import_jobs(id));
 	CREATE TABLE cover_import_ocr_results(job_id TEXT REFERENCES cover_import_jobs(id),text_raw TEXT);
 	CREATE TABLE cover_import_outbox(job_id TEXT REFERENCES cover_import_jobs(id));

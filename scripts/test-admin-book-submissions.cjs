@@ -8,6 +8,7 @@ const source=fs.readFileSync(path.join(__dirname,"..","static/js/admin-book-subm
 
 function setup(results) {
   let ready;
+  const listeners={},events=[],timers=[];
   const refresh={addEventListener() {}};
   const notice={textContent:""};
   const body={
@@ -36,7 +37,8 @@ function setup(results) {
     return null;
   }};
   const document={
-    addEventListener(event, listener){if(event==="DOMContentLoaded") ready=listener;},
+    addEventListener(event, listener){if(event==="DOMContentLoaded") ready=listener;else listeners[event]=listener;},
+    dispatchEvent(event){events.push(event);},
     querySelector(selector){
       if(selector==="#book-submissions-panel") return panel;
       if(selector==="#submission-retry-dialog") return retryDialog;
@@ -44,14 +46,14 @@ function setup(results) {
     },
     createElement(){return {dataset:{},className:"",textContent:"",title:"",append(){}};}
   };
-  const window={
+  const window={addEventListener(){},
     DeftaHTTP:{
       json:async()=>({role:"SUPER_ADMIN_ROOT"}),
       request:async()=>({json:async()=>({results})})
     }
   };
-  vm.runInNewContext(source,{window,document,encodeURIComponent,JSON});
-  return {body,ready};
+  vm.runInNewContext(source,{window,document,encodeURIComponent,JSON,clearTimeout(){},setTimeout(fn){timers.push(fn);return timers.length;},CustomEvent:class {constructor(type,options){this.type=type;this.detail=options.detail;}}});
+  return {body,ready,listeners,events,timers,window};
 }
 
 test("moderation statuses and decisions use readable semantic pills",async()=>{
@@ -80,4 +82,25 @@ test("moderation statuses and decisions use readable semantic pills",async()=>{
   const review=body.rows[3].cells;
   assert.equal(review[1].children[0].textContent,"Revue manuelle requise");
   assert.equal(review[3].textContent,"—");
+});
+
+test("accepted submission loads immediately and announces book creation once",async()=>{
+ const results=[];const h=setup(results);await h.ready();
+ results.push({id:"new",title:"Livre",moderationStatus:"APPROVED",createdBookId:480});
+ h.listeners["defta:book-submission-accepted"]({detail:{id:"new"}});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(h.body.rows.length,1);
+ assert.equal(h.events[0].type,"defta:book-submission-created");
+ assert.equal(h.events[0].detail.bookId,480);
+ h.listeners["defta:book-submission-accepted"]({detail:{id:"other"}});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(h.events.length,1);
+});
+test("pending submission is polled until approved after form closes",async()=>{
+ const results=[{id:"pending",title:"Livre",moderationStatus:"PENDING_SCAN"}];
+ const h=setup(results);await h.ready();assert.equal(h.timers.length,1);
+ results[0]={...results[0],moderationStatus:"APPROVED",createdBookId:480};
+ h.timers[0]();await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(h.events[0].detail.bookId,480);
+ assert.equal(h.timers.length,1);
 });

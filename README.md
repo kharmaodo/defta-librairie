@@ -1685,6 +1685,10 @@ Pour les imports de couvertures v1.7.0, la rétention, les retenues légales
 réservées au root et le gate Go/React/Chromium/Docker sont décrits dans
 [RELEASE_V1_7_0.md](docs/RELEASE_V1_7_0.md).
 
+Le [parcours de rattachement manuel SAFE](docs/MANUAL_COVER_MATCHING.md) permet
+une recherche de trois suggestions sans candidat OCR, avec résolution humaine
+et rejet persistant des propositions.
+
 
 ### Diagnostic OCR expérimental v1.7.1
 
