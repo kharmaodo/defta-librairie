@@ -2,6 +2,8 @@
 
 ## [À paraître]
 
+- US-1715 : matching expérimental v2 sur tout le texte utile, correction prudente et normalisation symétrique ; FTS5/BM25 temporaire en mémoire avec statistiques limitées à la bibliothèque, candidats et audit transactionnels. Off conserve le matching existant ; benchmark synthétique annoté ajouté.
+
 - US-1714 : adaptateur HTTP Go privé derrière un flag off par défaut, contrat strict, métadonnées OCR réelles et migration 035 ; reprise bornée avec baux et jetons, outbox/audit atomiques et rollback vers le runner local.
 
 - US-1713 : service OCR FastAPI interne partageant le cœur CPU, contrat multipart versionné, limites et capacité bornées, probes Tesseract arabe et conteneur isolé. Branchement Go facultatif livré par US-1714.

@@ -66,6 +66,14 @@ func (r *CoverImportRepository) SearchCoverImportCandidates(ctx context.Context,
 // CompleteMatching commits candidates, the state transition and the audit as
 // one unit. Re-delivery cannot add a second set of candidates or audit entry.
 func (r *CoverImportRepository) CompleteMatching(ctx context.Context, job CoverImportMatchingJob, candidates []CoverImportCandidate, auditID, now string) error {
+	return r.completeMatching(ctx, job, candidates, auditID, now, "fts5_bm25", "v1")
+}
+
+func (r *CoverImportRepository) CompleteQualityMatching(ctx context.Context, job CoverImportMatchingJob, candidates []CoverImportCandidate, auditID, now string) error {
+	return r.completeMatching(ctx, job, candidates, auditID, now, "scoped_fts5_bm25", "v2")
+}
+
+func (r *CoverImportRepository) completeMatching(ctx context.Context, job CoverImportMatchingJob, candidates []CoverImportCandidate, auditID, now, algorithm, policy string) error {
 	if job.ID == "" || job.LibraryID == "" || job.ActorUserID == "" || auditID == "" || len(candidates) > 5 {
 		return ErrInvalidCoverImport
 	}
@@ -98,13 +106,13 @@ func (r *CoverImportRepository) CompleteMatching(ctx context.Context, job CoverI
 		if err != nil {
 			return err
 		}
-		explanation, _ := json.Marshal(map[string]string{"algorithm": "fts5_bm25", "policyVersion": "v1"})
+		explanation, _ := json.Marshal(map[string]string{"algorithm": algorithm, "policyVersion": policy})
 		_, err = tx.ExecContext(ctx, `INSERT INTO cover_import_candidate_matches(job_id,book_id,rank,fts_score,explanation_json,created_at) VALUES(?,?,?,?,?,?)`, job.ID, bookID, rank+1, candidate.Score, string(explanation), now)
 		if err != nil {
 			return fmt.Errorf("persist matching candidate: %w", err)
 		}
 	}
-	values, _ := json.Marshal(map[string]any{"algorithm": "fts5_bm25", "candidateCount": len(candidates), "libraryId": job.LibraryID})
+	values, _ := json.Marshal(map[string]any{"algorithm": algorithm, "policyVersion": policy, "candidateCount": len(candidates), "libraryId": job.LibraryID, "correlationId": job.ID})
 	_, err = tx.ExecContext(ctx, `INSERT INTO audit_logs(id,actor_user_id,action,resource_type,resource_id,new_values,success,created_at) VALUES(?,?, 'COMPLETE_COVER_IMPORT_MATCHING','COVER_IMPORT_JOB',?,?,1,?)`, auditID, job.ActorUserID, job.ID, string(values), now)
 	if err != nil {
 		return fmt.Errorf("audit matching: %w", err)

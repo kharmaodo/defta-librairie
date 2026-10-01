@@ -51,7 +51,7 @@ func runCoverImportMatchWorker(ctx context.Context, cfg *config.Config, db *sql.
 		logger.Error("cover_import_match_subscribe_failed", "error", err)
 		return
 	}
-	service := services.NewCoverImportMatchingService(repositories.NewCoverImportRepository(db))
+	service := services.NewCoverImportMatchingService(repositories.NewCoverImportRepository(db)).WithQualityMatching(cfg.OCRExperimentalEnabled)
 	for ctx.Err() == nil {
 		messages, fetchErr := sub.Fetch(1, nats.MaxWait(time.Second))
 		if errors.Is(fetchErr, nats.ErrTimeout) {

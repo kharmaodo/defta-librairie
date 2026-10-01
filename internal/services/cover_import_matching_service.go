@@ -11,6 +11,7 @@ import (
 )
 
 type CoverImportMatchingService struct {
+	quality    bool
 	repository *repositories.CoverImportRepository
 	newID      func() (string, error)
 	now        func() time.Time
@@ -18,6 +19,11 @@ type CoverImportMatchingService struct {
 
 func NewCoverImportMatchingService(repository *repositories.CoverImportRepository) *CoverImportMatchingService {
 	return &CoverImportMatchingService{repository: repository, newID: identity.NewID, now: time.Now}
+}
+
+func (s *CoverImportMatchingService) WithQualityMatching(enabled bool) *CoverImportMatchingService {
+	s.quality = enabled
+	return s
 }
 
 // Process never updates a book. It only records candidates for human review.
@@ -29,26 +35,32 @@ func (s *CoverImportMatchingService) Process(ctx context.Context, jobID, library
 	if err != nil {
 		return err
 	}
-	tokens := strings.Fields(ocr.NormalizeForMatching(job.Text))
-	if len(tokens) > 12 {
-		tokens = tokens[:12]
-	}
-	for index, token := range tokens {
-		runes := []rune(token)
-		if len(runes) > 64 {
-			tokens[index] = string(runes[:64])
+	var candidates []repositories.CoverImportCandidate
+	if s.quality {
+		candidates, err = s.repository.SearchQualityCoverImportCandidates(ctx, job.LibraryID, job.Text)
+	} else {
+		tokens := strings.Fields(ocr.NormalizeForMatching(job.Text))
+		if len(tokens) > 12 {
+			tokens = tokens[:12]
 		}
+		for i, token := range tokens {
+			runes := []rune(token)
+			if len(runes) > 64 {
+				tokens[i] = string(runes[:64])
+			}
+		}
+		query := strings.ReplaceAll(ocr.FTSQuery(strings.Join(tokens, " ")), " AND ", " OR ")
+		candidates, err = s.repository.SearchCoverImportCandidates(ctx, job.LibraryID, query)
 	}
-	// OCR often contains unrelated lines; OR offers recall without allowing FTS
-	// operators from the image to be interpreted as syntax.
-	query := strings.ReplaceAll(ocr.FTSQuery(strings.Join(tokens, " ")), " AND ", " OR ")
-	candidates, err := s.repository.SearchCoverImportCandidates(ctx, job.LibraryID, query)
 	if err != nil {
 		return err
 	}
 	auditID, err := s.newID()
 	if err != nil {
 		return err
+	}
+	if s.quality {
+		return s.repository.CompleteQualityMatching(ctx, job, candidates, auditID, s.now().UTC().Format(time.RFC3339Nano))
 	}
 	return s.repository.CompleteMatching(ctx, job, candidates, auditID, s.now().UTC().Format(time.RFC3339Nano))
 }

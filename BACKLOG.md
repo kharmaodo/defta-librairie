@@ -307,7 +307,7 @@ Une fusion partielle conserve le statut Partiel et détaille les éléments rest
 
 ## v1.7.1 — OCR expérimental local (cadrage du 30 septembre 2026)
 
-Référence vérifiée : `develop` sur `7b2f860`, après fusion du PR #195. Prochain incrément après validation/fusion US-1714 : US-1715.
+Référence vérifiée : `develop` sur `6f6f18d`, après fusion du PR #196. Prochain incrément après validation/fusion US-1715 : US-1716.
 
 Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186 fusionné dans develop. Le cœur CPU/CLI est fusionné (PR #190). Le service interne US-1713 est fusionné (PR #195). L’adaptateur Go US-1714 reste désactivé par défaut. La qualité OCR reste une limite connue de v1.7.0.
 
@@ -317,8 +317,8 @@ Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186
 | US-1711 | Quotas et erreurs d'import explicites | Fusionné dans develop (PR #188) | Cause conservée après rollback ; HTTP 429/422/413, panne stockage 503, compensation et message français testés. Go/FTS5, vet et suites frontend verts. Test navigateur ajouté ; exécution locale bloquée par téléchargement Chromium, validation CI requise. |
 | US-1712 | Cœur OCR CPU et CLI de comparaison | Fusionné dans develop (PR #190) | 21 tests dont agrégation avec preuves, isolation et variantes couleur bornées et guillemets TSV littéraux et Tesseract arabe réel sur fixture synthétique ; lint/typage verts ; SQLite mode=ro, library_id, baseline/4 passes, option CLI couleur/8 passes, candidats par passe et combinés pour revue, exports privés JSON/CSV. Fragment de titre observé sur une couverture réelle ; gain global et matching réel non validés. |
 | US-1713 | FastAPI interne et Docker | Fusionné dans develop (PR #195) | API multipart privée versionnée, validation MIME/signature/dimensions, upload et OCR bornés, capacité sans file d’attente et slot conservé après déconnexion ; probes runtime arabe, Docker CPU non-root/read-only sans egress ni SQLite. 33 tests Python, lint/typage ; build et smoke Docker validés en CI. Adaptateur Go : US-1714. |
-| US-1714 | Adaptateur Go derrière feature flag | Réalisé, en revue | Flag off par défaut ; HTTP privé borné, contrat strict, migration 035 et métadonnées réelles ; transactions avec outbox/audit, baux avec jetons et reprises bornées. Tests Go off/on, timeout, erreurs, rollback, isolation et idempotence ; smoke adaptateur + Docker réel ajouté à la CI. Voir [guide](docs/OCR_GO_ADAPTER_V1_7_1.md). |
-| US-1715 | Matching de qualité et isolation | À développer | Titre après bruit, correction prudente et recall@1/5. |
+| US-1714 | Adaptateur Go derrière feature flag | Fusionné dans develop (PR #196) | Flag off par défaut ; HTTP privé borné, contrat strict, migration 035 et métadonnées réelles ; transactions avec outbox/audit, baux avec jetons et reprises bornées. Tests Go off/on, timeout, erreurs, rollback, isolation et idempotence ; smoke adaptateur + Docker réel et gate complet validés en CI. Voir [guide](docs/OCR_GO_ADAPTER_V1_7_1.md). |
+| US-1715 | Matching de qualité et isolation | Réalisé, en revue | Matching v2 sous le flag expérimental ; normalisation symétrique, mots utiles de tout le texte, correction unique à une édition, FTS5/BM25 en mémoire limité à la bibliothèque. Tests off/on, isolation des scores, idempotence, rollback et corpus synthétique annoté : baseline recall@1 4/6, v2 recall@1/5 6/6 ; gain réel à mesurer dans US-1716. Voir [guide](docs/OCR_MATCHING_QUALITY_V1_7_1.md). |
 | US-1716 | Recette et gate v1.7.1 | À développer | Benchmark local, rollback et validation de l'activation. |
 
 ### Ajustement UX de recette v1.7.1
