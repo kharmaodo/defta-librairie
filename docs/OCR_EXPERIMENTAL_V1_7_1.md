@@ -2,7 +2,7 @@
 
 ## Objectif et état
 
-Cadrage du 30 septembre 2026, après fusion du PR #186. Cette spécification décrit le prochain lot ; le service expérimental n'est pas encore implémenté ni activé. La qualité OCR de la v1.7.0 reste une limite connue. Aucun tag ou artefact v1.7.0 n'est publié par ce cadrage.
+Cadrage du 30 septembre 2026, après fusion du PR #186. Le cœur CPU/CLI (US-1712, PR #190) est fusionné. Le service FastAPI/Docker (US-1713) est implémenté sur sa branche dédiée ; son intégration Go et son activation relèvent de US-1714. La qualité OCR de la v1.7.0 reste une limite connue. Aucun tag ou artefact v1.7.0 n'est publié par ce cadrage.
 
 Le nouveau cœur Python doit être partagé par CLI et FastAPI, fonctionner sur CPU et rester local. Go conserve l'authentification, les autorisations, les états, la persistance, l'outbox JetStream et les décisions humaines.
 
@@ -59,7 +59,7 @@ Le dictionnaire et toutes les recherches excluent les livres supprimés et filtr
 
 ACK après persistance durable. Les doublons JetStream ne doivent pas multiplier les résultats ou candidats. Une reprise utilise la politique de retries existante et bornée ; ne pas supposer que le passage actuel à FAILED permet un retry automatique.
 
-## Contrat interne proposé
+## Contrat interne US-1713
 
 POST /v1/ocr, multipart avec champ image JPEG/PNG. Pas de chemin disque ni URL fournis par le client. En-tête X-Request-Id pour corrélation, sans contenu OCR dans les logs.
 
@@ -83,6 +83,8 @@ Réponse 200 :
 Le choix PSM et du prétraitement ci-dessus est illustratif, à mesurer sur les images. La confiance ne devient jamais 95 % parce qu'un livre a été trouvé. BM25 est un score de classement, pas une probabilité. Conserver les hypothèses de correction séparément du texte brut.
 
 Erreurs internes stables : INVALID_IMAGE (422), IMAGE_TOO_LARGE (413), OCR_TIMEOUT (504), OCR_UNAVAILABLE (503), OCR_BUSY (503). Enveloppe JSON avec code, message public et requestId. Go valide type, version, longueur maximale des textes et bornes numériques ; réponse invalide traitée comme erreur du moteur.
+
+Le contrat et les limites effectives sont documentés dans [le service OCR](../services/ocr-experimental/README.md#service-fastapi-interne-us-1713).
 
 GET /health/live : processus vivant. GET /health/ready : Tesseract, langue ara et configuration valides. Aucun téléchargement de modèle au démarrage.
 
