@@ -173,7 +173,857 @@ AUTH_COOKIE_SECURE=false
 
 # Couvertures de livre v1.4
 COVERS_ENABLED=false
-MINIO_END…15069 tokens truncated…e reconnecter.
+MINIO_ENDPOINT=minio:9000
+MINIO_ACCESS_KEY=
+MINIO_SECRET_KEY=
+MINIO_USE_SSL=false
+MINIO_BUCKET_COVERS=book-covers
+MINIO_SOURCE_RETENTION_HOURS=24
+NATS_URL=nats://nats:4222
+NATS_USER=
+NATS_PASSWORD=
+NATS_COVERS_STREAM=BOOK_COVERS
+NATS_COVERS_SUBJECT=book.covers.process.v1
+NATS_COVERS_CONSUMER=cover-worker-v1
+COVER_WORKER_MAX_DELIVER=5
+COVER_MAX_BYTES=5242880
+COVER_MAX_PIXELS=24000000
+```
+
+Ne jamais commiter `.env`, une sauvegarde de ce fichier, ni une valeur réelle de `JWT_SECRET`.
+
+La préparation, le tag et le retour arrière de la version stable sont décrits
+dans [RELEASE.md](docs/RELEASE.md). Les changements publiés figurent dans
+[CHANGELOG.md](CHANGELOG.md).
+
+Les archives candidates Windows AMD64 et Raspberry Pi de `v1.4.0`, ainsi que l’image worker Linux AMD64, sont décrites dans
+[RELEASE_ARTIFACTS.md](docs/RELEASE_ARTIFACTS.md).
+
+Sous Linux ou WSL, si `.env` a été modifié sous Windows, supprimer les retours chariot avant le lancement avec `sed -i 's/\r$//' .env`. Le chargeur neutralise également ces fins de ligne pour éviter qu'une valeur telle que `PORT=8080\r` soit transmise au serveur HTTP.
+
+### Durcissement HTTP
+
+Les endpoints `login` et `refresh` partagent une limite en mémoire par adresse IP. Un dépassement retourne `429 Too Many Requests` avec `Retry-After`. Le serveur ajoute également un `X-Request-ID`, désactive la mise en cache des réponses d'authentification et applique des en-têtes CSP, anti-framing, MIME sniffing, permissions et referrer. `SIGINT` et `SIGTERM` déclenchent un arrêt gracieux de 10 secondes avant la fermeture SQLite.
+
+La route du catalogue est volontairement exacte (`GET /{$}`). Une URL inconnue, notamment sous `/api/`, retourne donc `404 Not Found` au lieu d'être rendue par erreur comme une page HTML du catalogue.
+
+### Couvertures v1.4.0
+
+L’administration accepte un fichier JPEG ou PNG de 5 Mio maximum par livre.
+La source est contrôlée par l’API, stockée dans un bucket MinIO privé, puis
+traitée par un worker via NATS JetStream. L’interface affiche l’état
+`PENDING`, `PROCESSING`, `READY` ou `FAILED`, permet une relance si la
+source est encore disponible et sert les miniatures par la route authentifiée.
+L’image par défaut locale est affichée en l’absence de couverture.
+
+Pour un démarrage local avec couvertures, suivre
+[docs/BOOK_COVERS_V1_4.md](docs/BOOK_COVERS_V1_4.md) et
+[docs/RELEASE.md](docs/RELEASE.md). Sauvegarder SQLite avant toute migration ;
+garder MinIO, JetStream et la base sur des volumes persistants. Les secrets
+MinIO/NATS et `JWT_SECRET` restent hors du dépôt.
+
+## Migrations SQLite
+
+Les migrations embarquées sont appliquées automatiquement au démarrage, dans l'ordre et dans une transaction. La table `schema_migrations` conserve leur version et leur checksum. Une base vide est initialisée avec le catalogue `defta`, son index FTS5, puis les tables d'identité et de sécurité ; les anciennes bases restent migrées sans recréer leurs données.
+
+La première migration de sécurité crée :
+
+- `users` pour les profils `SUPER_ADMIN_ROOT` et `OWNER_LIBRARY` ;
+- `libraries` et la relation avec leur propriétaire ;
+- `refresh_sessions` pour la rotation et la révocation des sessions ;
+- `audit_logs` pour les actions sensibles ;
+- la réparation des triggers FTS5 historiques (`categorie`) ;
+- les colonnes de propriété, d'audit et de versionnement sur `defta`.
+
+Les livres historiques sont rattachés à la librairie système :
+
+```text
+00000000-0000-0000-0000-000000000001
+```
+
+### Politique d'autorisation
+
+Les routes de lecture du catalogue restent publiques. Les routes de gestion appliquent systématiquement l'authentification JWT puis les règles suivantes :
+
+| Profil | Périmètre autorisé |
+|---|---|
+| `SUPER_ADMIN_ROOT` | Toutes les librairies, tous les utilisateurs et tous les livres |
+| `OWNER_LIBRARY` | Uniquement les livres, prix, statuts et tags de la librairie portée par son JWT |
+
+Un propriétaire ne peut jamais choisir son périmètre avec un champ envoyé dans le corps de la requête. Le backend utilise le `library_id` signé dans le JWT et refuse tout accès croisé avec une réponse `403 Forbidden`.
+
+### Administration des propriétaires
+
+Ces routes exigent un JWT `SUPER_ADMIN_ROOT` :
+
+| Méthode | Route | Action |
+|---|---|---|
+| `GET` | `/api/admin/owners?q=...&status=...&libraryStatus=...&offset=0&limit=30` | Rechercher et paginer les propriétaires et leurs librairies |
+| `POST` | `/api/admin/owners` | Créer atomiquement un propriétaire et sa librairie |
+| `GET` | `/api/admin/owners/{id}` | Consulter un propriétaire |
+| `PATCH` | `/api/admin/owners/{id}` | Modifier le compte, le mot de passe ou la librairie |
+| `DELETE` | `/api/admin/owners/{id}` | Désactiver le compte et la librairie, puis révoquer ses sessions |
+| `POST` | `/api/admin/owners/{id}/unlock` | Déverrouiller un compte bloqué après des échecs de connexion |
+| `POST` | `/api/admin/owners/{id}/reactivate` | Réactiver atomiquement un compte et sa librairie désactivés |
+
+Exemple de création :
+
+```bash
+curl -fsS -X POST http://localhost:8080/api/admin/owners \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username":"owner-one",
+    "email":"owner@example.com",
+    "password":"Correct-Horse-2026",
+    "library":{"name":"Librairie Une","description":"Catalogue du propriétaire"}
+  }' | jq .
+```
+
+### Gestion des livres
+
+Les mutations de livres exigent un JWT `SUPER_ADMIN_ROOT` ou `OWNER_LIBRARY`. Le root précise `libraryId` lors de la création ; pour un propriétaire, le backend utilise exclusivement la librairie signée dans son JWT.
+
+La liste `GET /api/manage/books` accepte également `q`, `offset` et `limit`. Si `q` est renseigné, le backend utilise FTS5 et classe les livres par pertinence ; une expression FTS invalide bascule vers une recherche `LIKE`. Les deux chemins appliquent le même filtre de librairie issu du JWT.
+
+```bash
+curl -fsS 'http://localhost:8080/api/manage/books?q=fiqh&offset=0&limit=10' \
+  -H "Authorization: Bearer $OWNER_TOKEN" | jq .
+```
+
+| Méthode | Route | Action |
+|---|---|---|
+| `GET` | `/api/manage/books?offset=0&limit=30&libraryId=...` | Lister les livres autorisés |
+| `POST` | `/api/manage/books` | Créer un livre |
+| `GET` | `/api/manage/books/{id}` | Consulter un livre autorisé |
+| `GET` | `/api/manage/books/{id}/history?offset=0&limit=30` | Consulter l'historique commercial autorisé du livre |
+| `PUT` | `/api/manage/books/{id}` | Remplacer les données, prix, tags et statut |
+| `DELETE` | `/api/manage/books/{id}` | Supprimer logiquement un livre |
+
+### Gestion des stocks
+
+Chaque livre possède un état de stock versionné et un seuil d'alerte. Tous les changements produisent un mouvement immuable. Un `OWNER_LIBRARY` reste limité aux livres de sa librairie ; le `SUPER_ADMIN_ROOT` peut préciser `libraryId`. Une sortie qui rendrait le stock négatif est refusée et les écritures concurrentes utilisent le champ `version`.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/inventory?status=LOW_STOCK&offset=0&limit=30&libraryId=...` | Lister le stock autorisé |
+| `GET` | `/api/manage/books/{id}/inventory` | Consulter le stock d'un livre |
+| `POST` | `/api/manage/books/{id}/inventory/entries` | Enregistrer une entrée positive |
+| `POST` | `/api/manage/books/{id}/inventory/exits` | Enregistrer une sortie positive |
+| `PUT` | `/api/manage/books/{id}/inventory` | Ajuster le stock à une quantité absolue |
+| `PATCH` | `/api/manage/books/{id}/inventory/threshold` | Modifier le seuil de stock faible |
+| `GET` | `/api/manage/books/{id}/inventory/movements` | Consulter l'historique paginé |
+
+Les entrées et sorties reçoivent `{ "quantity": 5, "reason": "...", "version": 1 }`. L'ajustement reçoit `{ "quantity": 12, "reason": "inventaire physique", "version": 2 }`. Le seuil reçoit `{ "lowStockThreshold": 3, "version": 3 }`. Une version périmée répondra `409 inventory_version_conflict` et une sortie excessive `409 insufficient_stock`.
+
+L'historique des mouvements est paginé avec `offset` et `limit` (maximum 100), trié du plus récent au plus ancien. Une modification du seuil incrémente également la version du stock et écrit l'événement `UPDATE_INVENTORY_THRESHOLD` dans le journal d'audit, sans créer de faux mouvement de quantité.
+
+La liste des stocks accepte `LOW_STOCK` (quantité positive inférieure ou égale au seuil), `OUT_OF_STOCK` (quantité nulle) et `IN_STOCK` (quantité supérieure au seuil). Sans filtre, elle retourne tous les stocks autorisés, en présentant d'abord les ruptures puis les alertes. Seul le root peut utiliser `libraryId` pour limiter la liste à une librairie précise.
+
+Le tableau de bord affiche cette liste avec les mêmes filtres et codes visuels. Depuis une ligne, un utilisateur autorisé peut enregistrer une entrée, une sortie, un ajustement absolu ou un nouveau seuil, puis consulter l'historique immuable des mouvements. Après chaque opération, le stock et le journal d'audit sont actualisés sans rechargement complet de la page.
+
+```bash
+curl -fsS "http://localhost:8080/api/manage/books/$BOOK_ID/inventory" \
+  -H "Authorization: Bearer $OWNER_TOKEN" | jq .
+
+jq -n '{quantity:10,reason:"Réception fournisseur",version:1}' |
+curl -fsS -X POST "http://localhost:8080/api/manage/books/$BOOK_ID/inventory/entries" \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  -H 'Content-Type: application/json' --data-binary @- | jq .
+```
+
+Les mises à jour utilisent le champ `version`. Une version périmée produit `409 Conflict` afin d'éviter l'écrasement silencieux d'une modification concurrente. Les suppressions logiques disparaissent également du catalogue public et de la recherche FTS5.
+
+Chaque création, modification ou suppression conserve un instantané JSON du prix, du statut, des tags et de la version. L'historique reste consultable après une suppression logique ; un propriétaire ne peut toutefois consulter que les livres rattachés à sa propre librairie.
+
+### Gestion des ventes
+
+Une vente appartient à une seule librairie et contient une ou plusieurs lignes. Le prix et le titre du livre sont copiés dans la ligne afin de préserver la valeur commerciale au moment de la vente. Le cycle de vie autorisé est `DRAFT → CONFIRMED → CANCELLED`.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/sales?status=CONFIRMED&from=...&to=...&offset=0&limit=30&libraryId=...` | Lister les ventes autorisées |
+| `POST` | `/api/manage/sales` | Créer un brouillon avec ses lignes |
+| `GET` | `/api/manage/sales/{id}` | Consulter une vente et ses lignes |
+| `PUT` | `/api/manage/sales/{id}` | Modifier un brouillon versionné |
+| `POST` | `/api/manage/sales/{id}/confirm` | Confirmer et déduire atomiquement le stock |
+| `POST` | `/api/manage/sales/{id}/cancel` | Annuler et remettre atomiquement le stock |
+
+Le propriétaire ne peut créer ou consulter que les ventes de la librairie portée par son JWT. Le root précise `libraryId` pour une création et peut filtrer la liste globale. Une confirmation vérifie toutes les quantités avant la moindre écriture : si une ligne manque de stock, la vente, les mouvements et les quantités restent inchangés. Une annulation n'est possible qu'après confirmation et crée les mouvements inverses. Les modifications utilisent `version` et les transitions répétées sont refusées.
+
+Exemple de brouillon :
+
+~~~json
+{
+  "customerName": "Client comptoir",
+  "lines": [
+    {"bookId": 470, "quantity": 2}
+  ]
+}
+~~~
+
+La création répond `201 Created`, génère une référence `V-AAAAMMJJ-XXXXXXXX` et calcule `totalAmount` depuis les prix actuels des livres. Une modification de brouillon remplace atomiquement ses lignes, recalcule le total et incrémente `version`. Les actions `CREATE_SALE` et `UPDATE_SALE` sont enregistrées dans l'audit.
+
+La confirmation et l'annulation reçoivent `{"version": 2}`. Elles mettent à jour tous les stocks, créent un mouvement immuable par ligne et changent le statut de la vente dans une seule transaction SQLite. Une erreur de stock ou de concurrence annule donc l'ensemble de l'opération. Les audits associés sont `CONFIRM_SALE`, `CANCEL_SALE` et `UPDATE_INVENTORY`.
+
+### Référentiel des tags
+
+Les tags réutilisables sont définis par librairie. Leur unicité est insensible à la casse (`Fiqh` et `fiqh` représentent le même tag). Un propriétaire utilise toujours la librairie signée dans son JWT ; le root précise `libraryId` lors de la création.
+
+| Méthode | Route | Action |
+|---|---|---|
+| `GET` | `/api/manage/tags?libraryId=...` | Lister les tags autorisés |
+| `POST` | `/api/manage/tags` | Créer un tag dans la librairie autorisée |
+| `PATCH` | `/api/manage/tags/{id}` | Renommer un tag autorisé |
+| `DELETE` | `/api/manage/tags/{id}` | Supprimer un tag autorisé |
+
+```bash
+curl -fsS -X POST http://localhost:8080/api/manage/tags \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Fiqh"}' | jq .
+```
+
+```bash
+curl -fsS -X POST http://localhost:8080/api/manage/books \
+  -H "Authorization: Bearer $OWNER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title":"Nouveau livre",
+    "auteur":"Auteur",
+    "price":2500,
+    "volume":1,
+    "status":"AVAILABLE",
+    "tags":"arabe,fiqh",
+    "categorie":"Sciences islamiques"
+  }' | jq .
+```
+
+Avant le premier lancement sur une base existante, créer une sauvegarde :
+
+```bash
+cp data/defta.db "data/defta.db.backup-$(date +%Y%m%d-%H%M%S)"
+```
+
+Après le démarrage, contrôler les migrations :
+
+```bash
+sqlite3 -header -column data/defta.db \
+  "SELECT version, name, applied_at FROM schema_migrations ORDER BY version;"
+```
+
+## Bootstrap du SUPER_ADMIN_ROOT
+
+Le premier compte racine est créé par une commande locale contrôlée. Aucun endpoint public ne permet de créer ou de promouvoir un `SUPER_ADMIN_ROOT`.
+
+Le mot de passe doit contenir au moins 12 caractères, avec au minimum une majuscule, une minuscule, un chiffre et un caractère spécial. Il est stocké avec Argon2id. Cette politique s'applique à chaque création, changement ou réinitialisation sans invalider les hashes existants lors de la connexion. Les variables ne doivent pas être ajoutées au fichier `.env` versionné ni écrites dans les journaux.
+
+Tout propriétaire nouvellement créé, ou dont le mot de passe est réinitialisé par le root, reçoit un mot de passe temporaire. Le JWT porte alors `password_change_required=true`. Seuls `/api/auth/me`, `/api/auth/change-password`, les opérations de session, le refresh et la déconnexion restent accessibles ; les routes de gestion répondent `403 password_change_required` jusqu'au changement du mot de passe. Le tableau de bord ouvre automatiquement le formulaire obligatoire sans possibilité de le fermer.
+
+Le root utilise la route dédiée `POST /api/admin/owners/{id}/reset-password` avec `{ "password": "..." }`. L'opération révoque toutes les sessions, remet à zéro les échecs de connexion, déverrouille un compte `LOCKED`, mais conserve un compte `DISABLED` dans cet état. Aucun mot de passe n'est écrit dans l'audit `RESET_LIBRARY_OWNER_PASSWORD`.
+
+La migration `008_create_password_history.sql` conserve uniquement les hashes Argon2id des quatre mots de passe précédents. Avec le mot de passe courant, les cinq derniers secrets ne peuvent donc pas être réutilisés. Cette règle s'applique au changement autonome, à la réinitialisation d'un propriétaire par le root et à la commande locale `reset-root-password`. L'API répond `400 invalid_new_password` lorsqu'un mot de passe récent est proposé.
+
+```bash
+read -rsp 'Nouveau mot de passe temporaire : ' DEFTA_TEMP_PASSWORD
+echo
+jq -n --arg password "$DEFTA_TEMP_PASSWORD" '{password:$password}' |
+curl -i -X POST "http://localhost:8080/api/admin/owners/$OWNER_ID/reset-password" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  --data-binary @-
+unset DEFTA_TEMP_PASSWORD
+```
+
+```bash
+export DEFTA_ROOT_USERNAME='kharmaodo'
+export DEFTA_ROOT_EMAIL='root@example.com'
+export DEFTA_ROOT_PASSWORD='une-valeur-longue-et-unique'
+
+go run -tags fts5 ./cmd bootstrap-admin
+
+unset DEFTA_ROOT_PASSWORD
+```
+
+Résultat attendu :
+
+```text
+SUPER_ADMIN_ROOT créé → username=kharmaodo id=<uuid>
+```
+
+La commande est volontairement non répétable. Un second lancement échoue avec :
+
+```text
+a SUPER_ADMIN_ROOT already exists
+```
+
+Contrôler le compte sans afficher son hash :
+
+```bash
+sqlite3 -header -column data/defta.db \
+  "SELECT id, username, email, role, status, created_at FROM users;"
+```
+
+Contrôler son audit :
+
+```bash
+sqlite3 -header -column data/defta.db \
+  "SELECT action, resource_type, resource_id, success, created_at
+   FROM audit_logs WHERE action = 'BOOTSTRAP_SUPER_ADMIN';"
+```
+
+### Réinitialiser le mot de passe root
+
+Cette commande locale fonctionne sans `JWT_SECRET`. Elle remplace le hash Argon2id, déverrouille le compte, remet les tentatives à zéro, révoque toutes ses sessions et écrit un audit.
+
+```bash
+read -rsp 'Nouveau mot de passe root : ' DEFTA_ROOT_NEW_PASSWORD
+echo
+export DEFTA_ROOT_NEW_PASSWORD
+go run -tags fts5 ./cmd reset-root-password
+unset DEFTA_ROOT_NEW_PASSWORD
+```
+
+Contrôler l'opération :
+
+```bash
+sqlite3 -header -column data/defta.db \
+  "SELECT action, resource_id, success, created_at
+   FROM audit_logs WHERE action = 'RESET_ROOT_PASSWORD'
+   ORDER BY created_at DESC LIMIT 1;"
+```
+
+## Démarrage
+
+La balise `fts5` est obligatoire pour compiler le pilote avec le moteur plein
+texte. La commande cible le package `./cmd` afin d’inclure tous ses fichiers,
+notamment le superviseur de l’outbox des couvertures.
+
+### Mode standard
+
+Les couvertures restent désactivées par défaut et MinIO/NATS ne sont pas requis :
+
+```bash
+export JWT_SECRET="$(openssl rand -base64 48)"
+export COVERS_ENABLED=false
+go run -tags fts5 ./cmd
+```
+
+### Mode v1.4 avec couvertures
+
+Créer d’abord `.env`, puis renseigner des secrets locaux non vides. Ces valeurs
+d’exemple sont réservées au développement et ne doivent jamais être utilisées
+en production ni commitées :
+
+```dotenv
+COVERS_ENABLED=true
+MINIO_ENDPOINT=127.0.0.1:9000
+MINIO_ACCESS_KEY=<à-définir-en-local>
+MINIO_SECRET_KEY=<à-définir-en-local>
+MINIO_USE_SSL=false
+MINIO_BUCKET_COVERS=book-covers
+NATS_URL=nats://127.0.0.1:4222
+NATS_USER=<à-définir-en-local>
+NATS_PASSWORD=<à-définir-en-local>
+NATS_COVERS_STREAM=BOOK_COVERS
+NATS_COVERS_SUBJECT=book.covers.process.v1
+```
+
+Démarrer l’infrastructure puis l’API :
+
+```bash
+docker compose \
+  --env-file .env \
+  -f deploy/docker-compose.covers.yml \
+  up -d
+
+go run -tags fts5 ./cmd
+```
+
+MinIO doit être correctement configuré pour accepter un upload. En revanche,
+une indisponibilité NATS ne bloque pas le serveur HTTP : les couvertures restent
+`PENDING`, l’outbox les conserve et le publisher tente de se reconnecter. Les
+logs `cover_outbox_nats_unavailable` puis
+`cover_outbox_publisher_connected` permettent de suivre cette reprise.
+
+Puis ouvrir :
+
+- interface : <http://localhost:8080> ;
+- API : <http://localhost:8080/api/books?q=ديوان&offset=0&limit=10>.
+
+La page de résultats accepte aussi `page` :
+
+```text
+http://localhost:8080/?q=Anonyme&page=2
+```
+
+Test HTTP :
+
+```bash
+curl --get 'http://localhost:8080/api/books' \
+  --data-urlencode 'q=ديوان' \
+  --data-urlencode 'offset=0' \
+  --data-urlencode 'limit=5'
+```
+
+La propriété `total` contient le nombre total de correspondances, indépendamment de la taille de la page retournée.
+
+## Authentification JWT
+
+Obtenir un access token :
+
+```bash
+TOKEN=$(curl -fsS -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"kharmaodo","password":"VOTRE_MOT_DE_PASSE"}' \
+  | jq -r '.accessToken')
+```
+
+Ne pas écrire un véritable mot de passe dans l'historique du terminal. Pour une validation interactive :
+
+```bash
+read -rsp 'Mot de passe : ' DEFTA_LOGIN_PASSWORD
+echo
+TOKEN=$(jq -n --arg username 'kharmaodo' --arg password "$DEFTA_LOGIN_PASSWORD" \
+  '{username:$username,password:$password}' \
+  | curl -fsS -X POST http://localhost:8080/api/auth/login \
+      -H 'Content-Type: application/json' --data-binary @- \
+  | jq -r '.accessToken')
+unset DEFTA_LOGIN_PASSWORD
+```
+
+Consulter les claims de l'utilisateur connecté :
+
+```bash
+curl -fsS http://localhost:8080/api/auth/me \
+  -H "Authorization: Bearer $TOKEN" | jq .
+```
+
+Sans token ou avec un token invalide, l'endpoint retourne `401 Unauthorized` et l'en-tête `WWW-Authenticate: Bearer`.
+
+L'access token contient uniquement les claims nécessaires : `sub`, `role`, `library_id`, `sid`, `iss`, `aud`, `iat`, `nbf`, `exp` et `jti`. Sa durée par défaut est de 15 minutes. Le middleware vérifie le `sid` dans SQLite à chaque requête protégée : une déconnexion, une réutilisation de refresh token, la désactivation d'un compte ou de sa librairie invalide donc immédiatement l'access token.
+
+### Changement du mot de passe
+
+`POST /api/auth/change-password` est accessible aux deux rôles authentifiés. La requête contient `currentPassword` et `newPassword` ; le nouveau secret doit compter au moins 12 caractères et être différent de l'ancien. Après succès, toutes les sessions de l'utilisateur sont révoquées, le cookie web est supprimé et un audit `PASSWORD_CHANGED` est créé.
+
+```json
+{
+  "currentPassword": "ancien-mot-de-passe",
+  "newPassword": "nouveau-mot-de-passe-2026"
+}
+```
+
+### Rotation et déconnexion
+
+La connexion renvoie également un `refreshToken` opaque aux clients API. Seul son hash SHA-256 est conservé dans SQLite. Chaque appel à `/api/auth/refresh` révoque le token présenté et en émet un nouveau. La réutilisation d'un ancien token révoque toute sa famille de session et crée un audit `REFRESH_TOKEN_REUSE`.
+
+L'interface web envoie `X-Defta-Session: cookie` afin de recevoir le refresh token dans un cookie `HttpOnly`, `SameSite=Strict`, limité au chemin `/api/auth`. Le token n'est alors jamais retourné dans le JSON ni stocké dans `sessionStorage`. Les clients externes sans cet en-tête conservent le contrat JSON existant.
+
+### Interface d'administration
+
+Le serveur propose une interface responsive qui s'appuie exclusivement sur les API protégées :
+
+| URL | Accès | Fonction |
+|---|---|---|
+| `/login` | Public | Connexion d'un `SUPER_ADMIN_ROOT` ou `OWNER_LIBRARY` |
+| `/admin` | Session JWT | Tableau de bord adapté au rôle authentifié |
+
+Le navigateur conserve uniquement l'access token dans `sessionStorage`. Il renouvelle automatiquement la session après un `401` grâce au cookie `HttpOnly`; chaque rotation remplace ce cookie. La déconnexion révoque le refresh token côté serveur, supprime le cookie et vide la session du navigateur.
+
+- `SUPER_ADMIN_ROOT` voit la liste des propriétaires, des librairies et le catalogue global.
+- `OWNER_LIBRARY` ne voit que les livres de la librairie portée par son JWT.
+
+Le tableau de bord permet également :
+
+- au root de créer, modifier et désactiver un propriétaire avec sa librairie ;
+- au root de choisir la librairie destinataire lors de la création d'un livre ;
+- aux deux rôles de créer, modifier et supprimer les livres autorisés ;
+- de gérer le prix, le volume, le statut, la catégorie, les tags et la couverture ;
+- de transmettre la version courante lors d'une modification afin de détecter les écritures concurrentes.
+- au root de déverrouiller explicitement un propriétaire bloqué après plusieurs échecs de connexion.
+
+`POST /api/admin/owners/{id}/unlock` remet le compte `LOCKED` à `ACTIVE`, réinitialise `failed_login_attempts`, efface `locked_until`, révoque ses anciennes sessions et crée un audit `UNLOCK_LIBRARY_OWNER`. L'opération retourne `409 Conflict` si le compte n'est pas verrouillé.
+
+`POST /api/admin/owners/{id}/reactivate` remet un propriétaire `DISABLED` et sa librairie à `ACTIVE`, nettoie son verrouillage, révoque préventivement ses anciennes sessions et crée un audit `REACTIVATE_LIBRARY_OWNER`. Un compte absent retourne `404 Not Found` et un compte qui n'est pas désactivé retourne `409 Conflict`.
+
+L'interface ne constitue pas une frontière de sécurité : les contrôles d'autorisation restent appliqués par le middleware et les services backend.
+
+### Journal d'audit
+
+`GET /api/audit-logs` fournit une lecture paginée des événements avec les paramètres `offset`, `limit`, `actor`, `action`, `resourceType`, `resourceId`, `success`, `from` et `to`. Les dates utilisent RFC 3339. Le root voit tous les événements et peut filtrer par acteur ; un propriétaire ne voit que ceux dont `actor_user_id` correspond au sujet signé de son JWT et ne peut pas contourner ce périmètre avec `actor`.
+
+```bash
+curl -fsS 'http://localhost:8080/api/audit-logs?action=LOGIN_FAILED&success=false&limit=30' \
+  -H "Authorization: Bearer $TOKEN" | jq .
+```
+
+Le tableau de bord expose les mêmes filtres avec une pagination de 20 événements. L'API reste en lecture seule ; seul le root peut rechercher un nom d'acteur.
+
+### Sessions actives
+
+`GET /api/auth/sessions` liste les sessions actives et accepte `offset`, `limit`, `username`, `role`, `ipAddress` et `userAgent`. Le root dispose d'une vue globale et de tous les filtres. Un propriétaire reste limité à ses sessions, peut filtrer par IP ou appareil, mais ne peut pas utiliser `username` ou `role`. `DELETE /api/auth/sessions/{id}` révoque toute la famille correspondant à un appareil et masque les sessions d'un autre compte avec `404 Not Found`. `POST /api/auth/sessions/revoke-others` révoque atomiquement toutes les autres familles du compte authentifié sans interrompre sa session courante.
+
+La réponse indique `currentSessionId` pour identifier la session utilisée par la requête. Révoquer cette session supprime également le cookie web et impose une nouvelle connexion. Une révocation ciblée crée un audit `SESSION_REVOKED` ; la déconnexion des autres appareils crée `OTHER_SESSIONS_REVOKED` avec le nombre de familles révoquées.
+
+```bash
+curl -fsS http://localhost:8080/api/auth/sessions \
+  -H "Authorization: Bearer $TOKEN" | jq .
+
+curl -i -X DELETE http://localhost:8080/api/auth/sessions/SESSION_ID \
+  -H "Authorization: Bearer $TOKEN"
+
+curl -fsS -X POST http://localhost:8080/api/auth/sessions/revoke-others \
+  -H "Authorization: Bearer $TOKEN" | jq .
+```
+
+```bash
+LOGIN_RESPONSE=$(jq -n \
+  --arg username 'kharmaodo' \
+  --arg password "$DEFTA_LOGIN_PASSWORD" \
+  '{username:$username,password:$password}' \
+  | curl -fsS -X POST http://localhost:8080/api/auth/login \
+      -H 'Content-Type: application/json' --data-binary @-)
+
+TOKEN=$(printf '%s\n' "$LOGIN_RESPONSE" | jq -er '.accessToken')
+REFRESH_TOKEN=$(printf '%s\n' "$LOGIN_RESPONSE" | jq -er '.refreshToken')
+```
+
+Renouveler puis remplacer les deux tokens :
+
+```bash
+REFRESH_RESPONSE=$(jq -n --arg token "$REFRESH_TOKEN" '{refreshToken:$token}' \
+  | curl -fsS -X POST http://localhost:8080/api/auth/refresh \
+      -H 'Content-Type: application/json' --data-binary @-)
+
+TOKEN=$(printf '%s\n' "$REFRESH_RESPONSE" | jq -er '.accessToken')
+REFRESH_TOKEN=$(printf '%s\n' "$REFRESH_RESPONSE" | jq -er '.refreshToken')
+```
+
+Déconnecter toute la famille de session :
+
+```bash
+jq -n --arg token "$REFRESH_TOKEN" '{refreshToken:$token}' \
+  | curl -fsS -o /dev/null -X POST http://localhost:8080/api/auth/logout \
+      -H 'Content-Type: application/json' --data-binary @-
+
+unset TOKEN REFRESH_TOKEN LOGIN_RESPONSE REFRESH_RESPONSE
+```
+
+### Tableau de bord des ventes
+
+Le tableau de bord `/admin` affiche les ventes accessibles au compte connecté. Il permet de filtrer par état et par période ; le `SUPER_ADMIN_ROOT` peut également sélectionner une librairie. Les actions proposées respectent le cycle métier :
+
+- une vente `DRAFT` peut être confirmée et retire atomiquement les quantités du stock ;
+- une vente `CONFIRMED` peut être annulée et restitue atomiquement les quantités ;
+- une vente `CANCELLED` est terminale et ne propose plus d'action.
+
+Après chaque transition, l'interface actualise ensemble les ventes, les stocks et le journal d'audit. La version courante de la vente est transmise au backend afin de détecter une modification concurrente.
+
+Le bouton **Nouvelle vente** ouvre un brouillon composé d'un client facultatif et d'une à cent lignes. Chaque livre ne peut apparaître qu'une fois et sa quantité doit être positive. Le total affiché dans le navigateur est prévisionnel : le backend relit et fige toujours le titre et le prix courants lors de l'enregistrement. Seules les ventes `DRAFT` restent modifiables.
+
+`DELETE /api/manage/sales/{id}` supprime uniquement une vente `DRAFT` et ses lignes explicitement dans une transaction, puis conserve un audit `DELETE_SALE`. Cette suppression ne dépend donc pas de l'activation des cascades SQLite. Une vente confirmée ou annulée retourne `409 Conflict` afin de préserver l'historique commercial. La liste restitue les lignes de chaque vente afin que le nombre d'articles et le formulaire de modification utilisent toujours les données enregistrées.
+
+L'action **Détails** relit la vente depuis `GET /api/manage/sales/{id}` et affiche une fiche imprimable : référence, client, statut, dates, titres et prix figés, quantités et total. L'impression utilise les fonctions natives du navigateur et ne transmet aucune donnée à un service externe.
+
+### Fournisseurs et achats
+
+La migration `011_create_suppliers_purchases.sql` pose la fondation de l'approvisionnement avec trois tables :
+
+- `suppliers` : fournisseurs actifs ou désactivés, uniques par nom dans une librairie ;
+- `purchases` : bons d'achat `DRAFT`, `RECEIVED` ou `CANCELLED` ;
+- `purchase_lines` : livres, quantités, coûts unitaires et titres figés.
+
+Toutes les données sont rattachées à une librairie. Une contrainte composite interdit notamment d'associer un fournisseur d'une autre librairie à un achat. Les montants et quantités sont contrôlés par SQLite, les références sont uniques par librairie et les versions préparent la gestion des écritures concurrentes.
+
+La migration `012_normalize_supplier_names.sql` ajoute une clé de nom normalisée. Elle garantit l'unicité Unicode calculée par Go, notamment pour empêcher des doublons comme `Éditions Defta` et `éditions defta`, que la collation SQLite `NOCASE` seule ne détecte pas.
+
+Le cycle est `DRAFT → RECEIVED` ou `DRAFT → CANCELLED`. La réception augmente les stocks, crée les mouvements `ENTRY` et inscrit les audits correspondants dans une transaction atomique.
+
+Le CRUD fournisseur est accessible à `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. Le propriétaire ne voit que les fournisseurs de sa librairie ; le root peut utiliser `libraryId`. Chaque mutation utilise `version` et crée un audit. La suppression est logique (`DISABLED`) afin de conserver les achats historiques.
+
+- `GET|POST /api/manage/suppliers` ;
+- `GET|PUT /api/manage/suppliers/{id}` ;
+- `DELETE /api/manage/suppliers/{id}?version={version}` ;
+- `POST /api/manage/suppliers/{id}/reactivate?version={version}`.
+
+Les bons d'achat sont gérés sous forme de brouillons sans modifier le stock. Le backend contrôle le fournisseur actif, vérifie que chaque livre appartient à la même librairie, fige son titre et recalcule les montants à partir des quantités et coûts unitaires. Les doublons de livre sont refusés.
+
+- `GET /api/manage/purchases?status=&supplierId=&from=&to=&libraryId=&offset=0&limit=30` ;
+- `POST /api/manage/purchases` ;
+- `GET /api/manage/purchases/{id}` ;
+- `PUT /api/manage/purchases/{id}` ;
+- `DELETE /api/manage/purchases/{id}?version={version}`.
+
+Seul un achat `DRAFT` peut être modifié ou supprimé. Les actions créent respectivement les audits `CREATE_PURCHASE`, `UPDATE_PURCHASE` et `DELETE_PURCHASE`.
+
+La réception utilise `POST /api/manage/purchases/{id}/receive` avec la `version` dans le corps JSON. Dans une transaction unique, elle passe le bon à `RECEIVED`, augmente chaque stock, crée les mouvements `ENTRY`, les audits `UPDATE_INVENTORY` et l'audit `RECEIVE_PURCHASE`. Toute erreur annule l'ensemble de la réception.
+
+Un brouillon peut être abandonné avec `POST /api/manage/purchases/{id}/cancel`. Cette transition vers `CANCELLED` crée l'audit `CANCEL_PURCHASE` sans modifier le stock. Une réception ou annulation répétée retourne `409 Conflict`.
+
+Le tableau de bord `/admin` expose désormais les fournisseurs et les bons d'achat. Les formulaires utilisent les mêmes routes protégées ; après une réception, les achats et stocks sont relus depuis le serveur.
+
+Le formulaire de bon d'achat accepte jusqu'à cent lignes dynamiques. Il calcule un total prévisionnel, refuse les livres en double et permet de retirer une ligne avant l'enregistrement ; le serveur conserve la validation finale des quantités, coûts et montants.
+
+Pour le `SUPER_ADMIN_ROOT`, changer la librairie du formulaire filtre les fournisseurs et les livres proposés. Après une réception réussie, le tableau de bord recharge également les stocks afin d'afficher immédiatement les nouvelles quantités.
+
+L’action **Détails** ouvre une fiche imprimable du bon d’achat avec son fournisseur, son état, ses dates, ses lignes et son total.
+
+La liste des achats peut être filtrée par état, fournisseur et période. Le `SUPER_ADMIN_ROOT` peut en plus sélectionner une librairie. Les résultats sont paginés par dix afin de conserver un tableau de bord lisible lorsque l’historique grandit.
+
+### Gestion des clients
+
+La migration `013_create_customers.sql` crée le référentiel client propre à chaque librairie. Un client possède une référence stable et unique dans sa librairie, un nom, des coordonnées facultatives, une adresse, des notes, un statut et une version pour le contrôle des écritures concurrentes.
+
+La suppression fonctionnelle utilise le statut `DISABLED` afin de préserver l’historique commercial. Les contraintes empêchent le rattachement d’un client à une librairie inexistante et les index préparent la recherche par nom, téléphone ou e-mail. Le rattachement facultatif aux ventes est implémenté par la migration 014. L’action **Historique** de l’écran Clients ouvre les ventes rattachées au client, même désactivé, avec pagination et filtres de période et de statut.
+
+Le CRUD client est accessible aux rôles `OWNER_LIBRARY` et `SUPER_ADMIN_ROOT`. Le propriétaire reste limité aux clients de sa librairie ; le root peut préciser `libraryId`. La recherche couvre la référence, le nom, le téléphone et l’e-mail. Chaque mutation contrôle la version et produit un audit de type `CUSTOMER`.
+
+- `GET /api/manage/customers?q=&status=&libraryId=&offset=0&limit=30` ;
+- `POST /api/manage/customers` ;
+- `GET /api/manage/customers/{id}` ;
+- `PUT /api/manage/customers/{id}` ;
+- `DELETE /api/manage/customers/{id}?version={version}` ;
+- `POST /api/manage/customers/{id}/reactivate?version={version}`.
+
+La désactivation est logique et conserve le client ainsi que ses rattachements aux ventes. Plusieurs clients peuvent porter le même nom ; chacun reçoit une référence générée au format `C-AAAAMMJJ-XXXXXXXX`.
+
+Le tableau de bord `/admin` expose le référentiel client avec recherche, filtre de statut et pagination. Il permet la création, la modification, la désactivation et la réactivation. Pour le root, les filtres et le formulaire de création proposent uniquement les librairies actives.
+
+La migration `014_attach_sales_to_customers.sql` ajoute un rattachement facultatif entre une vente et un client. Le backend n’accepte qu’un client `ACTIVE` de la même librairie et SQLite protège également cette isolation par des déclencheurs. `customerId` conserve le lien vers le référentiel tandis que `customerName` reste figé dans la vente afin que les reçus historiques ne changent pas après une modification du client.
+
+Le formulaire de vente de `/admin` propose les clients actifs de la librairie sélectionnée. Choisir un client renseigne automatiquement le nom figé du reçu. L’option « Aucun · vente comptoir » conserve la saisie d’un nom libre et le changement de librairie réinitialise le client ainsi que les articles proposés.
+
+### Paiements et caisse
+
+La migration `015_create_payments_cash_registers.sql` pose la fondation des règlements. Les caisses sont isolées par librairie et peuvent être désactivées sans perdre leur historique. Une vente confirmée peut recevoir plusieurs paiements par espèces (`CASH`), mobile money (`MOBILE_MONEY`) ou carte (`CARD`).
+
+Le CRUD des caisses est exposé aux deux profils de gestion. Un `OWNER_LIBRARY` agit uniquement sur les caisses de la librairie portée par son JWT ; le `SUPER_ADMIN_ROOT` peut utiliser `libraryId` pour cibler une librairie. Les modifications et changements d'état sont versionnés et audités.
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/cash-registers?q=...&status=ACTIVE&offset=0&limit=30&libraryId=...` | Lister les caisses autorisées |
+| `POST` | `/api/manage/cash-registers` | Créer une caisse active |
+| `GET` | `/api/manage/cash-registers/{id}` | Consulter une caisse autorisée |
+| `PUT` | `/api/manage/cash-registers/{id}` | Renommer une caisse avec sa `version` |
+| `DELETE` | `/api/manage/cash-registers/{id}?version=...` | Désactiver une caisse |
+| `POST` | `/api/manage/cash-registers/{id}/reactivate?version=...` | Réactiver une caisse |
+
+Les règlements sont ensuite manipulés depuis une vente confirmée :
+
+| Méthode | Route | Fonction |
+|---|---|---|
+| `GET` | `/api/manage/sales/{id}/payments?method=CASH&status=RECORDED&offset=0&limit=30` | Consulter les règlements d'une vente |
+| `POST` | `/api/manage/sales/{id}/payments` | Enregistrer un règlement partiel ou total |
+| `GET` | `/api/manage/sales/{id}/payment-balance` | Calculer le payé et le reste à payer |
+| `POST` | `/api/manage/payments/{id}/void` | Annuler un règlement avec sa `version` et un motif |
+
+L'annulation ne supprime aucune ligne : le statut devient `VOIDED`, le solde de la vente est recalculé et l'opération est inscrite dans l'audit. Les références externes permettent d'identifier les transactions mobile money ou carte et sont uniques par librairie et méthode tant que le règlement reste actif.
+
+Le tableau de bord `/admin` contient désormais deux espaces de trésorerie. Le premier gère les caisses actives ou désactivées. Le second sélectionne une vente confirmée, affiche son total, le montant encaissé et le reste à payer, puis permet d'ajouter ou d'annuler un règlement. Pour le root, le choix de la librairie limite automatiquement les ventes et les caisses proposées.
+
+### Retours clients et remboursements
+
+La migration `016_create_customer_returns.sql` pose la fondation des retours clients. Un retour appartient à une vente confirmée et contient les lignes réellement retournées, valorisées au prix figé lors de la vente. Il suit le cycle `DRAFT`, `COMPLETED` ou `CANCELLED` et choisit dès sa création une résolution `REFUND` ou `CREDIT_NOTE`.
+
+SQLite interdit de retourner davantage d'exemplaires qu'il n'en a été vendu, en tenant compte des retours antérieurs déjà finalisés. Une finalisation vide est refusée. Les règlements de retour acceptent espèces, mobile money, carte ou avoir selon la résolution choisie, sans pouvoir dépasser le montant total du retour. La vue `customer_return_balances` expose le montant traité, le reste et l'état `PENDING`, `PARTIALLY_SETTLED` ou `SETTLED`.
+
+Le second incrément expose la gestion métier des retours :
+
+- `GET /api/manage/customer-returns` liste les retours avec pagination et filtres `status`, `saleId`, `customerId`, `from`, `to` et, pour le root seulement, `libraryId` ;
+- `POST /api/manage/customer-returns` crée un brouillon à partir des identifiants de lignes d'une vente confirmée ; les titres et prix sont toujours relus côté serveur ;
+- `GET /api/manage/customer-returns/{id}` consulte un retour dans le périmètre de la librairie connectée ;
+- `PUT /api/manage/customer-returns/{id}` remplace les lignes d'un brouillon avec contrôle optimiste par `version` ;
+- `POST /api/manage/customer-returns/{id}/complete` finalise le retour et restitue atomiquement les quantités au stock ;
+- `POST /api/manage/customer-returns/{id}/cancel` annule un brouillon sans modifier le stock.
+
+La finalisation produit un mouvement `ENTRY` par livre, des audits `UPDATE_INVENTORY` et un audit `COMPLETE_CUSTOMER_RETURN`. Les transitions répétées, versions obsolètes et dépassements des quantités vendues retournent `409 Conflict`. Les retours d'une autre librairie restent invisibles (`404 Not Found`).
+
+Les retours finalisés peuvent ensuite être réglés, en une ou plusieurs fois, avec les routes suivantes :
+
+- `GET /api/manage/customer-returns/{id}/settlements` liste les règlements du retour avec les filtres `method` et `status` ;
+- `POST /api/manage/customer-returns/{id}/settlements` émet un remboursement `CASH`, `MOBILE_MONEY`, `CARD` ou un avoir `CREDIT_NOTE` ;
+- `GET /api/manage/customer-returns/{id}/settlement-balance` expose le total, le montant réglé, le reste et l'état financier ;
+- `POST /api/manage/return-settlements/{id}/void` annule un règlement avec son numéro de version et un motif obligatoire.
+
+La méthode doit correspondre à la résolution du retour : `CREDIT_NOTE` pour un avoir, et une méthode monétaire pour `REFUND`. Le cumul des règlements actifs ne peut jamais dépasser le total du retour. L'annulation conserve la ligne avec le statut `VOIDED`, rétablit le solde disponible et produit les audits `ISSUE_RETURN_SETTLEMENT` et `VOID_RETURN_SETTLEMENT`.
+
+Le tableau de bord `/admin` liste les retours avec leurs filtres et leur pagination. Pour chaque retour finalisé, l'action **Règlements** affiche le total traité, le reste à rembourser et l'historique conservé. Elle permet d'émettre un remboursement ou un avoir compatible avec la résolution choisie, puis d'annuler un règlement avec un motif obligatoire.
+
+L'action **Nouveau retour** sélectionne une vente confirmée et les quantités réellement reçues. Le brouillon obtenu peut être finalisé pour restituer atomiquement le stock ou annulé sans mouvement. Le root choisit d'abord la librairie, ce qui limite immédiatement les ventes proposées.
+
+SQLite contrôle que la vente et la caisse appartiennent à la même librairie, que la caisse est active, que la vente est confirmée et que le cumul des règlements ne dépasse jamais son total. La vue `sale_payment_balances` calcule le montant payé, le reste à payer et l’état financier `UNPAID`, `PARTIALLY_PAID` ou `PAID`. Un règlement annulé conservera sa ligne avec le statut `VOIDED` pour assurer la traçabilité.
+
+### Retours fournisseurs
+
+La migration `017_create_supplier_returns.sql` pose la fondation des retours vers les fournisseurs. Un retour est obligatoirement rattaché à un achat `RECEIVED`, au fournisseur et à la même librairie. Ses lignes référencent les lignes réellement réceptionnées et reprennent le livre, le titre et le coût unitaire historiques.
+
+Le cycle est `DRAFT → SHIPPED` ou `DRAFT → CANCELLED`. SQLite refuse les lignes étrangères à l'achat, les brouillons vides lors de l'expédition et le cumul de quantités supérieur à la quantité reçue. Les brouillons concurrents réservent les quantités disponibles ; leur annulation les libère. L’expédition diminue atomiquement le stock et produit des mouvements `EXIT` ainsi que les audits associés.
+
+Le CRUD des brouillons est exposé par `GET|POST /api/manage/supplier-returns`, `GET|PUT /api/manage/supplier-returns/{id}` et `POST /api/manage/supplier-returns/{id}/cancel`. La liste accepte `status`, `purchaseId`, `supplierId`, `from`, `to`, `offset`, `limit` et, pour le root, `libraryId`. Chaque création, modification et annulation produit un audit dédié et respecte le contrôle optimiste par `version`.
+
+## Tester FTS5 directement
+
+Vérifier que SQLite a été compilé avec FTS5 :
+
+```bash
+sqlite3 data/defta.db "SELECT sqlite_compileoption_used('ENABLE_FTS5');"
+```
+
+La commande doit retourner `1`.
+
+Contrôler le nombre de lignes de la table source et de l’index :
+
+```bash
+sqlite3 data/defta.db <<'SQL'
+SELECT 'defta', COUNT(*) FROM defta;
+SELECT 'defta_fts', COUNT(*) FROM defta_fts;
+SQL
+```
+
+Exécuter une recherche arabe classée par pertinence :
+
+```bash
+sqlite3 -header -column data/defta.db <<'SQL'
+SELECT d.id, d.title, d.auteur, fts.rank
+FROM defta_fts AS fts
+JOIN defta AS d ON fts.rowid = d.id
+WHERE defta_fts MATCH 'ديوان'
+ORDER BY fts.rank
+LIMIT 10;
+SQL
+```
+
+Contrôler l’intégrité logique de l’index :
+
+```bash
+sqlite3 data/defta.db "INSERT INTO defta_fts(defta_fts) VALUES('integrity-check');"
+```
+
+## Tests automatisés
+
+Les tests de la couche de données créent une base temporaire, alimentent l’index et vérifient la recherche, le score et le total paginé :
+
+```bash
+go test -tags fts5 ./...
+```
+
+Pour détecter les problèmes de concurrence :
+
+```bash
+go test -race -tags fts5 ./...
+```
+
+## API
+
+### `GET /api/books`
+
+| Paramètre | Obligatoire | Description |
+|---|---|---|
+| `q` | Non | Expression de recherche FTS5 ; vide pour obtenir tous les livres |
+| `offset` | Non | Position de départ, minimum `0` |
+| `limit` | Non | Taille de page ; utilise `PAGE_SIZE` si absent ou invalide, maximum `100` |
+
+Exemple de réponse :
+
+```json
+{
+  "results": [
+    {
+      "id": 5,
+      "title": "ديوان طرفة",
+      "auteur": "Anonyme",
+      "editeur": null,
+      "price": 0,
+      "volume": 0,
+      "status": null,
+      "tags": null,
+      "categorie": "Non classé",
+      "coverUrl": null,
+      "score": -4.449599289331961
+    }
+  ],
+  "total": 9,
+  "offset": 0,
+  "limit": 5
+}
+```
+
+## Workflow de contribution
+
+Les nouvelles fonctionnalités partent de `develop` et sont proposées par pull request :
+
+```bash
+git switch develop
+git pull --ff-only origin develop
+git switch -c feature/nom-fonctionnalite
+```
+
+Avant de pousser :
+
+```bash
+gofmt -w ./cmd ./internal
+go test -tags fts5 ./...
+git diff --check
+```
+
+Chaque incrément part de `develop` et revient dans `develop` par pull request. Les anciennes branches de réécriture sont déjà fusionnées.
+
+### Expédition des retours fournisseurs
+
+`POST /api/manage/supplier-returns/{id}/ship` accepte `{"version":1}`. Seul un brouillon de la librairie autorisée peut être expédié. Une transaction unique enregistre l’état `SHIPPED`, diminue les stocks, crée les mouvements `EXIT` et les audits `UPDATE_INVENTORY` et `SHIP_SUPPLIER_RETURN`. Un stock insuffisant retourne `409 supplier_return_insufficient_stock` et annule toutes les écritures. Les versions obsolètes et transitions répétées sont refusées. Sauvegarder la base avant les tests locaux.
+
+Le test `TestSupplierReturnShipInsufficientStockRollsBack` utilise une base temporaire et les migrations réelles. Il vérifie le refus pour stock insuffisant, y compris après une première ligne traitée, et exige que le brouillon, les quantités, versions, dates, mouvements et audits restent inchangés. Exécution ciblée : `go test -tags fts5 ./internal/services -run TestSupplierReturnShipInsufficientStockRollsBack -count=1 -v`.
+
+Le test d’expédition couvre aussi l’isolation entre librairies, les versions obsolètes, une expédition valide et le refus d’une répétition sans seconde sortie de stock ni audit supplémentaire. Ces contrôles utilisent exclusivement la base temporaire de test.
+
+### Tableau de bord des retours fournisseurs
+
+La section Retours fournisseurs de `/admin` propose liste paginée, filtre de statut, création depuis un achat réceptionné, modification des quantités et du motif d’un brouillon, annulation et expédition confirmée. Les retours terminaux sont consultables en lecture seule. Le root sélectionne la librairie ; les propriétaires restent limités à leur périmètre JWT. Les contrôles de quantité et de version restent réalisés par le serveur. Après une expédition, actualiser la section Stocks pour consulter les nouvelles quantités. Sauvegarder SQLite avant les essais métier.
+
+### Coût moyen pondéré — première étape
+
+La migration `018_add_inventory_average_cost.sql` ajoute `book_inventory.average_unit_cost`. Le CMP est recalculé dans la transaction de réception : (stock avant × CMP avant + quantité reçue × coût unitaire) / stock après. Quand le stock avant est nul, le coût de la réception devient le CMP. Un coût gratuit connu vaut zéro ; un coût inconnu vaut NULL. Les stocks historiques positifs conservent un CMP inconnu, même après réception, plutôt que d’estimer leur valorisation.
+
+La migration 018 couvre les réceptions. Les coûts figés des ventes et des retours, les règles de valorisation des entrées manuelles et les statistiques de marge sont également implémentés et décrits ci-dessous. Les tests couvrent la moyenne pondérée, le stock vide, le coût nul connu, le coût historique inconnu et la réception transactionnelle. Aucune marge historique n’est reconstituée.
+
+### Coûts figés des ventes
+
+La migration `019_freeze_sale_cost.sql` ajoute `sale_lines.unit_cost_snapshot`, nullable. La confirmation copie le CMP courant dans chaque ligne dans la même transaction que la sortie de stock et les audits. Les ventes historiques restent sans coût connu ; aucune estimation rétroactive n'est appliquée. Le coût reste consultable en SQL et n'est pas encore exposé par l'API.
+
+L'annulation restitue le stock au coût figé, en recalculant sa moyenne avec le stock présent. Un coût de sortie inconnu rend la valorisation résultante inconnue. Les coûts figés restent conservés après annulation. Un échec de confirmation annule aussi les écritures de coût. Les tests vérifient le gel du coût, sa conservation après changement du CMP, la revalorisation à l'annulation et le rollback pour stock insuffisant.
+
+Sauvegarder SQLite avant de redémarrer pour appliquer les migrations. La valorisation des ajustements manuels et les statistiques de marge sont décrites dans les sections suivantes.
+
+### Valorisation des retours clients
+
+La finalisation d'un retour client restitue chaque livre au coût figé de sa ligne de vente (`sale_lines.unit_cost_snapshot`). Le CMP est recalculé avec le stock présent, dans la transaction qui enregistre les quantités, mouvements et audits. Le prix de vente et le montant du remboursement ne servent pas à valoriser le stock. Un coût historique inconnu rend le CMP résultant inconnu ; zéro reste un coût connu. Le coût de la vente d'origine n'est pas modifié.
+
+Aucune migration supplémentaire n'est nécessaire après 018 et 019. Les retours déjà finalisés ne sont pas recalculés rétroactivement. Les tests couvrent la moyenne pondérée, les coûts inconnus ou nuls, le refus d'une finalisation répétée et le rollback du stock, du CMP et du statut en cas d'échec d'audit. Les statistiques de marge sont disponibles dans l’API et le tableau de bord.
+
+### Ajustements manuels et CMP
+
+Les entrées manuelles et corrections de quantité à la hausse ne fournissent aucun coût d'achat dans l'API actuelle : elles rendent le CMP inconnu (NULL). Les sorties et corrections à la baisse conservent le CMP. Un stock vidé conserve son ancien CMP à titre historique ; une prochaine réception sur stock nul initialise le CMP au coût reçu. Aucun coût ni marge historique n'est estimé. Les tests ajoutés couvrent ces quatre cas.
+
+### Fondation des statistiques commerciales
+
+`CommercialStatisticsRepository.Summary` calcule les ventes brutes, annulations, retours clients, ventes nettes et coûts connus pour une librairie explicite et un intervalle [from, to). Le service contrôle les droits sur la librairie avant la requête ; l’endpoint est `GET /api/manage/statistics`.
+
+Les dates utilisées sont confirmed_at, cancelled_at et completed_at. Une annulation sur une période ultérieure ne réécrit donc pas les ventes de la période initiale. Les coûts proviennent des lignes de vente figées. Si une ligne d'événement présente un coût inconnu, netMargin reste null et unknownCostEvents indique le nombre de lignes concernées. knownCost représente uniquement la partie connue et ne doit pas être présenté comme le coût total lorsque des coûts manquent. Une période vide donne des totaux nuls. Ces indicateurs décrivent l'activité commerciale, pas les encaissements. La migration 021 empêche une double restitution par annulation et retour d’une même vente.
+
+Tests : `go test -tags fts5 ./internal/repositories -run TestCommercialStatisticsEventsAndIsolation -count=1 -v`. Les achats, écarts de retours fournisseurs, contrôles d’accès et écran de statistiques sont également implémentés.
+
+### API des statistiques commerciales
+
+`GET /api/manage/statistics?from=2026-09-01T00:00:00Z&to=2026-10-01T00:00:00Z` retourne les indicateurs de la période [from, to). Les deux dates RFC3339 sont obligatoires. Un propriétaire utilise sa librairie JWT ; un libraryId différent est refusé (403). Le root doit préciser libraryId (400 si absent). Une période invalide ou un filtre répété retourne 400. Une authentification valide et le changement du mot de passe initial sont requis. Les réponses portent Cache-Control: no-store.
+
+La réponse contient grossSales, cancellations, customerReturns, netSales, knownCost, unknownCostEvents et netMargin. netMargin vaut null lorsque des coûts manquent. Une librairie sans événements renvoie des totaux nuls. L’API expose également les achats et écarts fournisseurs décrits ci-dessous. Les encaissements restent suivis séparément dans les paiements ; ils ne sont pas assimilés aux ventes.
+
+Après sauvegarde, application du patch et tests Go, redémarrer le serveur pour charger la nouvelle route. Exécuter `go test -tags fts5 ./internal/services -run TestCommercialStatisticsAuthorizationAndDates -count=1 -v` puis les suites normales et race.
+
+### Écran des statistiques commerciales
+
+La section Statistiques commerciales de `/admin` affiche les ventes brutes, annulations, retours clients, ventes nettes et marge commerciale. La période initiale va du premier jour du mois à aujourd'hui en UTC ; la date de fin choisie est incluse. Le propriétaire consulte sa librairie et le root doit en sélectionner une. Les résultats sont masqués dès qu'un filtre change, pendant le chargement et en cas d'erreur. Une marge inconnue affiche Indisponible avec le nombre de lignes sans coût. Les sessions expirées affichent une invitation à se reconnecter.
 
 Vérification locale : recharger `/admin` après redémarrage du serveur ; contrôler propriétaire et root, période inversée, journée unique, période vide, coûts manquants et session expirée. Les montants utilisent F CFA comme le reste de l'interface actuelle. Le paramétrage de devise reste à développer.
 
