@@ -2,6 +2,8 @@
 
 ## [À paraître]
 
+- US-1713 : service OCR FastAPI interne partageant le cœur CPU, contrat multipart versionné, limites et capacité bornées, probes Tesseract arabe et conteneur isolé. Le branchement Go reste prévu par US-1714.
+
 - Le test navigateur de suppression attend le module de confirmation après la navigation vers `/admin` et vérifie le parcours avec son chargement volontairement retardé.
 
 ## [1.7.0] — candidate

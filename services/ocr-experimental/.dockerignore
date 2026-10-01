@@ -1,0 +1,6 @@
+*
+!api.py
+!requirements.txt
+!requirements-api.txt
+!ocr_core/
+!ocr_core/*.py

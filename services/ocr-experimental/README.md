@@ -1,6 +1,6 @@
-# OCR expérimental v1.7.1 — cœur local et CLI (US-1712)
+# OCR expérimental v1.7.1 — cœur CPU, CLI et service interne
 
-Diagnostic CPU local, partagé avec la future API FastAPI. Ce lot ne modifie pas
+Diagnostic CPU local, partagé avec le service FastAPI interne. Ce lot ne modifie pas
 le worker Go et n'active aucun feature flag. Le catalogue reste celui de
 DEFTA-LIBRAIRIE ; aucun second schéma ou CRUD livres n'est créé.
 
@@ -84,7 +84,7 @@ privé avec book_id attendu ou absence réelle, puis comparer recall@1/5, erreur
 de transcription, latence et mémoire. Le service reste expérimental jusqu'à
 cette mesure.
 
-FastAPI/Docker : US-1713. Adaptateur Go et flag off/on : US-1714. Aucune API
+FastAPI/Docker est livré par US-1713 ci-dessous. Adaptateur Go et flag off/on : US-1714. Aucune API
 publique ou autorisation utilisateur supplémentaire n'est introduite ici.
 
 ## Comparaison couleur explicite
@@ -122,3 +122,106 @@ Cette union diagnostique ne rattache aucun livre, n'écrit pas dans SQLite et
 porte `review_required: true`. Elle conserve le filtrage par bibliothèque et
 l'exclusion des livres supprimés. Les quatre passes couleur nécessitent toujours
 `--color-diagnostics`.
+
+## Service FastAPI interne (US-1713)
+
+Le service ne lit ni n’écrit le catalogue : aucun volume SQLite, aucun candidat,
+aucun rattachement et aucun compte utilisateur Python. Le navigateur conserve
+les routes Go et JWT existants. Le worker Go actuel n’est pas modifié par ce lot.
+
+### Exécution CPU locale
+
+```bash
+services/ocr-experimental/.venv/bin/python -m pip install -r services/ocr-experimental/requirements-api.txt
+cd services/ocr-experimental
+.venv/bin/uvicorn api:app --host 127.0.0.1 --port 8091 --workers 1 --limit-concurrency 16 --no-access-log
+```
+
+Le service nécessite Tesseract 5 et `ara` déjà installés. Il ne télécharge rien
+au démarrage ni pendant l’extraction. `GET /health/live` répond 200 si le
+processus est vivant ; `GET /health/ready` vérifie réellement Tesseract et `ara`
+avec un délai de 2 secondes et répond 503 si le runtime est indisponible.
+
+### Contrat HTTP
+
+`POST /v1/ocr` accepte exactement un fichier multipart `image`, avec MIME
+`image/jpeg` ou `image/png` cohérent avec sa signature et son format décodé.
+Un nom de fichier n’est jamais utilisé comme chemin. URL, chemins clients,
+fichiers supplémentaires et champs texte ne sont pas acceptés.
+
+```bash
+curl --fail-with-body http://127.0.0.1:8091/v1/ocr \
+  -H 'X-Request-Id: diagnostic-1713' \
+  -F 'image=@/chemin/prive/couverture.png;type=image/png'
+```
+
+La réponse 200 comporte `schemaVersion: 1`, `engine`, `engineVersion` réelle,
+`policyVersion: ocr-local-v1`, `language: ara`, `textRaw`, `textNormalized`,
+`confidence` mesurée dans [0,1] ou null, `psm` et `preprocessing`. Le texte reste
+Unicode logique ; la normalisation supprime diacritiques/tatweel et remplace la
+ponctuation par des espaces, comme la CLI. Quatre passes, politique initiale
+inchangée ; les variantes couleur restent un diagnostic CLI explicite.
+
+Les erreurs ont l’enveloppe `{ "error": { "code", "message", "requestId" } }` :
+`INVALID_IMAGE` 422, `IMAGE_TOO_LARGE` 413, `OCR_TIMEOUT` 504,
+`OCR_UNAVAILABLE` 503, `OCR_BUSY` 503 avec `Retry-After: 1`. Un résultat TSV
+invalide/trop long est une indisponibilité du moteur, sans détails internes.
+L’identifiant de corrélation est repris s’il contient 1–128 caractères ASCII
+lettres/chiffres/`._:-`, sinon un UUID est généré. Réponses OCR `no-store` ;
+aucun texte/image/URL privée dans les logs, documentation interactive désactivée.
+
+### Limites du service
+
+| Variable du conteneur | Défaut | Borne |
+|---|---:|---|
+| `OCR_SERVICE_MAX_IMAGE_BYTES` | 10485760 | 1 à 10 Mio |
+| `OCR_SERVICE_MAX_PIXELS` | 24000000 | 1 à 24 millions |
+| `OCR_SERVICE_MAX_DIMENSION` | 10000 | 1 à 10000 par côté |
+| `OCR_SERVICE_MAX_OUTPUT_BYTES` | 1048576 | 1 à 1 Mio par passe |
+| `OCR_SERVICE_TIMEOUT_SECONDS` | 30 | >0 à 120, partagé entre toutes les passes |
+| `OCR_SERVICE_UPLOAD_TIMEOUT_SECONDS` | 15 | >0 à 30, lecture/parsing multipart |
+| `OCR_SERVICE_CONCURRENCY` | 1 | 1 à 4, mémoire/CPU à dimensionner si augmenté |
+
+Le corps multipart entier est limité à la taille image + 64 Kio, y compris
+sans `Content-Length`, avant parsing. La capacité est réservée avant lecture ;
+aucune file d’attente OCR illimitée. Une déconnexion ne libère pas un traitement
+encore actif : le timeout du cœur tue le sous-processus et ses temporaires sont
+nettoyés avant de rendre le créneau. Les uploads multipart sont toujours fermés.
+Le temps maximal normal comprend le budget upload puis le budget OCR ; le
+client Go devra configurer son propre délai en conséquence dans US-1714.
+Une configuration invalide empêche le démarrage.
+
+### Conteneur privé
+
+```bash
+docker compose -f services/ocr-experimental/compose.ocr-experimental.yaml up -d --build
+```
+
+Pas de port publié par défaut : réseau Docker `internal`, sans egress, exposé
+uniquement en 8091 aux services joints à ce réseau. L’intégration réseau avec
+Go relève de US-1714. Pour un diagnostic sur la machine uniquement :
+
+```bash
+docker compose -f services/ocr-experimental/compose.ocr-experimental.yaml \
+  -f services/ocr-experimental/compose.ocr-diagnostic.yaml up -d --build
+```
+
+Le port est alors lié à `127.0.0.1:8091`. Image Python 3.12.12, dépendances
+Python et paquets Tesseract épinglés, utilisateur 10001, système read-only,
+`/tmp` tmpfs 256 Mio, capacités supprimées, `no-new-privileges`, mémoire 1 Gio,
+2 CPU et 64 PID. Un worker Uvicorn, Tesseract borné à un thread OpenMP. La mémoire
+doit être adaptée avant d’augmenter concurrence ou taille des images.
+Aucun modèle, base, image ou export privé n’entre dans le contexte Docker.
+
+### Vérification de livraison
+
+```bash
+sh services/ocr-experimental/check-container.sh
+```
+
+Le contrôle construit l’image, valide Compose et lance le runtime en réseau
+`none`, sans volume métier et avec système read-only. Un smoke test HTTP utilise
+une image synthétique en mémoire, vérifie probes, version réelle, contrat et
+nettoyage des temporaires. La CI OCR exécute aussi tests unitaires/intégration,
+Ruff et mypy strict. Les limites, refus, saturation, upload lent et déconnexion
+sont testés. La qualité sur couvertures réelles reste à mesurer dans US-1716.
