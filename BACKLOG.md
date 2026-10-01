@@ -307,7 +307,7 @@ Une fusion partielle conserve le statut Partiel et détaille les éléments rest
 
 ## v1.7.1 — OCR expérimental local (cadrage du 30 septembre 2026)
 
-Référence vérifiée : `develop` sur `0e337c7`, après fusion du PR #198. US-1716 clôturée sur décision du propriétaire le 1er octobre 2026, avec maintien de l’OCR arabe en expérimental. La recette réelle avant activation générale reste suivie séparément.
+Référence vérifiée : `develop` sur `9570e28`, après fusion du PR #199. US-1717 finalisée par revue de la fusion #193 et recette automatisée ; prochain incrément : préparation du candidat de release v1.7.1. US-1716 clôturée sur décision du propriétaire le 1er octobre 2026, avec maintien de l’OCR arabe en expérimental. La recette réelle avant activation générale reste suivie séparément.
 
 Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186 fusionné dans develop. Le cœur CPU/CLI est fusionné (PR #190). Le service interne US-1713 est fusionné (PR #195). L’adaptateur Go US-1714 reste désactivé par défaut. La qualité OCR reste une limite connue de v1.7.0.
 
@@ -320,6 +320,7 @@ Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186
 | US-1714 | Adaptateur Go derrière feature flag | Fusionné dans develop (PR #196) | Flag off par défaut ; HTTP privé borné, contrat strict, migration 035 et métadonnées réelles ; transactions avec outbox/audit, baux avec jetons et reprises bornées. Tests Go off/on, timeout, erreurs, rollback, isolation et idempotence ; smoke adaptateur + Docker réel et gate complet validés en CI. Voir [guide](docs/OCR_GO_ADAPTER_V1_7_1.md). |
 | US-1715 | Matching de qualité et isolation | Fusionné dans develop (PR #197), CI verte | Matching v2 sous le flag expérimental ; normalisation symétrique, mots utiles de tout le texte, correction unique à une édition, FTS5/BM25 en mémoire limité à la bibliothèque. Tests off/on, isolation des scores, idempotence, rollback et corpus synthétique annoté : baseline recall@1 4/6, v2 recall@1/5 6/6 ; gain réel à mesurer dans le suivi OCR arabe. Voir [guide](docs/OCR_MATCHING_QUALITY_V1_7_1.md). |
 | US-1716 | Outillage de recette et gate v1.7.1 | Clôturée — périmètre expérimental accepté le 2026-10-01 | PR #198 fusionné, gate technique et CI verts : comparateur Go, copie SQLite mode=ro, empreintes, rapports privés, métriques qualité/latence, contrôle de preuve mémoire et rollback. Le propriétaire accepte la clôture avec flag off par défaut. Qualité arabe réelle et seuils non validés ; aucune activation générale autorisée. Voir [décision et suivi](docs/OCR_ACCEPTANCE_V1_7_1.md). |
+| US-1717 | Recherche manuelle et résolution SAFE | Clôturée — PR #193 fusionné et recette automatisée validée | Recherche limitée à trois livres, aperçu privé, confirmation/remplacement, rejet persistant, isolation et idempotence. Go/FTS5, vet, race, 125 tests frontend, 123 opérations OpenAPI et 30 parcours navigateur verts ; deux tests de recette supplémentaires sur exclusions et échec différé. Voir [preuves](docs/MANUAL_COVER_MATCHING.md). |
 
 ### Suivi OCR arabe — avant activation générale
 
@@ -356,14 +357,25 @@ vrai template ; rechargement root/propriétaire et rendu des tags restent testé
 
 ### US-1717 — Recherche manuelle et résolution des couvertures SAFE
 
-Branche feature/v1.7.1-manual-cover-matching : recherche limitée à trois livres
-de la bibliothèque, suggestions persistées, aperçu privé, confirmation de
-résolution/remplacement, rejet d'une solution distinct du rejet du rattachement,
-audit et idempotence. Migration 034, API/OpenAPI et revue React.
-ISBN : recherche exacte des ISBN issus des OCR déjà rattachés ; defta n'a pas
-de champ ISBN dédié. Voir [contrat et recette](docs/MANUAL_COVER_MATCHING.md).
-Validation locale : Go/FTS5, vet, race sur services/repositories/handlers,
-125 tests frontend, TypeScript/Vite et contrat OpenAPI verts. Scénarios
-Playwright adaptés/ajoutés ; téléchargement Chromium local tronqué, exécution
-navigateur à confirmer en CI. État : implémenté, validation CI et recette
-locale requises avant clôture.
+**Clôturée le 1er octobre 2026 après revue finale et recette automatisée.**
+L’implémentation est fusionnée via PR #193 (`c11d0e3`) et présente dans le
+commit de référence `9570e28`. Le statut précédent « navigateur à confirmer »
+est remplacé par les preuves CI vérifiées.
+
+Recherche de zéro à trois livres actifs de la bibliothèque, titre/auteur ou
+ISBN exact déjà connu d’un OCR rattaché ; suggestions persistées, aperçu privé,
+confirmation de remplacement, rejet d’une solution distinct du rejet du
+rattachement, audit et idempotence. Migration 034, API/OpenAPI et revue React.
+Aucun champ ISBN inventé ni dépendance au flag OCR expérimental.
+
+Validation : Go/FTS5 complet, vet, race services/repositories/handlers,
+125 tests frontend et 123 opérations OpenAPI verts. CI release #48 verte,
+30 parcours navigateur réussis, dont recherche de trois suggestions, rejet,
+annulation et confirmation de remplacement. La revue finale ajoute des tests
+sur zéro/un résultat, livres étrangers/supprimés, suppression après suggestion,
+et échec différé du remplacement avec migrations réelles : ancienne couverture
+et aperçu conservés, aucun doublon de copie, d’audit ou d’outbox.
+
+Voir [contrat et preuves de recette](docs/MANUAL_COVER_MATCHING.md).
+L’OCR arabe expérimental reste dans son suivi distinct ; la recherche manuelle
+SAFE et la décision humaine sont livrées.

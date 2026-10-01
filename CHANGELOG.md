@@ -2,6 +2,8 @@
 
 ## [À paraître]
 
+- US-1717 finalisée : recherche manuelle SAFE fusionnée via PR #193, recette automatisée et preuves CI confirmées. Tests supplémentaires sur zéro/un résultat, exclusions après recherche et conservation de l’ancienne couverture après échec différé, sans doublons.
+
 - US-1716 clôturée en périmètre expérimental sur décision du propriétaire (2026-10-01), PR #198 : comparateur des runners Go et politiques de matching sur corpus annoté privé, mesures de qualité/latence et gate avec preuve mémoire, copie SQLite en lecture seule et rapports privés. Smoke synthétique avec runtimes réels ; recette arabe réelle et activation générale reportées à un suivi distinct ; flag off par défaut et gate inchangés.
 
 - US-1715 : matching expérimental v2 sur tout le texte utile, correction prudente et normalisation symétrique ; FTS5/BM25 temporaire en mémoire avec statistiques limitées à la bibliothèque, candidats et audit transactionnels. Off conserve le matching existant ; benchmark synthétique annoté ajouté.
