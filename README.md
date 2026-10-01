@@ -1698,4 +1698,4 @@ Le [service FastAPI OCR interne](services/ocr-experimental/README.md#service-fas
 
 Le [matching de qualité US-1715](docs/OCR_MATCHING_QUALITY_V1_7_1.md) utilise le même flag expérimental, off par défaut : tokens utiles de tout le texte, corrections non ambiguës et classement FTS5/BM25 isolé par bibliothèque. Le gain sur images réelles reste à valider lors de la recette.
 
-La [recette US-1716](docs/OCR_ACCEPTANCE_V1_7_1.md) fournit un comparateur Go et un gate qualité/mémoire avec preuves privées. Les contrôles synthétiques ne valent pas validation sur couvertures réelles ; le flag reste désactivé et toute activation exige la revue prévue par le contrat.
+L’[US-1716](docs/OCR_ACCEPTANCE_V1_7_1.md) est clôturée sur décision du propriétaire pour la livraison du comparateur Go, du gate qualité/mémoire et du protocole de rollback. L’OCR arabe reste expérimental, avec flag désactivé par défaut. La recette sur couvertures réelles est suivie séparément avant activation générale ; la clôture ne valide ni la qualité arabe ni les seuils proposés.
