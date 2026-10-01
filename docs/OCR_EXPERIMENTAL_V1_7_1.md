@@ -2,7 +2,7 @@
 
 ## Objectif et état
 
-Cadrage du 30 septembre 2026, après fusion du PR #186. Le cœur CPU/CLI (US-1712, PR #190) est fusionné. Le service FastAPI/Docker (US-1713) est fusionné (PR #195). L’adaptateur Go US-1714 est implémenté derrière un flag désactivé ; l’activation de recette reste soumise à US-1716. La qualité OCR de la v1.7.0 reste une limite connue. Aucun tag ou artefact v1.7.0 n'est publié par ce cadrage.
+Cadrage du 30 septembre 2026, après fusion du PR #186. Le cœur CPU/CLI (US-1712, PR #190) est fusionné. Le service FastAPI/Docker (US-1713) est fusionné (PR #195). L’adaptateur Go US-1714 est implémenté derrière un flag désactivé ; US-1716 est clôturée pour son outillage sur décision du propriétaire le 1er octobre 2026. La qualité arabe réelle et l’activation générale restent à valider dans un suivi distinct. La qualité OCR de la v1.7.0 reste une limite connue. Aucun tag ou artefact v1.7.0 n'est publié par ce cadrage.
 
 Le nouveau cœur Python doit être partagé par CLI et FastAPI, fonctionner sur CPU et rester local. Go conserve l'authentification, les autorisations, les états, la persistance, l'outbox JetStream et les décisions humaines.
 
@@ -27,7 +27,7 @@ Chaque US possède sa branche et son PR. Mettre à jour BACKLOG.md avec preuves 
 | US-1713 | feature/v1.7.1-us-1713-ocr-fastapi | API interne, validation des images, limites, délais, capacité bornée, Docker et probes. |
 | US-1714 | feature/v1.7.1-us-1714-ocr-go-adapter | Feature flag off par défaut, adaptateur HTTP Go, métadonnées OCR persistées, tests off/on/timeout/réponse invalide et reprise idempotente. |
 | US-1715 | feature/v1.7.1-us-1715-matching-quality | Tokens utiles de tout le texte, correction prudente par dictionnaire de bibliothèque, candidats BM25 bornés, tests d'isolation et benchmark annoté. |
-| US-1716 | feature/v1.7.1-us-1716-local-acceptance | Recette locale, comparaison qualité/latence/mémoire, rollback et gate v1.7.1. Activation par défaut seulement après validation explicite. |
+| US-1716 | feature/v1.7.1-us-1716-local-acceptance | Clôturée : outillage de recette, comparateur, rollback et gate technique livrés (PR #198). Recette réelle reportée au suivi OCR arabe ; flag expérimental off par défaut. Activation générale seulement après validation explicite. |
 
 ## Mapping et responsabilités SQLite
 
@@ -122,3 +122,5 @@ Les originaux restent privés dans MinIO. Aucun cloud ni GPU. Temporaires suppri
 ## Outillage de recette US-1716
 
 Le [guide de recette](OCR_ACCEPTANCE_V1_7_1.md) et le comparateur Go évaluent les runtimes et matching effectivement branchés, avec corpus annoté, empreintes, seuils explicites et preuves mémoire. Les seuils exemples restent une proposition à valider avant mesure. Le gate technique/synthétique est distinct de la recette réelle ; aucun flag n’est activé automatiquement.
+
+Décision du propriétaire du 1er octobre 2026 : clôture US-1716 avec maintien en expérimental, sans validation de qualité arabe réelle ni approbation des seuils exemples. Le gate qualité et le protocole ci-dessus restent inchangés ; la recette réelle est conservée dans le suivi OCR arabe du backlog avant toute activation générale.

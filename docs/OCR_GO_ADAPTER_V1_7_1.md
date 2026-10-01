@@ -2,7 +2,8 @@
 
 Le runner local reste actif par défaut. L’adaptateur US-1714 ne change ni le matching, ni
 l’authentification, ni les décisions humaines. La qualité et l’activation de
-recette restent à valider dans US-1715 et US-1716.
+recette restent à valider dans le suivi OCR arabe avant activation générale ;
+US-1716 est clôturée pour son outillage avec maintien en expérimental.
 
 ## Configuration
 
@@ -34,7 +35,7 @@ Ne pas publier ce service sur une interface publique.
 
 Après vérification des probes et sauvegarde de la base, configurer explicitement
 le flag sur `true` et redémarrer l’application. Les variables exemples ne
-modifient pas le fichier `.env` existant. L’activation générale attend US-1716.
+modifient pas le fichier `.env` existant. L’activation générale attend la recette réelle et la revue du suivi OCR arabe.
 
 ## Contrat et persistance
 

@@ -2,10 +2,17 @@
 
 ## État
 
-L’outil et les contrôles techniques sont livrés. **La recette réelle et
-l’activation ne sont pas validées.** Le workspace ne contient pas la copie du
-catalogue ni le corpus réel annoté nécessaires. Le flag reste `false`, aucun
-`.env`, livre ou résultat métier n’est modifié. Ce lot ne publie aucun tag.
+**US-1716 clôturée le 1er octobre 2026 sur décision du propriétaire**, pour la
+livraison de l’outillage de recette, du gate technique et du protocole de rollback
+(PR #198 fusionné, CI verte). Le propriétaire accepte le maintien de l’OCR arabe
+en mode expérimental derrière le feature flag.
+
+**La qualité sur corpus réel, les seuils proposés et l’activation générale ne
+sont pas validés.** La recette réelle est reportée dans le suivi OCR arabe avant
+activation générale, conservé dans le [backlog](../BACKLOG.md). La clôture de l’US
+n’est pas une réussite du gate qualité réel. `OCR_EXPERIMENTAL_ENABLED` reste
+`false` par défaut ; le gate et les décisions humaines restent obligatoires.
+Aucun `.env`, livre, résultat métier ou tag n’est modifié par cette décision.
 
 Les résultats synthétiques US-1715 valident des cas de recherche ; ils ne
 prouvent pas un gain OCR sur des couvertures réelles. Le comparateur Python
@@ -165,7 +172,7 @@ La CI compose les workflows existants : gate release et intégration
 MinIO/JetStream ; interface d’import ; OCR Python/Docker avec le nouveau smoke
 comparateur. Les tests vérifient rollback, idempotence, isolation, off/on,
 absence de mutation de la copie SQLite, refus d’écrasement et confidentialité.
-La CI technique verte ne clôture pas la recette réelle.
+La CI technique verte valide la livraison clôturée ; elle ne valide pas la recette réelle reportée au suivi OCR arabe.
 
 ## Décision et rollback
 

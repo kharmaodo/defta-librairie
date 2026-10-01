@@ -96,7 +96,9 @@ go test -tags fts5 ./internal/services -run MatchingQuality -v
 
 Ces résultats mesurent la recherche à partir de textes annotés, **pas** la qualité
 de l’extraction sur des images réelles. CER/WER, recall réel, faux candidats,
-latence p50/p95 et mémoire sur le corpus privé relèvent de la recette US-1716.
+latence p50/p95 et mémoire sur le corpus privé restent à mesurer dans le suivi
+OCR arabe avant activation générale. US-1716 est clôturée pour son outillage ;
+la recette réelle n’est pas validée.
 L’activation reste off en attendant cette mesure. Les tests couvrent aussi
 le mode off/on, le scope, les doublons, le rollback de persistance et le nettoyage
 des index temporaires ; le gate complet conserve les parcours navigateur.
