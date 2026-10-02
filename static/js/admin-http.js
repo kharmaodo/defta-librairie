@@ -103,13 +103,23 @@
     }
     return response;
   }
+  function csrfToken() {
+    if (typeof document === 'undefined') return '';
+    const cookies = String(document.cookie || '').split(';').map(value => value.trim());
+    for (const name of ['__Host-defta_csrf', 'defta_csrf']) {
+      const value = cookies.find(cookie => cookie.startsWith(`${name}=`));
+      if (value) return value.slice(name.length + 1);
+    }
+    return '';
+  }
   async function authJSON(action, body) {
     if (!['login', 'refresh', 'logout'].includes(action)) throw new APIError('Action de session non autorisée.');
     let response;
     try {
       response = await fetch(`${window.location.origin}/api/auth/${action}`, {
         method: 'POST', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
-        headers: {'X-Defta-Session': 'cookie', 'Content-Type': 'application/json'},
+        headers: {'X-Defta-Session': 'cookie', 'Content-Type': 'application/json',
+          'X-Defta-CSRF': csrfToken()},
         ...(body === undefined ? {} : {body: JSON.stringify(body)})
       });
     } catch (error) { throw transportError(error); }

@@ -47,12 +47,14 @@ func (r *CoverImportRepository) SearchQualityCoverImportCandidates(parent contex
 	for rows.Next() {
 		var book matchingCatalogueBook
 		if err = rows.Scan(&book.id, &book.fields[0], &book.fields[1], &book.fields[2], &book.fields[3], &book.fields[4]); err != nil {
+			// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 			rows.Close()
 			return nil, err
 		}
 		for _, field := range book.fields {
 			catalogueBytes += len(field)
 			if len(field) > 65536 || catalogueBytes > 8*1024*1024 {
+				// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 				rows.Close()
 				return nil, ErrMatchingCatalogueLimit
 			}
@@ -71,11 +73,13 @@ func (r *CoverImportRepository) SearchQualityCoverImportCandidates(parent contex
 		}
 		books = append(books, book)
 		if len(books) > MaxMatchingCatalogueBooks || len(dictionary) > MaxMatchingDictionaryWords {
+			// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 			rows.Close()
 			return nil, ErrMatchingCatalogueLimit
 		}
 	}
 	err = rows.Err()
+	// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 	rows.Close()
 	if err != nil {
 		return nil, err
@@ -108,18 +112,22 @@ func (r *CoverImportRepository) SearchQualityCoverImportCandidates(parent contex
 		defer stop()
 		_, _ = connection.ExecContext(cleanup, `DROP TABLE IF EXISTS temp.`+table)
 	}()
+	// #nosec G202 -- SQL fragments and identifiers are server constants/generated counters; all client values use bound parameters.
 	statement, err := connection.PrepareContext(ctx, `INSERT INTO temp.`+table+`(book_id,title,editeur,auteur,tags,categorie) VALUES(?,?,?,?,?,?)`)
 	if err != nil {
 		return nil, err
 	}
 	for _, book := range books {
 		if _, err = statement.ExecContext(ctx, book.id, book.fields[0], book.fields[1], book.fields[2], book.fields[3], book.fields[4]); err != nil {
+			// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 			statement.Close()
 			return nil, err
 		}
 	}
+	// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 	statement.Close()
 	query := strings.ReplaceAll(ocr.FTSQuery(strings.Join(terms, " ")), " AND ", " OR ")
+	// #nosec G202 -- SQL fragments and identifiers are server constants/generated counters; all client values use bound parameters.
 	result, err := connection.QueryContext(ctx, `SELECT book_id,bm25(`+table+`,0.0,5.0,1.0,2.0,0.5,0.5) FROM temp.`+table+` WHERE `+table+` MATCH ? ORDER BY 2 ASC,book_id ASC LIMIT 5`, query)
 	if err != nil {
 		return nil, err

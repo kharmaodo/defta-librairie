@@ -61,5 +61,5 @@ test('admin dashboard keeps its thematic structure and stable section targets', 
   await navigation.getByRole('button', {name: 'Administration'}).click();
   await expect(navigation.getByRole('link', {name: 'Propriétaires'})).toBeVisible();
   await expect(page.locator('footer.admin-footer'))
-    .toHaveText(/^Defta Librairie · \S+ · \S+$/);
+    .toHaveText('Defta Librairie');
 });

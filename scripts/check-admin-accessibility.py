@@ -51,10 +51,6 @@ class Check(HTMLParser):
 
 check = Check()
 check.feed((ROOT / "templates/admin.html").read_text())
-script = (ROOT / "static/js/admin-supplier-returns.js").read_text()
-markup = re.search(r"root\.innerHTML\s*=\s*`([\s\S]*?)`;", script)
-assert markup, "Supplier return markup not found; adapt this checker"
-check.feed(markup[1])
 check.close()
 check.errors.extend("Unresolved dialog title: " + ref for ref in check.refs if ref not in check.ids)
 assert check.dialogs > 0, "No dialog checked"

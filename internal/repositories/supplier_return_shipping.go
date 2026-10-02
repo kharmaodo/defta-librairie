@@ -69,12 +69,14 @@ func (r *SupplierReturnRepository) Ship(ctx context.Context, id, libraryID strin
 	for rows.Next() {
 		var l line
 		if err = rows.Scan(&l.book, &l.quantity); err != nil {
+			// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 			rows.Close()
 			return models.SupplierReturn{}, err
 		}
 		lines = append(lines, l)
 	}
 	err = rows.Err()
+	// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 	rows.Close()
 	if err != nil {
 		return models.SupplierReturn{}, err

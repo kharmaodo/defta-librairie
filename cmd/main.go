@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"defta-librairie/internal/auth"
 	"defta-librairie/internal/bootstrap"
 	"defta-librairie/internal/config"
@@ -312,14 +313,18 @@ func main() {
 	mux.Handle("POST /api/manage/tags", bookManagers(http.HandlerFunc(tagHandler.Create)))
 	mux.Handle("PATCH /api/manage/tags/{id}", bookManagers(http.HandlerFunc(tagHandler.Update)))
 	mux.Handle("DELETE /api/manage/tags/{id}", bookManagers(http.HandlerFunc(tagHandler.Delete)))
-	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	mux.Handle("/static/", http.StripPrefix("/static/", middleware.StaticFiles(os.DirFS("static"))))
 
 	addr := fmt.Sprintf(":%s", cfg.Port)
+	if cfg.PublicOrigin != "" {
+		addr = "127.0.0.1:" + cfg.Port
+	}
 	log.Printf("Serveur démarré → http://localhost%s", addr)
 	log.Printf("Version %s | Build %s", cfg.Version, cfg.BuildDate)
 
 	server := &http.Server{
-		Addr: addr, Handler: middleware.SecureHTTP(observability.Wrap(mux)),
+		Addr: addr, Handler: middleware.ProductionHTTPS(cfg.PublicOrigin, middleware.SecureHTTP(middleware.CSRF(cfg.AuthCookieSecure, observability.Wrap(mux), []byte(cfg.JWTSecret)))),
+		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,

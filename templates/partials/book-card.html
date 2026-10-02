@@ -17,9 +17,6 @@
                 {{if .Categorie.Valid}}{{.Categorie.String}}{{else}}غير مصنف{{end}}
             </span>
         </div>
-        <span class="status {{if eq .Status.String "متوفر"}}available{{else}}unavailable{{end}}">
-            {{if .Status.Valid}}{{.Status.String}}{{else}}غير محدد{{end}}
-        </span>
     </div>
 </div>
 {{end}}

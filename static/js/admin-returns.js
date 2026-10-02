@@ -1,5 +1,7 @@
 (() => {
   "use strict";
+  function showEmptyLines(container) { const p = document.createElement("p"); p.className = "empty"; p.textContent = "Sélectionnez une vente."; container.replaceChildren(p); }
+
 
   const state = {isRoot: false, libraries: [], returns: [], sales: [], offset: 0, limit: 10, total: 0, current: null, balance: null, settlements: []};
   const money = (value) => new Intl.NumberFormat("fr-FR", {style: "currency", currency: "XOF", maximumFractionDigits: 2}).format(value || 0);
@@ -41,16 +43,16 @@
     const payload = await api(`/api/manage/sales?${query}`);
     state.sales = payload.results;
     fill(document.querySelector("#return-form [name=saleId]"), [{id: "", reference: "Choisir une vente"}, ...state.sales], (sale) => sale.id ? `${sale.reference} · ${sale.customerName || "Client comptoir"} · ${money(sale.totalAmount)}` : sale.reference);
-    document.querySelector("#return-lines").innerHTML = '<p class="empty">Sélectionnez une vente.</p>';
+    showEmptyLines(document.querySelector("#return-lines"));
   }
 
   async function renderReturnLines(saleID) {
     const container = document.querySelector("#return-lines");
-    if (!saleID) { container.innerHTML = '<p class="empty">Sélectionnez une vente.</p>'; return; }
+    if (!saleID) { showEmptyLines(container); return; }
     const sale = await api(`/api/manage/sales/${saleID}`);
     container.replaceChildren(...sale.lines.map((line) => {
       const row = document.createElement("div"); row.className = "return-line"; row.dataset.saleLineId = line.id;
-      const title = document.createElement("div"); title.innerHTML = `<strong></strong><p class="hint"></p>`; title.querySelector("strong").textContent = line.title; title.querySelector("p").textContent = `${line.quantity} vendu(s) · ${money(line.unitPrice)}`;
+      const title = document.createElement("div"); const strong = document.createElement("strong"), hint = document.createElement("p"); hint.className = "hint"; title.append(strong, hint); title.querySelector("strong").textContent = line.title; title.querySelector("p").textContent = `${line.quantity} vendu(s) · ${money(line.unitPrice)}`;
       const label = document.createElement("label"); label.textContent = "Quantité retournée";
       const input = document.createElement("input"); input.type = "number"; input.name = "quantity"; input.min = "0"; input.max = String(line.quantity); input.step = "1"; input.value = "0"; label.append(input); row.append(title, label); return row;
     }));

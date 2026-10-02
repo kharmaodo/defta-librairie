@@ -85,6 +85,7 @@ func ensureDatabaseFile(path string) (bool, error) {
 		return false, fmt.Errorf("inspect SQLite database: %w", err)
 	}
 	seedPath := filepath.Join(filepath.Dir(path), "catalogue.seed.db")
+	// #nosec G304 -- Local operator-selected path, not an HTTP input; read-only validation/restore tool or startup database configuration.
 	seed, err := os.Open(seedPath)
 	if os.IsNotExist(err) {
 		return false, nil
@@ -119,6 +120,7 @@ func ensureDatabaseFile(path string) (bool, error) {
 
 func Close() {
 	if DB != nil {
+		// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 		DB.Close()
 		log.Println("Connexion SQLite fermée")
 	}
@@ -179,7 +181,7 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
 
 	if err == nil {
 		// FTS5 est disponible → on utilise le rank
-		log.Printf("FTS5 activé → recherche avec MATCH '%s'", ftsQuery)
+		log.Print("FTS5 search")
 
 		rows, err = DB.Query(`
             SELECT

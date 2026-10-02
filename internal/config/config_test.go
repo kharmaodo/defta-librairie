@@ -92,3 +92,18 @@ func TestExperimentalOCRConfiguration(t *testing.T) {
 		t.Fatal("invalid flag silently disabled")
 	}
 }
+
+func TestProductionOriginForcesSecureCookies(t *testing.T) {
+	t.Setenv("PUBLIC_ORIGIN", "https://books.example.test")
+	t.Setenv("AUTH_COOKIE_SECURE", "false")
+	cfg, err := Load()
+	if err != nil || !cfg.AuthCookieSecure {
+		t.Fatalf("production cookies: cfg=%v error=%v", cfg != nil, err)
+	}
+	for _, invalid := range []string{"http://books.example.test", "https://books.example.test/path", "https://user:pass@books.example.test"} {
+		t.Setenv("PUBLIC_ORIGIN", invalid)
+		if _, err := Load(); err == nil {
+			t.Fatalf("accepted origin %q", invalid)
+		}
+	}
+}

@@ -70,6 +70,10 @@ func VerifyPassword(password, encodedHash string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if len(expected) > 1024 {
+		return false, ErrInvalidPasswordHash
+	}
+	// #nosec G115 -- Value is validated positive and bounded before conversion; no unsigned-to-signed narrowing.
 	actual := argon2.IDKey([]byte(password), salt, p.Iterations, p.Memory, p.Parallelism, uint32(len(expected)))
 	return subtle.ConstantTimeCompare(expected, actual) == 1, nil
 }
@@ -99,7 +103,7 @@ func decodeHash(encodedHash string) (Argon2Params, []byte, []byte, error) {
 		return p, nil, nil, ErrInvalidPasswordHash
 	}
 	expected, err := base64.RawStdEncoding.Strict().DecodeString(parts[5])
-	if err != nil || len(expected) < 16 {
+	if err != nil || len(expected) < 16 || len(expected) > 1024 {
 		return p, nil, nil, ErrInvalidPasswordHash
 	}
 

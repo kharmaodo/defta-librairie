@@ -291,12 +291,14 @@ func (r *CustomerReturnRepository) Transition(ctx context.Context, id, libraryID
 		for rows.Next() {
 			var x item
 			if e = rows.Scan(&x.bookID, &x.quantity, &x.unitCost); e != nil {
+				// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 				rows.Close()
 				return models.CustomerReturn{}, e
 			}
 			items = append(items, x)
 		}
 		if e = rows.Err(); e != nil {
+			// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 			rows.Close()
 			return models.CustomerReturn{}, e
 		}

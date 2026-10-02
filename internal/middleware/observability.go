@@ -69,7 +69,9 @@ func (w *observedWriter) Write(b []byte) (int, error) {
 		w.WriteHeader(http.StatusOK)
 	}
 	n, err := w.ResponseWriter.Write(b)
-	w.bytes += uint64(n)
+	if n > 0 {
+		w.bytes += uint64(n)
+	}
 	return n, err
 }
 func (o *HTTPObservability) Wrap(next http.Handler) http.Handler {

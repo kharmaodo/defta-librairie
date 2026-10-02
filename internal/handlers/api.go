@@ -6,7 +6,6 @@ import (
 	"defta-librairie/internal/database"
 	"defta-librairie/internal/models"
 
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"log"
@@ -19,7 +18,7 @@ import (
 var globalCfg *config.Config
 
 const (
-	maxAPIBooksLimit = 100
+	maxAPIBooksLimit   = 100
 	maxAPISearchLength = 256
 )
 
@@ -29,50 +28,8 @@ func SetConfig(c *config.Config) {
 	globalCfg = c
 }
 
-// cleanBook transforme les champs sql.Null* en valeurs simples ou null
-func cleanBook(b models.Book) map[string]interface{} {
-	return map[string]interface{}{
-		"id":        b.ID,
-		"title":     b.Title,
-		"auteur":    nullableString(b.Auteur),
-		"editeur":   nullableString(b.Editeur),
-		"price":     b.Price,
-		"volume":    b.Volume,
-		"status":    nullableString(b.Status),
-		"tags":      nullableString(b.Tags),
-		"categorie": nullableString(b.Categorie),
-		"coverUrl":  nullableString(b.CoverURL),
-		"score":     nullableFloat(b.Score),
-	}
-}
-
-func nullableString(sf models.StringField) interface{} {
-	if sf.Valid {
-		return sf.String
-	}
-	return nil
-}
-
-func nullableInt64(i models.IntField) interface{} {
-	if i.Valid {
-		return i.Int64
-	}
-	return nil
-}
-
-func nullableSQLInt64(i sql.NullInt64) interface{} {
-	if i.Valid {
-		return i.Int64
-	}
-	return nil
-}
-
-func nullableFloat(f sql.NullFloat64) interface{} {
-	if f.Valid {
-		return f.Float64
-	}
-	return nil
-}
+// cleanBook returns the dedicated public representation.
+func cleanBook(b models.Book) PublicBook { return publicBook(b) }
 
 func normalizeAPISearch(value string) (string, error) {
 	value = strings.TrimSpace(value)
@@ -122,24 +79,24 @@ func APIBooksHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("SearchBooks error: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
-			"error":   "database error",
-			"details": err.Error(),
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error":   "internal_error",
+			"message": "Catalogue temporarily unavailable",
 		})
 		return
 	}
 
 	// Nettoyage des résultats avant envoi
-	cleanResults := make([]map[string]interface{}, len(books))
+	cleanResults := make([]PublicBook, len(books))
 	for i, book := range books {
 		cleanResults[i] = cleanBook(book)
 	}
 
 	resp := struct {
-		Results []map[string]interface{} `json:"results"`
-		Total   int                      `json:"total"`
-		Offset  int                      `json:"offset"`
-		Limit   int                      `json:"limit"`
+		Results []PublicBook `json:"results"`
+		Total   int          `json:"total"`
+		Offset  int          `json:"offset"`
+		Limit   int          `json:"limit"`
 	}{
 		Results: cleanResults,
 		Total:   total,

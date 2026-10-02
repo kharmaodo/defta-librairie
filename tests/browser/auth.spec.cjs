@@ -33,7 +33,7 @@ test('root dashboard and logout invalidate cookie session',async({page})=>{
   await expect(page.locator('#owners-section')).toBeVisible();
   await page.locator('#logout-button').click();await expect(page).toHaveURL(/\/login$/);
   expect(await page.evaluate(()=>sessionStorage.getItem('defta.accessToken'))).toBeNull();
-  const refresh = await page.request.post('/api/auth/refresh',{headers:{'X-Defta-Session':'cookie'}});
+  const refresh = await page.request.post('/api/auth/refresh',{headers:{'X-Defta-Session':'cookie','X-Defta-CSRF':await page.evaluate(()=>document.cookie.split('; ').find(c=>c.startsWith('defta_csrf=')).split('=')[1])}});
   expect(refresh.status()).toBe(400);
   expect((await refresh.json()).error).toBe('invalid_request');
   await page.goto('/admin');await expect(page).toHaveURL(/\/login$/);

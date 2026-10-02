@@ -115,7 +115,9 @@
     state.balance = null;
     document.querySelector("#payment-balance").hidden = true;
     const body = document.querySelector("#payments-body");
-    body.innerHTML = '<tr><td colspan="6" class="empty">Sélectionnez une vente confirmée.</td></tr>';
+    const row = document.createElement("tr"), cell = document.createElement("td");
+    cell.colSpan = 6; cell.className = "empty"; cell.textContent = "Sélectionnez une vente confirmée.";
+    row.append(cell); body.replaceChildren(row);
     document.querySelector("#payment-error").hidden = true;
   }
 

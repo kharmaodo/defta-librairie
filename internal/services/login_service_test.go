@@ -71,3 +71,14 @@ func TestLoginServiceUnknownUserUsesGenericError(t *testing.T) {
 		t.Fatalf("unknown login: audits=%d err=%v", store.unknown, err)
 	}
 }
+
+func TestProgressiveLoginLock(t *testing.T) {
+	for _, tc := range []struct {
+		failures int
+		want     time.Duration
+	}{{0, 15 * time.Minute}, {4, 15 * time.Minute}, {5, 30 * time.Minute}, {9, 30 * time.Minute}, {10, time.Hour}, {100000, time.Hour}} {
+		if got := progressiveLockDuration(tc.failures); got != tc.want {
+			t.Fatalf("failures=%d duration=%v want=%v", tc.failures, got, tc.want)
+		}
+	}
+}

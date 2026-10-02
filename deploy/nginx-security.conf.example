@@ -1,0 +1,24 @@
+# PUBLIC_ORIGIN=https://books.example.test ; Go écoute uniquement 127.0.0.1:8080.
+# Remplacer le domaine et les chemins des certificats. Proxy sur le même hôte.
+server {
+    listen 80;
+    server_name books.example.test;
+    return 308 https://books.example.test$request_uri;
+}
+server {
+    listen 443 ssl;
+    server_name books.example.test;
+    ssl_certificate /etc/letsencrypt/live/books.example.test/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/books.example.test/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    # Aligné sur les limites de lots du backend ; validation fine dans Go.
+    client_max_body_size 501m;
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        # Écrase toute valeur transmise par le client.
+        proxy_set_header X-Forwarded-Proto https;
+        proxy_http_version 1.1;
+        proxy_read_timeout 120s;
+    }
+}

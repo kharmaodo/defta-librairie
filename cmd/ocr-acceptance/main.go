@@ -24,6 +24,7 @@ import (
 )
 
 func readEvidence(path string, target any) ([]byte, error) {
+	// #nosec G304 -- Local operator-selected path, not an HTTP input; read-only validation/restore tool or startup database configuration.
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, ocracceptance.ErrInvalidEvidence
@@ -142,6 +143,7 @@ func run(args []string) int {
 	err = encoder.Encode(report)
 	closeErr := file.Close()
 	if err != nil || closeErr != nil {
+		// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 		os.Remove(*output)
 		fmt.Fprintln(os.Stderr, "OUTPUT_FAILED")
 		return 2
@@ -157,6 +159,7 @@ func hashCopy(path string) (string, error) {
 	if info, err := os.Stat(path + "-wal"); err == nil && info.Size() > 0 {
 		return "", ocracceptance.ErrInvalidEvidence
 	}
+	// #nosec G304 -- Local operator-selected path, not an HTTP input; read-only validation/restore tool or startup database configuration.
 	file, err := os.Open(path)
 	if err != nil {
 		return "", err

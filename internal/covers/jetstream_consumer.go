@@ -36,11 +36,11 @@ type CoverEventFailureHandler interface {
 }
 
 type JetStreamConsumer struct {
-	connection *nats.Conn
-	jetStream  nats.JetStreamContext
+	connection   *nats.Conn
+	jetStream    nats.JetStreamContext
 	subscription *nats.Subscription
-	retryDelay time.Duration
-	maxDeliver int
+	retryDelay   time.Duration
+	maxDeliver   int
 }
 
 func NewJetStreamConsumer(
@@ -100,11 +100,11 @@ func NewJetStreamConsumer(
 		return nil, fmt.Errorf("create durable cover consumer: %w", err)
 	}
 	return &JetStreamConsumer{
-		connection: connection,
-		jetStream: jetStream,
+		connection:   connection,
+		jetStream:    jetStream,
 		subscription: subscription,
-		retryDelay: 5 * time.Second,
-		maxDeliver: maxDeliver,
+		retryDelay:   5 * time.Second,
+		maxDeliver:   maxDeliver,
 	}, nil
 }
 
@@ -155,7 +155,8 @@ func (c *JetStreamConsumer) FetchAndHandle(
 			if metadataErr != nil {
 				return handled, errors.Join(handleErr, fmt.Errorf("read cover delivery metadata: %w", metadataErr))
 			}
-			if int(metadata.NumDelivered) >= c.maxDeliver {
+			// #nosec G115 -- Value is validated positive and bounded before conversion; no unsigned-to-signed narrowing.
+			if metadata.NumDelivered >= uint64(c.maxDeliver) {
 				if failureHandler, ok := handler.(CoverEventFailureHandler); ok {
 					if failureErr := failureHandler.MarkFailed(ctx, event, handleErr); failureErr != nil {
 						return handled, errors.Join(handleErr, fmt.Errorf("mark cover processing failed: %w", failureErr))
