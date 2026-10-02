@@ -1704,9 +1704,9 @@ US-1717 est clôturée après revue de la [recherche manuelle SAFE et de sa rece
 
 ### Livraison du correctif de sécurité v1.7.2
 
-L'audit applicatif est fusionné (PR #203). La [préparation v1.7.2](docs/RELEASE_V1_7_2.md)
+La v1.7.2 est [publiée](https://github.com/kharmaodo/defta-librairie/releases/tag/v1.7.2) sur `92536cf`, après les PR #203, #204 et #205. La [procédure v1.7.2](docs/RELEASE_V1_7_2.md)
 détaille le gate complet, la recette locale/WSL, les archives Go 1.26.7+ et les
 contrôles de production. [Rapport de sécurité](docs/SECURITY_AUDIT_V1_7_2.md) et
 [inventaire des routes](docs/SECURITY_ROUTES_V1_7_2.md). Le tag v1.7.1 reste immuable ;
-aucun tag v1.7.2 n'est annoncé comme publié par cette préparation. PUBLIC_ORIGIN
+les [empreintes, digest worker et preuves de recette](docs/RELEASE_ARTIFACTS.md) sont consignés. PUBLIC_ORIGIN
 reste vide pour l'usage HTTP local ; aucune modification automatique du .env.

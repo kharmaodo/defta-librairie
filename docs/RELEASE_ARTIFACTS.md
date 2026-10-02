@@ -1,5 +1,65 @@
 # Artefacts publiés des releases
 
+## Version 1.7.2 — 2 octobre 2026
+
+Le tag annoté immuable `v1.7.2` (objet `8a06c765d455689268344bfcd1a8dd3a5ace4460`)
+référence `92536cfdab6be8851be642c926b1a84cfc1746ab`, après fusion de l'audit #203,
+de la préparation #204 et du correctif catégories/tags #205.
+[Release publiée](https://github.com/kharmaodo/defta-librairie/releases/tag/v1.7.2).
+
+| Archive publiée | Cible | SHA-256 vérifié après téléchargement indépendant |
+|---|---|---|
+| `defta-librairie-1.7.2-windows-amd64.zip` | Windows AMD64 | `1c901cc2e3373381ce83d1c8e2f2a0579b7fc031790c0c319527af17151219f1` |
+| `defta-librairie-1.7.2-linux-amd64.tar.gz` | Linux AMD64 | `9c8ef81c974861d85db80adb37ce31e097863ba15ea50107e55d7c4ebb1e5b2f` |
+
+La [publication des exécutables](https://github.com/kharmaodo/defta-librairie/actions/runs/37023662029)
+a réussi. Après téléchargement des quatre assets publiés, `sha256sum -c SHA256SUMS`
+et `scripts/check-release-packages.py` réussissent pour les deux archives.
+Le vérificateur confirme les plateformes dans les binaires, Go réellement compilé
+`go1.26.7`, les trois polices locales et licences, et l'absence de fichiers privés,
+de chemins traversants, de liens et de fichiers spéciaux.
+
+`BUILD-INFO.txt`, publié et embarqué dans chaque archive :
+
+```text
+VERSION=1.7.2
+BUILD_DATE=2026-10-02
+SOURCE_COMMIT=92536cfdab6be8851be642c926b1a84cfc1746ab
+GO_VERSION=go1.26.7
+```
+
+La [publication du worker](https://github.com/kharmaodo/defta-librairie/actions/runs/37023661950)
+a réussi pour `linux/amd64`. Digest de l'index poussé, attestations incluses :
+
+```text
+ghcr.io/kharmaodo/defta-cover-worker@sha256:6b27276726cb775c5bac4b26c7e484171df21c3f7b1e93c9cf2ff4b16e48b778
+```
+
+Tags worker publiés : `v1.7.2` et alias mobile `1.7`. Épingler le digest au déploiement.
+Les logs confirment la génération SBOM et provenance ; aucune vérification
+cryptographique indépendante des attestations n'est revendiquée.
+
+Les quatre contrôles post-fusion du SHA tagué sont verts :
+[gate v1.7.2](https://github.com/kharmaodo/defta-librairie/actions/runs/37020823711),
+[sécurité](https://github.com/kharmaodo/defta-librairie/actions/runs/37020823665),
+[gate v1.7.1](https://github.com/kharmaodo/defta-librairie/actions/runs/37020823668),
+[gate v1.7.0](https://github.com/kharmaodo/defta-librairie/actions/runs/37020824352).
+Le correctif #205 a également passé 34 tests navigateur et 127 tests frontend.
+
+Recette locale WSL confirmée par l'opérateur le 2 octobre : copie SQLite restaurée
+avec 36 migrations (empreinte initiale de restauration
+`6e3319f08218ed8dca3913cbea423f2d543b71f176441629383ec364c80a0ba7`),
+MinIO/JetStream de recette séparés, NSFW prêt, santé alive/ready,
+CSP stricte, refus du listing statique (404) et de l'API admin anonyme (401).
+Les parcours navigateur demandés sont conformes selon l'opérateur, y compris
+catégories/tags après mise à jour du checkout vers `92536cf`.
+L'empreinte de restauration n'est pas celle de la base après les écritures de recette.
+
+La recette locale et la publication ne prouvent pas un déploiement en production.
+HTTPS/HSTS réels, traitement des anciens secrets/journaux et vérification des
+attestations restent distincts. OCR expérimental off par défaut ; qualité arabe
+réelle non validée. Le service Python OCR reste séparé des archives Go.
+
 ## Version 1.7.1 — 2 octobre 2026
 
 Le tag annoté `v1.7.1` référence le commit validé
