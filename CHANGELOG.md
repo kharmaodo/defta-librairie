@@ -2,6 +2,14 @@
 
 ## [À paraître]
 
+### v1.7.2 — correctif de sécurité en préparation
+
+- Audit fusionné par PR #203 : suppression du log de configuration et des fuites publiques, DTO catalogue, rendu XSS testé et tri du repli FTS qualifié après jointures.
+- Go minimum/worker 1.26.7 et x/crypto 0.56.0 ; CSP stricte, polices locales sous OFL, static sans listing, CSRF signé pour le mode cookie et verrouillage progressif.
+- Mode production explicite PUBLIC_ORIGIN : HTTPS canonique, cookies Secure, backend loopback et HSTS. HTTP local et OCR expérimental off par défaut conservés.
+- Préparation v1.7.2 : gate métier/OCR + analyseurs épinglés, inventaire d'archives et vérification du Go compilé, BUILD-INFO embarqué avec SHA source. Publication sans écrasement des assets existants.
+- Aucun tag ni artefact v1.7.2 publié à ce stade ; recette locale, transport réel et secrets historiques à consigner séparément.
+
 ## [1.7.1] — 2026-10-02
 
 - Préparation de release : gate complet v1.7.1 (delivery, OCR CPU réel, conteneur privé et intégration MinIO/JetStream), publication worker compatible avec les tags v1.7 et guide de publication/rollback. Tag `v1.7.1` publié sur `4998257` ; archives Windows/Linux AMD64 vérifiées par SHA256, worker publié avec SBOM et provenance. Déploiement et recette d’exploitation restent à confirmer.

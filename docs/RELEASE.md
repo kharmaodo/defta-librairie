@@ -1,6 +1,6 @@
 # Procédures de release
 
-La préparation actuelle est le [candidat v1.7.1](RELEASE_V1_7_1.md), avec OCR expérimental désactivé par défaut. La procédure historique v1.6.0 ci-dessous reste une référence pour ses artefacts.
+La préparation actuelle est le [correctif de sécurité v1.7.2](RELEASE_V1_7_2.md), avec OCR expérimental désactivé par défaut. La [v1.7.1](RELEASE_V1_7_1.md) publiée et la procédure historique v1.6.0 restent des références pour leurs artefacts.
 
 # Préparation de la version 1.6.0
 
