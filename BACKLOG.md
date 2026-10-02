@@ -307,7 +307,7 @@ Une fusion partielle conserve le statut Partiel et détaille les éléments rest
 
 ## v1.7.1 — OCR expérimental local (cadrage du 30 septembre 2026)
 
-Référence vérifiée : `develop` sur `59295af`, après fusion du PR #200. US-1717 finalisée par revue de la fusion #193 et recette automatisée ; préparation du candidat de release v1.7.1 en cours (gate complet, artefacts et procédure, sans tag publié). US-1716 clôturée sur décision du propriétaire le 1er octobre 2026, avec maintien de l’OCR arabe en expérimental. La recette réelle avant activation générale reste suivie séparément.
+Référence vérifiée : `develop` sur `59295af`, après fusion du PR #200. US-1717 finalisée par revue de la fusion #193 et recette automatisée ; v1.7.1 publiée le 2 octobre 2026 sur `4998257`, archives vérifiées et worker publié ; prochain jalon : recette de déploiement. US-1716 clôturée sur décision du propriétaire le 1er octobre 2026, avec maintien de l’OCR arabe en expérimental. La recette réelle avant activation générale reste suivie séparément.
 
 Référence : [Contrat et plan v1.7.1](docs/OCR_EXPERIMENTAL_V1_7_1.md). PR #186 fusionné dans develop. Le cœur CPU/CLI est fusionné (PR #190). Le service interne US-1713 est fusionné (PR #195). L’adaptateur Go US-1714 reste désactivé par défaut. La qualité OCR reste une limite connue de v1.7.0.
 
@@ -380,6 +380,6 @@ Voir [contrat et preuves de recette](docs/MANUAL_COVER_MATCHING.md).
 L’OCR arabe expérimental reste dans son suivi distinct ; la recherche manuelle
 SAFE et la décision humaine sont livrées.
 
-### Candidat de release v1.7.1
+### Release v1.7.1 publiée
 
-Branche `release/v1.7.1-candidate` : [procédure](docs/RELEASE_V1_7_1.md), gate CI complet et publication worker compatible v1.7. Le flag OCR reste off par défaut. Après fusion, valider le SHA exact de `develop`, les contrôles techniques, la sauvegarde/restauration et la recette de déploiement avant tag. Aucun tag, artefact ou déploiement publié par cette préparation.
+Tag annoté `v1.7.1` sur `499825752cf1b306cb4d6bca0655fa9fc095c434` ; gates verts, archives Windows/Linux AMD64 téléchargées et vérifiées par SHA256, worker Linux AMD64 publié avec SBOM/provenance. Voir [preuves](docs/RELEASE_ARTIFACTS.md) et [procédure](docs/RELEASE_V1_7_1.md). Le flag OCR reste off par défaut. Prochain jalon : sauvegarde/restauration et recette sur l’environnement cible ; déploiement effectif non confirmé.

@@ -2,9 +2,9 @@
 
 ## [À paraître]
 
-## [1.7.1] — candidate
+## [1.7.1] — 2026-10-02
 
-- Préparation de release : gate complet v1.7.1 (delivery, OCR CPU réel, conteneur privé et intégration MinIO/JetStream), publication worker compatible avec les tags v1.7 et guide de publication/rollback. Tag, artefacts et déploiement restent à valider.
+- Préparation de release : gate complet v1.7.1 (delivery, OCR CPU réel, conteneur privé et intégration MinIO/JetStream), publication worker compatible avec les tags v1.7 et guide de publication/rollback. Tag `v1.7.1` publié sur `4998257` ; archives Windows/Linux AMD64 vérifiées par SHA256, worker publié avec SBOM et provenance. Déploiement et recette d’exploitation restent à confirmer.
 
 - US-1717 finalisée : recherche manuelle SAFE fusionnée via PR #193, recette automatisée et preuves CI confirmées. Tests supplémentaires sur zéro/un résultat, exclusions après recherche et conservation de l’ancienne couverture après échec différé, sans doublons.
 

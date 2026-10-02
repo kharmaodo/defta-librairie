@@ -1,5 +1,40 @@
 # Artefacts publiés des releases
 
+## Version 1.7.1 — 2 octobre 2026
+
+Le tag annoté `v1.7.1` référence le commit validé
+`499825752cf1b306cb4d6bca0655fa9fc095c434`. La [release publiée](https://github.com/kharmaodo/defta-librairie/releases/tag/v1.7.1)
+et les deux workflows de publication ont été vérifiés le 2 octobre 2026.
+
+| Archive publiée | Cible | SHA-256 vérifié après téléchargement |
+|---|---|---|
+| `defta-librairie-1.7.1-windows-amd64.zip` | Windows AMD64 | `505d7a9f4e7b6be5a861fa1995a3cdf681a4df6df8d9c98fbe6302f3560d8a3f` |
+| `defta-librairie-1.7.1-linux-amd64.tar.gz` | Linux AMD64 | `96c5bfe91299397b49eb91a7bd22e6411806da7f4f4948f87f1416fb141a4f4b` |
+
+[Publication des exécutables](https://github.com/kharmaodo/defta-librairie/actions/runs/36981416994)
+réussie. Vérification indépendante : `SHA256SUMS` correspond aux deux archives ;
+`BUILD-INFO.txt` annonce `VERSION=1.7.1` et `BUILD_DATE=2026-10-02`.
+Les inventaires ZIP/TAR ne contiennent ni `.env`, ni base SQLite.
+
+[Publication du worker](https://github.com/kharmaodo/defta-librairie/actions/runs/36981415959)
+réussie pour `linux/amd64`, avec SBOM et provenance générés. Le digest de
+l’index poussé, attestations incluses, est :
+
+```text
+ghcr.io/kharmaodo/defta-cover-worker@sha256:084d52e632468501b98c377c9e8ead10b52a53d6076cdffb01ef3e869d349fa4
+```
+
+Tags publiés : `v1.7.1` et `1.7`. Épingler le digest au déploiement.
+Le [gate complet sur le SHA tagué](https://github.com/kharmaodo/defta-librairie/actions/runs/36902546129)
+est vert, ainsi que le gate v1.7.0 (`36902546204`).
+La génération des attestations est confirmée dans les logs de publication ;
+leur vérification cryptographique indépendante et la recette du déploiement
+ne sont pas revendiquées par ces contrôles d’archives.
+
+`OCR_EXPERIMENTAL_ENABLED` reste false par défaut. La publication ne valide
+pas la qualité arabe réelle et ne prouve pas un déploiement en production.
+Le service Python OCR est distinct des archives Go.
+
 ## Version 1.6.0 — 25 septembre 2026
 
 Le tag annoté immuable `v1.6.0` référence le commit validé
