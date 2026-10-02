@@ -6,8 +6,6 @@ const protectedRoutes = Object.entries(contract.paths).flatMap(([path, operation
   .filter(method => ['get','post','put','patch','delete','head'].includes(method))
   .map(method => [method.toUpperCase(), path.replace(/\{[^}]+\}/g, '1')])
 );
-// Internal observability endpoint is deliberately outside the public OpenAPI.
-protectedRoutes.push(['GET', '/api/admin/metrics']);
 
 test('every documented protected API rejects anonymous access',async({request})=>{
   for(const [method,path] of protectedRoutes){

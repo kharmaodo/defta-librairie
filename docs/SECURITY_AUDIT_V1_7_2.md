@@ -23,7 +23,7 @@ Si la configuration contenant de vrais secrets a été écrite dans des journaux
 
 ## 2. Autorisation, routes et IDOR
 
-L'[inventaire exhaustif des routes](SECURITY_ROUTES_V1_7_2.md) indique méthode, middleware et rôle. Les routes GET acceptent HEAD selon net/http. L'inventaire inclut les routes commerciales enregistrées par helper et les shells HTML. Le contrat OpenAPI contient 123 opérations API ; 116 sont soumises à session ; ces 116 opérations et les métriques internes sont vérifiées sans authentification par le test navigateur dédié.
+L'[inventaire exhaustif des routes](SECURITY_ROUTES_V1_7_2.md) indique méthode, middleware et rôle. Les routes GET acceptent HEAD selon net/http. L'inventaire inclut les routes commerciales enregistrées par helper et les shells HTML. Le contrat OpenAPI contient 123 opérations API ; 116 sont soumises à session ; ces 116 opérations (métriques incluses) sont vérifiées sans authentification par le test navigateur dédié.
 
 Chaîne existante conservée : `AuthenticateSession` vérifie signature JWT, session active en base et correspondance utilisateur/rôle/bibliothèque ; `RequirePasswordChanged` impose le changement initial ; `RequireRoles` impose ROOT ou OWNER selon la route. Les services appliquent `library_id` aux ressources et relations (livres, ventes, clients, paiements, retours, import/revue/source). Un JWT signé mais révoqué n'est pas accepté. Le rôle ou la bibliothèque du JS ne fait pas autorité.
 
@@ -95,7 +95,7 @@ curl -i -X POST "$BASE_URL/api/auth/login" \
 curl -i --get "$BASE_URL/" --data-urlencode 'q=<script>alert(1)</script>'
 ```
 
-Vérifier CSP stricte, absence d'URL Google Fonts et de versions visibles ; la recherche doit afficher/échappper le texte sans exécuter de script. Le test Playwright protège le refus anonyme de **toutes les 117 opérations protégées (116 OpenAPI + métriques internes)**, pas seulement les exemples ci-dessus. Les tests de services continuent de vérifier refus d'accès entre bibliothèques et session révoquée ; les parcours métier doivent tous passer avant fusion.
+Vérifier CSP stricte, absence d'URL Google Fonts et de versions visibles ; la recherche doit afficher/échappper le texte sans exécuter de script. Le test Playwright protège le refus anonyme de **toutes les 116 opérations protégées**, pas seulement les exemples ci-dessus. Les tests de services continuent de vérifier refus d'accès entre bibliothèques et session révoquée ; les parcours métier doivent tous passer avant fusion.
 
 ```sh
 # Sur le déploiement réel seulement, après configuration du proxy/certificat :
