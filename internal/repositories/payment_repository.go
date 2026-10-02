@@ -48,6 +48,7 @@ func (r *PaymentRepository) List(ctx context.Context, saleID, libraryID string, 
 		return nil, 0, fmt.Errorf("count payments: %w", err)
 	}
 	listArgs := append(append([]interface{}{}, args...), limit, offset)
+	// #nosec G202 -- SQL fragments and identifiers are server constants/generated counters; all client values use bound parameters.
 	rows, err := r.db.QueryContext(ctx, `SELECT id,library_id,sale_id,cash_register_id,method,amount,
 		COALESCE(external_reference,''),COALESCE(notes,''),status,version,recorded_by,
 		COALESCE(voided_by,''),created_at,updated_at,COALESCE(voided_at,'')

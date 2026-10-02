@@ -61,12 +61,14 @@ func (r *PurchaseRepository) List(ctx context.Context, libraryID string, filter 
 	for rows.Next() {
 		purchase, scanErr := scanPurchase(rows)
 		if scanErr != nil {
+			// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 			rows.Close()
 			return nil, 0, scanErr
 		}
 		purchases = append(purchases, purchase)
 	}
 	if err = rows.Err(); err != nil {
+		// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 		rows.Close()
 		return nil, 0, fmt.Errorf("iterate purchases: %w", err)
 	}
@@ -364,6 +366,7 @@ func (r *PurchaseRepository) Transition(ctx context.Context, id, libraryID, acto
 		for rows.Next() {
 			var line receiptLine
 			if err = rows.Scan(&line.bookID, &line.quantity, &line.unitCost); err != nil {
+				// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 				rows.Close()
 				return models.Purchase{}, fmt.Errorf("scan purchase receipt line: %w", err)
 			}

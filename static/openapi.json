@@ -15823,10 +15823,6 @@
           "volume": {
             "type": "integer"
           },
-          "status": {
-            "type": "string",
-            "nullable": true
-          },
           "tags": {
             "type": "string",
             "nullable": true
@@ -15838,10 +15834,6 @@
           "coverUrl": {
             "type": "string",
             "nullable": true
-          },
-          "score": {
-            "type": "number",
-            "nullable": true
           }
         },
         "required": [
@@ -15851,11 +15843,9 @@
           "editeur",
           "price",
           "volume",
-          "status",
           "tags",
           "categorie",
-          "coverUrl",
-          "score"
+          "coverUrl"
         ]
       },
       "PublicBookPage": {

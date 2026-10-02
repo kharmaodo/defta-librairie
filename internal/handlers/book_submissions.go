@@ -39,6 +39,7 @@ func (h *BookSubmissionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, h.maxBytes+multipartEnvelopeAllowance)
+	// #nosec G120 -- Request body is bounded with http.MaxBytesReader before multipart parsing.
 	if err := r.ParseMultipartForm(h.maxBytes + multipartEnvelopeAllowance); err != nil {
 		writeBookCoverError(w, services.ErrInvalidBook)
 		return
@@ -137,15 +138,24 @@ func submissionOptionalInteger(r *http.Request, name string) (*int, error) {
 
 var _ = errors.Is
 
-
 func (h *BookSubmissionHandler) List(w http.ResponseWriter, r *http.Request) {
-	if !h.enabled || h.service == nil { writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{"error":"covers_disabled"}); return }
+	if !h.enabled || h.service == nil {
+		writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "covers_disabled"})
+		return
+	}
 	limit := 30
-	if value := r.URL.Query().Get("limit"); value != "" { if parsed, err := strconv.Atoi(value); err == nil { limit = parsed } }
+	if value := r.URL.Query().Get("limit"); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
+			limit = parsed
+		}
+	}
 	claims, _ := auth.ClaimsFromContext(r.Context())
 	items, err := h.service.List(r.Context(), claims, r.URL.Query().Get("libraryId"), limit)
-	if err != nil { writeBookCoverError(w, err); return }
-	writeAuthJSON(w, http.StatusOK, map[string]interface{}{"results":items, "total":len(items)})
+	if err != nil {
+		writeBookCoverError(w, err)
+		return
+	}
+	writeAuthJSON(w, http.StatusOK, map[string]interface{}{"results": items, "total": len(items)})
 }
 
 type manualBookSubmissionDecisionRequest struct {
@@ -172,10 +182,16 @@ func (h *BookSubmissionHandler) DecideReview(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *BookSubmissionHandler) RetryFailed(w http.ResponseWriter, r *http.Request) {
-	if !h.enabled || h.service == nil { writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{"error":"covers_disabled"}); return }
+	if !h.enabled || h.service == nil {
+		writeAuthJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "covers_disabled"})
+		return
+	}
 	claims, _ := auth.ClaimsFromContext(r.Context())
-	if err := h.service.RetryFailed(r.Context(), claims, r.PathValue("id")); err != nil { writeBookSubmissionError(w, err); return }
-	writeAuthJSON(w, http.StatusAccepted, map[string]string{"id":r.PathValue("id"), "moderationStatus":"PENDING_SCAN", "decisionCode":"RETRY_REQUESTED"})
+	if err := h.service.RetryFailed(r.Context(), claims, r.PathValue("id")); err != nil {
+		writeBookSubmissionError(w, err)
+		return
+	}
+	writeAuthJSON(w, http.StatusAccepted, map[string]string{"id": r.PathValue("id"), "moderationStatus": "PENDING_SCAN", "decisionCode": "RETRY_REQUESTED"})
 }
 
 func writeBookSubmissionError(w http.ResponseWriter, err error) {

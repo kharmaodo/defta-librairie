@@ -50,6 +50,7 @@ func (r *CoverImportRepository) SearchReviewBooks(ctx context.Context, job Cover
 	for rows.Next() {
 		var c CoverImportReviewCandidate
 		if err = rows.Scan(&c.BookID, &c.Title, &c.Author, &c.Score, &c.HasActiveCover); err != nil {
+			// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 			rows.Close()
 			return nil, err
 		}
@@ -61,6 +62,7 @@ func (r *CoverImportRepository) SearchReviewBooks(ctx context.Context, job Cover
 		result = append(result, c)
 	}
 	err = rows.Err()
+	// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 	rows.Close()
 	if err != nil {
 		return nil, err

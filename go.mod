@@ -1,6 +1,6 @@
 module defta-librairie
 
-go 1.26.0
+go 1.26.7
 
 require (
 	github.com/joho/godotenv v1.5.1
@@ -14,7 +14,7 @@ require github.com/mattn/go-sqlite3 v1.14.48
 
 require (
 	github.com/HugoSmits86/nativewebp v1.3.0
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/image v0.46.0
 )
 

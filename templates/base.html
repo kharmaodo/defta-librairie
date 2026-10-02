@@ -5,10 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="فهرس رقمي سريع للبحث في كتب مكتبة دفتا">
     <title>{{.Title}} | دفتا</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="/static/css/fonts.css">
 </head>
 <body>
     <header class="site-header">
@@ -24,7 +22,6 @@
     <footer class="site-footer">
         <div class="container footer-inner">
             <p>{{GetMsg .Lang "footer_copyright"}}</p>
-            <p>{{GetMsg .Lang "footer_version"}} {{.Version}} · آخر تحديث {{.BuildDate}}</p>
         </div>
     </footer>
     <script src="/static/js/main.js" defer></script>

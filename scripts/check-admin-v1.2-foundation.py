@@ -50,10 +50,10 @@ for attribute in (
 ):
     require(attribute in HTML, f"attribut de navigation absent : {attribute}")
 
-require(len(re.findall(r"<dialog\b", HTML)) == 22, "vingt-deux dialogues statiques sont attendus")
+require(len(re.findall(r"<dialog\b", HTML)) == 23, "vingt-trois dialogues statiques sont attendus")
 require(
-    "<dialog " in SUPPLIER_RETURNS_JAVASCRIPT,
-    "le dialogue dynamique de retour fournisseur est absent",
+    'aria-labelledby="supplier-return-form-title"' in HTML,
+    "le dialogue statique de retour fournisseur est absent",
 )
 require(HTML.count('src="/static/js/admin-') >= 20, "au moins vingt modules admin sont attendus")
 require('src="/static/js/admin-summary.js"' in HTML, "module de synthèse absent")

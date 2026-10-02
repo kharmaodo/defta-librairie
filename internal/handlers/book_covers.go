@@ -66,6 +66,7 @@ func (h *BookCoverHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, h.maxBytes+multipartEnvelopeAllowance)
+	// #nosec G120 -- Request body is bounded with http.MaxBytesReader before multipart parsing.
 	if err = r.ParseMultipartForm(h.maxBytes + multipartEnvelopeAllowance); err != nil {
 		var maxBytesError *http.MaxBytesError
 		if errors.As(err, &maxBytesError) {
@@ -114,7 +115,7 @@ func (h *BookCoverHandler) Upload(w http.ResponseWriter, r *http.Request) {
 // book covers must not bypass the quarantine and NSFW decision workflow.
 func (h *BookCoverHandler) ModerationRequired(w http.ResponseWriter, r *http.Request) {
 	writeAuthJSON(w, http.StatusConflict, map[string]string{
-		"error": "cover_moderation_required",
+		"error":   "cover_moderation_required",
 		"message": "Existing book cover replacements require moderation",
 	})
 }

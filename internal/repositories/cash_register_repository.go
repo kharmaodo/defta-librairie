@@ -30,6 +30,7 @@ func (r *CashRegisterRepository) List(ctx context.Context, libraryID string, fil
 		return nil, 0, fmt.Errorf("count cash registers: %w", err)
 	}
 	listArgs := append(append([]interface{}{}, args...), limit, offset)
+	// #nosec G202 -- SQL fragments and identifiers are server constants/generated counters; all client values use bound parameters.
 	rows, err := r.db.QueryContext(ctx, `SELECT id,library_id,name,status,version,created_by,created_at,updated_at
 		FROM cash_registers`+where+` ORDER BY name COLLATE NOCASE LIMIT ? OFFSET ?`, listArgs...)
 	if err != nil {

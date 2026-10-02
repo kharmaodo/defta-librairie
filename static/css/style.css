@@ -90,3 +90,6 @@ button,input { font: inherit; } a { color: inherit; }
 }
 @media (max-width:420px) { .books-grid { grid-template-columns: 1fr; } .card-cover { height: 280px; } }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior: auto !important; transition: none !important; } }
+
+.public-table-cover { width:80px; height:auto; }
+.public-table-empty { text-align:center; padding:3rem; }

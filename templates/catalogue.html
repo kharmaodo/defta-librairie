@@ -37,7 +37,6 @@
                             <p class="author">{{if .Auteur.Valid}}{{.Auteur.String}}{{else}}مؤلف غير محدد{{end}}</p>
                             <div class="card-footer">
                                 <strong class="price">{{.Price}} دج</strong>
-                                <span class="status {{if eq .Status.String "متوفر"}}available{{else}}unavailable{{end}}">{{if .Status.Valid}}{{.Status.String}}{{else}}غير محدد{{end}}</span>
                             </div>
                         </div>
                     </article>
@@ -45,12 +44,11 @@
             </div>
             <div id="books-table-view" class="table-view" hidden>
                 <table class="book-table">
-                    <thead><tr><th>العنوان</th><th>المؤلف</th><th>الناشر</th><th>السعر</th><th>التصنيف</th><th>الحالة</th></tr></thead>
+                    <thead><tr><th>العنوان</th><th>المؤلف</th><th>الناشر</th><th>السعر</th><th>التصنيف</th></tr></thead>
                     <tbody>{{range .Books}}<tr>
                         <td><strong>{{.Title}}</strong></td><td>{{if .Auteur.Valid}}{{.Auteur.String}}{{else}}غير محدد{{end}}</td>
                         <td>{{if .Editeur.Valid}}{{.Editeur.String}}{{else}}غير محدد{{end}}</td><td>{{.Price}} دج</td>
                         <td>{{if .Categorie.Valid}}{{.Categorie.String}}{{else}}غير مصنف{{end}}</td>
-                        <td><span class="status {{if eq .Status.String "متوفر"}}available{{else}}unavailable{{end}}">{{if .Status.Valid}}{{.Status.String}}{{else}}غير محدد{{end}}</span></td>
                     </tr>{{end}}</tbody>
                 </table>
             </div>

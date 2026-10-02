@@ -2,39 +2,7 @@
   "use strict";
   const root = document.querySelector('#supplier-returns-panel');
   if (!root) return;
-  root.innerHTML = `
-    <div class="panel-heading purchase-heading"><h2>Retours fournisseurs</h2>
-      <button class="button primary" data-new type="button">Nouveau retour</button></div>
-    <form class="filters entity-form" data-filters>
-      <label>État<select name="status"><option value="">Tous</option><option>DRAFT</option><option>SHIPPED</option><option>CANCELLED</option></select></label>
-      <label data-root hidden>Librairie<select name="libraryId"></select></label>
-      <button class="button ghost">Actualiser</button>
-    </form>
-    <p class="alert" role="alert" data-error hidden></p>
-    <p class="scope-note">Expédier retire les quantités du stock. Un retour expédié reste conservé dans l’historique.</p>
-    <div class="table-wrap"><table><thead><tr><th scope="col">Référence</th><th scope="col">Motif</th><th scope="col">Total</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead><tbody></tbody></table></div>
-    <div class="pagination"><button class="button ghost" data-prev>Précédent</button><span data-page></span><button class="button ghost" data-next>Suivant</button></div>
-    <dialog class="modal sale-modal" aria-labelledby="supplier-return-form-title"><form class="entity-form" data-editor>
-      <h2 data-title id="supplier-return-form-title">Nouveau retour fournisseur</h2>
-      <div class="form-grid">
-        <label data-root hidden>Librairie<select name="libraryId"></select></label>
-        <label class="full">Achat réceptionné<select name="purchaseId" required></select></label>
-        <label class="full">Motif<textarea name="reason" minlength="3" maxlength="1000" required></textarea></label>
-        <label class="full">Référence fournisseur<input name="supplierReference" maxlength="160"></label>
-      </div>
-      <p class="hint" data-quantity-hint>Quantité zéro : article exclu du retour. Le serveur contrôle les quantités déjà réservées.</p>
-      <div data-lines class="form-grid"></div>
-      <section data-costs hidden aria-label="Valorisation du retour expédié">
-        <h3>Valorisation à l’expédition</h3>
-        <p class="hint">Montants en F CFA. Écart = montant fournisseur − valeur du stock sorti. Un écart positif signifie que le montant fournisseur est supérieur à la valeur du stock sorti.</p>
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Coûts par livre, défilement horizontal">
-          <table><thead><tr><th scope="col">Livre</th><th scope="col">Quantité</th><th scope="col">Montant fournisseur</th><th scope="col">CMP figé</th><th scope="col">Valeur du stock sorti</th><th scope="col">Écart</th></tr></thead><tbody data-cost-rows></tbody></table>
-        </div>
-        <p class="hint">« Indisponible » indique un coût inconnu. Ces montants historiques ne représentent pas un remboursement reçu.</p>
-      </section>
-      <p class="alert" role="alert" data-form-error hidden></p>
-      <div class="modal-actions"><button type="button" class="button ghost" data-close>Fermer</button><button class="button primary" data-save>Enregistrer</button></div>
-    </form></dialog>`;
+
   const $ = (s) => root.querySelector(s);
   const form = $('[data-editor]'), filters = $('[data-filters]'), dialog = $('dialog');
   let isRoot = false, offset = 0, editing = null, busy = false, purchaseGeneration = 0;

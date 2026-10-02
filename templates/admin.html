@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Tableau de bord Defta Librairie">
   <title>{{.Title}} · Defta Librairie</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Noto+Kufi+Arabic:wght@600;700&display=swap" rel="stylesheet">
   <script src="/static/js/admin-theme.js"></script>\n  <link rel="stylesheet" href="/static/css/admin.css">
+<link rel="stylesheet" href="/static/css/fonts.css">
 </head>
 <body class="dashboard-page" data-page="dashboard">
   <a class="skip-link" href="#dashboard-main">Aller au contenu principal</a>
@@ -139,7 +137,7 @@
         <label>Seuil par défaut des nouveaux livres<input name="defaultLowStockThreshold" type="number" min="0" max="1000000" required></label>
         <label>Texte en bas des impressions<textarea name="printFooter" maxlength="500"></textarea></label>
         <label>Logo PNG ou JPEG (128 Kio, 1 024 × 1 024 maximum)<input name="logo" type="file" accept="image/png,image/jpeg"></label>
-        <img data-logo alt="Logo de la librairie" style="max-width:120px;max-height:100px" hidden>
+        <img data-logo alt="Logo de la librairie" class="library-logo" hidden>
         <label><input type="checkbox" name="removeLogo">Supprimer le logo</label>
         <p>Les impressions utilisent les coordonnées actuelles. Les seuils des livres existants sont conservés.</p>
         <button type="submit" class="button primary">Enregistrer</button>
@@ -171,7 +169,7 @@
         <button type="submit" class="button ghost">Actualiser</button>
       </form>
       <p data-notice role="status" aria-live="polite"></p><p data-error role="alert" hidden></p>
-      <div data-results hidden><div style="overflow-x:auto"><table><thead><tr><th scope="col">Catégorie</th><th scope="col">Ressource</th><th scope="col">Détail</th></tr></thead><tbody></tbody></table></div>
+      <div data-results hidden><div class="table-wrap"><table><thead><tr><th scope="col">Catégorie</th><th scope="col">Ressource</th><th scope="col">Détail</th></tr></thead><tbody></tbody></table></div>
       <div class="pagination"><button type="button" data-prev>Précédent</button><span data-page></span><button type="button" data-next>Suivant</button></div></div>
     </section>
 
@@ -424,7 +422,39 @@
       </div>
       <div class="pagination"><button id="sessions-previous" class="button ghost" type="button">Précédent</button><span id="sessions-page-label" class="hint">Page 1</span><button id="sessions-next" class="button ghost" type="button">Suivant</button></div>
     </section>
-    <section class="panel" id="supplier-returns-panel" tabindex="-1" aria-label="Retours fournisseurs"></section>
+    <section class="panel" id="supplier-returns-panel" tabindex="-1" aria-label="Retours fournisseurs">
+    <div class="panel-heading purchase-heading"><h2>Retours fournisseurs</h2>
+      <button class="button primary" data-new type="button">Nouveau retour</button></div>
+    <form class="filters entity-form" data-filters>
+      <label>État<select name="status"><option value="">Tous</option><option>DRAFT</option><option>SHIPPED</option><option>CANCELLED</option></select></label>
+      <label data-root hidden>Librairie<select name="libraryId"></select></label>
+      <button class="button ghost">Actualiser</button>
+    </form>
+    <p class="alert" role="alert" data-error hidden></p>
+    <p class="scope-note">Expédier retire les quantités du stock. Un retour expédié reste conservé dans l’historique.</p>
+    <div class="table-wrap"><table><thead><tr><th scope="col">Référence</th><th scope="col">Motif</th><th scope="col">Total</th><th scope="col">État</th><th scope="col">Actions</th></tr></thead><tbody></tbody></table></div>
+    <div class="pagination"><button class="button ghost" data-prev>Précédent</button><span data-page></span><button class="button ghost" data-next>Suivant</button></div>
+    <dialog class="modal sale-modal" aria-labelledby="supplier-return-form-title"><form class="entity-form" data-editor>
+      <h2 data-title id="supplier-return-form-title">Nouveau retour fournisseur</h2>
+      <div class="form-grid">
+        <label data-root hidden>Librairie<select name="libraryId"></select></label>
+        <label class="full">Achat réceptionné<select name="purchaseId" required></select></label>
+        <label class="full">Motif<textarea name="reason" minlength="3" maxlength="1000" required></textarea></label>
+        <label class="full">Référence fournisseur<input name="supplierReference" maxlength="160"></label>
+      </div>
+      <p class="hint" data-quantity-hint>Quantité zéro : article exclu du retour. Le serveur contrôle les quantités déjà réservées.</p>
+      <div data-lines class="form-grid"></div>
+      <section data-costs hidden aria-label="Valorisation du retour expédié">
+        <h3>Valorisation à l’expédition</h3>
+        <p class="hint">Montants en F CFA. Écart = montant fournisseur − valeur du stock sorti. Un écart positif signifie que le montant fournisseur est supérieur à la valeur du stock sorti.</p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Coûts par livre, défilement horizontal">
+          <table><thead><tr><th scope="col">Livre</th><th scope="col">Quantité</th><th scope="col">Montant fournisseur</th><th scope="col">CMP figé</th><th scope="col">Valeur du stock sorti</th><th scope="col">Écart</th></tr></thead><tbody data-cost-rows></tbody></table>
+        </div>
+        <p class="hint">« Indisponible » indique un coût inconnu. Ces montants historiques ne représentent pas un remboursement reçu.</p>
+      </section>
+      <p class="alert" role="alert" data-form-error hidden></p>
+      <div class="modal-actions"><button type="button" class="button ghost" data-close>Fermer</button><button class="button primary" data-save>Enregistrer</button></div>
+    </form></dialog></section>
   <section id="book-submissions-panel" class="panel"><div class="panel-heading"><div><p class="eyebrow">Modération</p><h2>Soumissions de couvertures</h2></div><button class="button ghost" type="button">Actualiser</button></div><p data-submission-notice class="hint"></p><div class="table-wrap"><table><thead><tr><th scope="col">Titre</th><th scope="col">État</th><th scope="col">Score</th><th scope="col">Décision</th><th scope="col">Livre créé</th><th scope="col">Actions</th></tr></thead><tbody></tbody></table></div></section>
 
   </main>
@@ -781,7 +811,7 @@
     </form>
   </dialog>
 
-  <footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>
+  <footer class="admin-footer">Defta Librairie</footer>
   <script src="/static/js/admin-navigation.js" defer></script>
   <script src="/static/js/admin-http.js" defer></script>
   <script src="/static/js/admin-delete-confirmation.js" defer></script>

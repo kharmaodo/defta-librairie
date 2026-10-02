@@ -28,6 +28,7 @@ func (r *CustomerRepository) List(ctx context.Context, libraryID string, filter 
 		return nil, 0, fmt.Errorf("count customers: %w", err)
 	}
 	listArgs := append(append([]interface{}{}, args...), limit, offset)
+	// #nosec G202 -- SQL fragments and identifiers are server constants/generated counters; all client values use bound parameters.
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id,library_id,reference,name,COALESCE(phone,''),COALESCE(email,''),
 		       COALESCE(address,''),COALESCE(notes,''),status,version,created_by,created_at,updated_at

@@ -195,11 +195,13 @@ func Run(ctx context.Context, db *sql.DB, manifest Manifest, root string, baseli
 				return Report{}, ErrInvalidEvidence
 			}
 		}
+		// #nosec G304 -- Local operator-selected path, not an HTTP input; read-only validation/restore tool or startup database configuration.
 		file, err := os.Open(filepath.Join(root, c.Image))
 		if err != nil {
 			return Report{}, ErrInvalidEvidence
 		}
 		image, err := covers.NewValidator(10*1024*1024, 24_000_000).Validate(file, "")
+		// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 		file.Close()
 		if err != nil {
 			return Report{}, ErrInvalidEvidence

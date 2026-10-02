@@ -74,7 +74,8 @@ func runCoverImportMatchWorker(ctx context.Context, cfg *config.Config, db *sql.
 				continue
 			}
 			metadata, metaErr := message.Metadata()
-			if metaErr == nil && int(metadata.NumDelivered) >= cfg.CoverWorkerMaxDeliver {
+			// #nosec G115 -- Value is validated positive and bounded before conversion; no unsigned-to-signed narrowing.
+			if metaErr == nil && metadata.NumDelivered >= uint64(cfg.CoverWorkerMaxDeliver) {
 				if failErr := service.Fail(ctx, event.JobID, event.LibraryID); failErr == nil || services.IsMatchingAlreadyProcessed(failErr) {
 					logger.Error("cover_import_match_failed_terminal", "job_id", event.JobID, "library_id", event.LibraryID, "error", err)
 					_ = message.Ack()

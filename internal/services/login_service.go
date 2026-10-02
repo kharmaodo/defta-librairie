@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 var (
@@ -49,6 +50,10 @@ func NewLoginService(users loginUserStore, tokens *auth.TokenManager) (*LoginSer
 
 func (s *LoginService) Login(ctx context.Context, username, password, ipAddress string) (LoginResult, error) {
 	username = strings.TrimSpace(username)
+	if len(username) > 256 || len(password) > 256*1024 || !utf8.ValidString(username) || !utf8.ValidString(password) {
+		s.auditUnknown(ctx, ipAddress)
+		return LoginResult{}, ErrInvalidCredentials
+	}
 	user, err := s.users.FindByUsername(ctx, username)
 	if errors.Is(err, repositories.ErrUserNotFound) {
 		_, _ = auth.VerifyPassword(password, s.dummyHash)
@@ -82,7 +87,7 @@ func (s *LoginService) Login(ctx context.Context, username, password, ipAddress 
 			return LoginResult{}, idErr
 		}
 		stamp := now.Format(time.RFC3339Nano)
-		if err = s.users.RecordFailedLogin(ctx, user.ID, auditID, ipAddress, stamp, now.Add(lockDuration).Format(time.RFC3339Nano)); err != nil {
+		if err = s.users.RecordFailedLogin(ctx, user.ID, auditID, ipAddress, stamp, now.Add(progressiveLockDuration(user.FailedLoginAttempts)).Format(time.RFC3339Nano)); err != nil {
 			return LoginResult{}, err
 		}
 		return LoginResult{}, ErrInvalidCredentials
@@ -109,4 +114,16 @@ func (s *LoginService) auditUnknown(ctx context.Context, ipAddress string) {
 		return
 	}
 	_ = s.users.RecordUnknownLogin(ctx, auditID, ipAddress, s.now().UTC().Format(time.RFC3339Nano))
+}
+
+// Preserve the initial 15-minute lock and increase repeated failures after expiry.
+// A successful login resets the stored counter. The cap also avoids overflow.
+func progressiveLockDuration(previousFailures int) time.Duration {
+	if previousFailures < 5 {
+		return lockDuration
+	}
+	if previousFailures < 10 {
+		return 2 * lockDuration
+	}
+	return 4 * lockDuration
 }

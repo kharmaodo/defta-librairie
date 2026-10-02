@@ -18,7 +18,7 @@ def require(condition: bool, message: str) -> None:
 require(HTML.count("data-dashboard-nav-group") == 5, "cinq groupes thématiques attendus")
 require(HTML.count("data-dashboard-nav-link") == 22, "vingt-deux liens de rubrique attendus")
 require(
-    '<footer class="admin-footer">Defta Librairie · {{.Version}} · {{.BuildDate}}</footer>' in HTML,
+    '<footer class="admin-footer">Defta Librairie</footer>' in HTML,
     "le contenu contractuel du footer a changé",
 )
 

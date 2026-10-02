@@ -6,6 +6,7 @@ import (
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -53,6 +54,16 @@ func TestLoginServiceSuccessAndInvalidPassword(t *testing.T) {
 	if err != nil || result.AccessToken == "" || store.succeeded != 1 {
 		t.Fatalf("successful login: token=%v succeeded=%d err=%v", result.AccessToken != "", store.succeeded, err)
 	}
+	// Passwords previously allowed by the HTTP body limit must remain usable.
+	longPassword := strings.Repeat("x", 5000) + "A1!"
+	longHash, hashErr := auth.HashPassword(longPassword)
+	if hashErr != nil {
+		t.Fatal(hashErr)
+	}
+	store.user.PasswordHash = longHash
+	if _, loginErr := service.Login(context.Background(), "owner", longPassword, "127.0.0.1"); loginErr != nil {
+		t.Fatalf("existing long password rejected: %v", loginErr)
+	}
 	_, err = service.Login(context.Background(), "owner", "Wrong-Password-2026", "127.0.0.1")
 	if !errors.Is(err, ErrInvalidCredentials) || store.failed != 1 {
 		t.Fatalf("invalid login: failed=%d err=%v", store.failed, err)
@@ -69,5 +80,16 @@ func TestLoginServiceUnknownUserUsesGenericError(t *testing.T) {
 	_, err = service.Login(context.Background(), "missing", "Any-Password-2026", "127.0.0.1")
 	if !errors.Is(err, ErrInvalidCredentials) || store.unknown != 1 {
 		t.Fatalf("unknown login: audits=%d err=%v", store.unknown, err)
+	}
+}
+
+func TestProgressiveLoginLock(t *testing.T) {
+	for _, tc := range []struct {
+		failures int
+		want     time.Duration
+	}{{0, 15 * time.Minute}, {4, 15 * time.Minute}, {5, 30 * time.Minute}, {9, 30 * time.Minute}, {10, time.Hour}, {100000, time.Hour}} {
+		if got := progressiveLockDuration(tc.failures); got != tc.want {
+			t.Fatalf("failures=%d duration=%v want=%v", tc.failures, got, tc.want)
+		}
 	}
 }

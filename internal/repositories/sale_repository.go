@@ -60,6 +60,7 @@ func (r *SaleRepository) List(ctx context.Context, libraryID string, filter mode
 	for rows.Next() {
 		sale, scanErr := scanSale(rows)
 		if scanErr != nil {
+			// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 			rows.Close()
 			return nil, 0, scanErr
 		}
@@ -67,6 +68,7 @@ func (r *SaleRepository) List(ctx context.Context, libraryID string, filter mode
 		sales = append(sales, sale)
 	}
 	if err = rows.Err(); err != nil {
+		// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 		rows.Close()
 		return nil, 0, fmt.Errorf("iterate sales: %w", err)
 	}
@@ -354,12 +356,14 @@ func (r *SaleRepository) Transition(ctx context.Context, id, libraryID, actorID 
 	for rows.Next() {
 		var line transitionLine
 		if err = rows.Scan(&line.bookID, &line.quantity, &line.unitCost); err != nil {
+			// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 			rows.Close()
 			return models.Sale{}, fmt.Errorf("scan sale transition line: %w", err)
 		}
 		lines = append(lines, line)
 	}
 	if err = rows.Err(); err != nil {
+		// #nosec G104 -- Cleanup operation; primary read/scan error is preserved and deferred rollback/close still applies.
 		rows.Close()
 		return models.Sale{}, fmt.Errorf("iterate sale transition lines: %w", err)
 	}

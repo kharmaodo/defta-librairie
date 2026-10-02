@@ -1592,3 +1592,5 @@ tbody tr:last-child td {
     flex-direction: column;
   }
 }
+
+.library-logo { max-width:120px; max-height:100px; }

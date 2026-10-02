@@ -4,6 +4,7 @@ import (
 	"defta-librairie/internal/ocr"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -14,6 +15,7 @@ import (
 
 type Config struct {
 	Port                      string
+	PublicOrigin              string
 	DBPath                    string
 	Version                   string
 	BuildDate                 string
@@ -67,6 +69,7 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		Port:                      getEnv("PORT", "8080"),
+		PublicOrigin:              getEnv("PUBLIC_ORIGIN", ""),
 		DBPath:                    getEnv("DB_PATH", "./data/defta.db"),
 		Version:                   getEnv("VERSION", "0.1.0-dev"),
 		BuildDate:                 getEnv("BUILD_DATE", "unknown"),
@@ -88,7 +91,8 @@ func Load() (*Config, error) {
 		MinIOSourceRetentionHours: getEnvInt("MINIO_SOURCE_RETENTION_HOURS", 24),
 		// v1.7.0 accepts up to 10 MiB per cover; the import total is enforced
 		// separately by the HTTP handler.
-		CoverMaxBytes:          getEnvPositiveInt64("COVER_MAX_BYTES", 10*1024*1024),
+		CoverMaxBytes: getEnvPositiveInt64("COVER_MAX_BYTES", 10*1024*1024),
+		// #nosec G115 -- Value is validated positive and bounded before conversion; no unsigned-to-signed narrowing.
 		CoverMaxPixels:         uint64(getEnvPositiveInt64("COVER_MAX_PIXELS", 24_000_000)),
 		NATSURL:                getEnv("NATS_URL", "nats://localhost:4222"),
 		NATSUser:               getEnv("NATS_USER", ""),
@@ -111,6 +115,14 @@ func Load() (*Config, error) {
 		OCRLanguage:            getEnv("OCR_LANGUAGE", "ara"),
 		OCRTimeout:             time.Duration(getEnvPositiveInt64("OCR_TIMEOUT_SECONDS", 20)) * time.Second,
 		NSFWModerationEndpoint: getEnv("NSFW_MODERATION_ENDPOINT", "http://nsfw-moderator:8090"),
+	}
+
+	if cfg.PublicOrigin != "" {
+		origin, err := url.Parse(cfg.PublicOrigin)
+		if err != nil || origin.Scheme != "https" || origin.Host == "" || origin.User != nil || origin.Path != "" || origin.RawQuery != "" || origin.Fragment != "" {
+			return nil, fmt.Errorf("PUBLIC_ORIGIN must be an HTTPS origin without path")
+		}
+		cfg.AuthCookieSecure = true
 	}
 
 	flag, err := strconv.ParseBool(getEnv("OCR_EXPERIMENTAL_ENABLED", "false"))

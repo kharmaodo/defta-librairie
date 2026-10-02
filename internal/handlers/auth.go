@@ -254,6 +254,7 @@ func (h *AuthHandler) setRefreshCookie(w http.ResponseWriter, token string, expi
 	if maxAge < 1 {
 		maxAge = 1
 	}
+	// #nosec G124 -- Secure is forced by PUBLIC_ORIGIN in production; local HTTP is supported. CSRF cookie must be readable by same-origin JS.
 	http.SetCookie(w, &http.Cookie{
 		Name: refreshCookieName, Value: token, Path: "/api/auth",
 		Expires: expires, MaxAge: maxAge, HttpOnly: true, Secure: h.cookieSecure,
@@ -262,6 +263,7 @@ func (h *AuthHandler) setRefreshCookie(w http.ResponseWriter, token string, expi
 }
 
 func (h *AuthHandler) clearRefreshCookie(w http.ResponseWriter) {
+	// #nosec G124 -- Secure is forced by PUBLIC_ORIGIN in production; local HTTP is supported. CSRF cookie must be readable by same-origin JS.
 	http.SetCookie(w, &http.Cookie{
 		Name: refreshCookieName, Value: "", Path: "/api/auth",
 		Expires: time.Unix(1, 0), MaxAge: -1, HttpOnly: true,

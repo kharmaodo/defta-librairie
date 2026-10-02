@@ -28,6 +28,7 @@ func (r *SupplierRepository) List(ctx context.Context, libraryID, query string, 
 		return nil, 0, fmt.Errorf("count suppliers: %w", err)
 	}
 	listArgs := append(append([]interface{}{}, args...), limit, offset)
+	// #nosec G202 -- SQL fragments and identifiers are server constants/generated counters; all client values use bound parameters.
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, library_id, name, COALESCE(contact_name,''), COALESCE(phone,''),
 		       COALESCE(email,''), COALESCE(address,''), status, version, created_by, created_at, updated_at
