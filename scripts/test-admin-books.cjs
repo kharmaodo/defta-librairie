@@ -153,3 +153,28 @@ test('failed cover replacement explains that book information was already saved'
  assert.equal(f.version.value,4);
  assert.equal(h.get('#book-dialog').closed,0);
 });
+
+
+test('category selection sends a primary category together with relational tags',async()=>{
+ const h=setup();h.module.init();
+ const f=h.get('#book-form').elements;
+ f.id.value='12';f.version.value='3';
+ f.categoryIds.options=[{value:'2',selected:true}];
+ f.tagIds.options=[{value:'tag-1',selected:true}];
+ await h.event('#book-form','submit');
+ const payload=JSON.parse(h.calls.find(c=>c.options?.method==='PUT').options.body);
+ assert.deepEqual(payload.categoryIds,[2]);assert.equal(payload.primaryCategoryId,2);
+ assert.deepEqual(payload.tagIds,['tag-1']);
+});
+test('editing preserves the selected primary category and handles its removal',async()=>{
+ for(const selection of [[1,2],[1],[]]){
+  const existing={...book,categoryIds:[1,2],primaryCategoryId:2};
+  const h=setup(async()=>page(0,[existing],1));h.module.init();await h.module.reload();
+  await h.event('#books-body');await new Promise(resolve=>setImmediate(resolve));
+  h.get('#book-form').elements.categoryIds.options=selection.map(id=>({value:String(id),selected:true}));
+  await h.event('#book-form','submit');
+  const payload=JSON.parse(h.calls.find(c=>c.options?.method==='PUT').options.body);
+  assert.deepEqual(payload.categoryIds,selection);
+  assert.equal(payload.primaryCategoryId,selection.includes(2)?2:selection[0]);
+ }
+});
