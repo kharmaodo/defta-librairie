@@ -1,9 +1,10 @@
-# Préparation v1.7.2 — correctif de sécurité
+# Livraison v1.7.2 — correctif de sécurité
 
-Préparée le 2 octobre 2026 depuis `develop` après fusion de la PR #203,
-commit de départ `c094673c354f14d3ed3f5b061788b2a8ff4dbd7f`.
-Ce SHA n'est pas annoncé comme futur SHA tagué. Aucun tag/artefact v1.7.2
-n'est publié par cette préparation. Ne pas modifier le tag v1.7.1.
+Publiée le 2 octobre 2026 : tag annoté immuable `v1.7.2` sur
+`92536cfdab6be8851be642c926b1a84cfc1746ab`. Audit #203, préparation #204
+et correctif du formulaire catégories/tags #205 fusionnés ; recette locale
+confirmée par l'opérateur. [Empreintes et preuves](RELEASE_ARTIFACTS.md).
+La v1.7.1 reste inchangée. Le contrôle du transport en production reste distinct.
 
 ## Périmètre et preuves disponibles
 
@@ -67,7 +68,7 @@ pour cette recette HTTP locale. Le `.env` existant reste privé et intact.
 DEFTA_RECETTE_DIR=$(mktemp -d "$PWD/data/recette-v1.7.2-XXXXXX")
 DEFTA_BACKUP_DIR="$DEFTA_RECETTE_DIR/backup" bash scripts/backup-db.sh
 # Reprendre le chemin de sauvegarde affiché, puis :
-python3 scripts/restore-db.py --source <SAUVEGARDE_VERIFIEE> \
+python3 scripts/restore-db.py <SAUVEGARDE_VERIFIEE> \
   --output "$DEFTA_RECETTE_DIR/defta-restored.db"
 ```
 
@@ -120,8 +121,10 @@ contenant des secrets a été enregistrée, restreindre l'accès et renouveler
 JWT/MinIO/NATS concernés selon la procédure opérateur. Ne pas copier ces
 journaux dans une issue publique et ne pas envoyer de secrets pour vérification.
 
-## Publication après fusion, gate et recette validés
+## Procédure de publication — exécutée pour v1.7.2
 
+Les commandes ci-dessous décrivent la procédure déjà exécutée ; ne pas recréer
+ni remplacer le tag v1.7.2 existant. Pour une prochaine version, adapter tag et SHA.
 Relever le SHA final de develop, preuves CI et recette. Le tag annoté doit
 référencer ce SHA exact, pas le SHA de départ ni un ancien commit de v1.7.1 :
 
@@ -166,12 +169,12 @@ de v1.7.1 réintroduit l'ancien runtime et les problèmes de l'audit : préfére
 correctif en avant, et encadrer tout retour temporaire selon le risque réel.
 Le rollback OCR reste le flag false ; aucune activation générale par ce jalon.
 
-## État à compléter
+## État vérifié au 2 octobre 2026
 
 | Preuve | État |
 |---|---|
 | Audit #203 fusionné | Confirmé : c094673 |
-| Gate sur le SHA final après fusion de cette préparation | À relever |
-| Recette locale v1.7.2 / copie restaurée / ressources séparées | À consigner |
+| Gates sur le SHA tagué `92536cf` | Quatre workflows post-fusion verts ; liens dans RELEASE_ARTIFACTS.md |
+| Recette locale v1.7.2 / copie restaurée / ressources séparées | Confirmée par l’opérateur, catégories/tags retestés après #205 |
 | TLS réel et traitement des anciens secrets/journaux | À vérifier selon déploiement |
-| Tag et artefacts v1.7.2 / hashes / digest | Non publiés à ce stade |
+| Tag et artefacts v1.7.2 / hashes / digest | Publiés et archives téléchargées/vérifiées ; preuves dans RELEASE_ARTIFACTS.md |

@@ -1,6 +1,6 @@
 # Procédures de release
 
-La préparation actuelle est le [correctif de sécurité v1.7.2](RELEASE_V1_7_2.md), avec OCR expérimental désactivé par défaut. La [v1.7.1](RELEASE_V1_7_1.md) publiée et la procédure historique v1.6.0 restent des références pour leurs artefacts.
+Le [correctif de sécurité v1.7.2](RELEASE_V1_7_2.md) est publié sur `92536cf` et sa recette locale WSL est validée. Les [preuves de publication](RELEASE_ARTIFACTS.md) consignent empreintes et digest ; le contrôle du transport en production reste distinct. OCR expérimental désactivé par défaut. La [v1.7.1](RELEASE_V1_7_1.md) publiée et la procédure historique v1.6.0 restent des références pour leurs artefacts.
 
 # Préparation de la version 1.6.0
 
