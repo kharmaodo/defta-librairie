@@ -1,9 +1,12 @@
-# Candidat de release v1.7.1
+# Release v1.7.1
 
 Préparation du 1er octobre 2026, depuis `develop` après la fusion #200
 (`59295af`). Ce SHA est le point de départ, pas le futur SHA tagué. Les
 US-1712 à US-1717 sont livrées dans le périmètre expérimental accepté.
-Le tag, les artefacts et le déploiement ne sont pas encore publiés.
+Le tag annoté et les artefacts ont été publiés le 2 octobre 2026 sur
+`499825752cf1b306cb4d6bca0655fa9fc095c434`. Les [preuves d’artefacts](RELEASE_ARTIFACTS.md#version-171--2-octobre-2026)
+consignent les CI, SHA256 et digest. Le déploiement reste à confirmer.
+La procédure ci-dessous reste la référence de publication ; ne pas recréer le tag.
 
 ## Périmètre et limites
 
