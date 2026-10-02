@@ -46,6 +46,8 @@ jobs:
           for name in MINIO_ACCESS_KEY MINIO_SECRET_KEY NATS_USER NATS_PASSWORD; do
             case "$name" in
               MINIO_ACCESS_KEY|NATS_USER) value="ci$(openssl rand -hex 8)" ;;
+              # NATS parses unquoted environment values; a numeric/exponent prefix can fail.
+              NATS_PASSWORD) value="ci$(openssl rand -hex 24)" ;;
               *) value="$(openssl rand -hex 24)" ;;
             esac
             echo "::add-mask::$value"
