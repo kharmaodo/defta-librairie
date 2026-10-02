@@ -1701,3 +1701,12 @@ Le [matching de qualité US-1715](docs/OCR_MATCHING_QUALITY_V1_7_1.md) utilise l
 L’[US-1716](docs/OCR_ACCEPTANCE_V1_7_1.md) est clôturée sur décision du propriétaire pour la livraison du comparateur Go, du gate qualité/mémoire et du protocole de rollback. L’OCR arabe reste expérimental, avec flag désactivé par défaut. La recette sur couvertures réelles est suivie séparément avant activation générale ; la clôture ne valide ni la qualité arabe ni les seuils proposés.
 
 US-1717 est clôturée après revue de la [recherche manuelle SAFE et de sa recette automatisée](docs/MANUAL_COVER_MATCHING.md) : trois suggestions maximum, aperçu privé, rejet persistant et remplacement confirmé. L’ancienne couverture reste disponible si le traitement de la nouvelle échoue ; cette recherche ne dépend pas du flag OCR expérimental.
+
+### Livraison du correctif de sécurité v1.7.2
+
+L'audit applicatif est fusionné (PR #203). La [préparation v1.7.2](docs/RELEASE_V1_7_2.md)
+détaille le gate complet, la recette locale/WSL, les archives Go 1.26.7+ et les
+contrôles de production. [Rapport de sécurité](docs/SECURITY_AUDIT_V1_7_2.md) et
+[inventaire des routes](docs/SECURITY_ROUTES_V1_7_2.md). Le tag v1.7.1 reste immuable ;
+aucun tag v1.7.2 n'est annoncé comme publié par cette préparation. PUBLIC_ORIGIN
+reste vide pour l'usage HTTP local ; aucune modification automatique du .env.

@@ -6,7 +6,7 @@ on:
       tag:
         description: Existing release tag to build
         required: true
-        default: v1.7.1
+        default: v1.7.2
 
 permissions:
   contents: write
@@ -48,42 +48,15 @@ jobs:
       - name: Build and package executables
         shell: bash
         run: |
-          set -euo pipefail
-          version="${RELEASE_TAG#v}"
-          build_date="$(date -u +%Y-%m-%d)"
-          staging="$(mktemp -d)"
-          trap 'rm -rf "$staging"' EXIT
-          mkdir -p dist
+          bash scripts/build-release-packages.sh "${RELEASE_TAG#v}"
 
-          package_windows() {
-            local name="defta-librairie-${version}-windows-amd64"
-            mkdir -p "$staging/$name"
-            CGO_ENABLED=1 GOOS=windows GOARCH=amd64 \
-              CC=x86_64-w64-mingw32-gcc \
-              go build -trimpath -tags fts5 -ldflags="-s -w" \
-                -o "$staging/$name/defta-librairie.exe" ./cmd
-            cp -R templates static .env.example README.md "$staging/$name/"
-            (cd "$staging" && zip -qr "$GITHUB_WORKSPACE/dist/$name.zip" "$name")
-          }
+      - name: Verify archive contents and compiled Go version
+        run: |
+          python3 scripts/check-release-packages.py --version "${RELEASE_TAG#v}" \
+            --commit "$(git rev-parse HEAD)" dist/*.zip dist/*.tar.gz
+          (cd dist && sha256sum -c SHA256SUMS)
 
-          package_linux_amd64() {
-            local name="defta-librairie-${version}-linux-amd64"
-            mkdir -p "$staging/$name"
-            CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
-              go build -trimpath -tags fts5 -ldflags="-s -w" \
-                -o "$staging/$name/defta-librairie" ./cmd
-            cp -R templates static .env.example README.md "$staging/$name/"
-            tar -C "$staging" -czf "dist/$name.tar.gz" "$name"
-          }
-
-          package_windows
-          package_linux_amd64
-
-          printf 'VERSION=%s\nBUILD_DATE=%s\n' "$version" "$build_date" > dist/BUILD-INFO.txt
-          (cd dist && sha256sum *.zip *.tar.gz > SHA256SUMS)
-          file "$staging"/*/defta-librairie*
-
-      - name: Create or update the GitHub release
+      - name: Create the GitHub release or upload missing assets
         shell: bash
         run: |
           set -euo pipefail
@@ -93,5 +66,4 @@ jobs:
               --generate-notes
           fi
           gh release upload "$RELEASE_TAG" \
-            dist/*.zip dist/*.tar.gz dist/SHA256SUMS dist/BUILD-INFO.txt \
-            --clobber
+            dist/*.zip dist/*.tar.gz dist/SHA256SUMS dist/BUILD-INFO.txt
