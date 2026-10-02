@@ -13,6 +13,7 @@
 		const listCoverURLs = new Set();
 		let coversAvailable = true;
 		let bookSubmissionPending = false;
+		let primaryCategoryId = null;
 		const defaultCover = "/static/img/book-cover-placeholder.svg";
 
 		function setCoverImage(image, url) {
@@ -160,6 +161,7 @@
 			resetBookSubmissionState();
 			resetCoverState();
 			form.reset();
+			primaryCategoryId = book?.primaryCategoryId ?? null;
 			form.elements.cover.disabled = false;
 			form.elements.id.value = book ? book.id : "";
 			form.elements.version.value = book ? book.version : "";
@@ -235,7 +237,10 @@
 				tagIds: selectedValues(form.elements.tagIds)
 			};
 			const categoryIds = selectedValues(form.elements.categoryIds).map(Number);
-			if (categoryIds.length) payload.categoryIds = categoryIds;
+			payload.categoryIds = categoryIds;
+			if (categoryIds.length) {
+				payload.primaryCategoryId = categoryIds.includes(primaryCategoryId) ? primaryCategoryId : categoryIds[0];
+			}
 			if (form.elements.publisherId.value) payload.publisherId = Number(form.elements.publisherId.value);
 			if (isRoot() && form.elements.libraryId.value) payload.libraryId = form.elements.libraryId.value;
 			if (form.elements.id.value) payload.version = Number(form.elements.version.value);
