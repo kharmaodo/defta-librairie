@@ -84,7 +84,11 @@ require(
 )
 require(
     ".github/workflows/release-binaries.yml",
-    ("GOOS=windows GOARCH=amd64", "gcc-mingw-w64-x86-64"),
+    ("scripts/build-release-packages.sh", "gcc-mingw-w64-x86-64"),
+)
+require(
+    "scripts/build-release-packages.sh",
+    ("GOOS=windows GOARCH=amd64", "CGO_ENABLED=1", "CC=x86_64-w64-mingw32-gcc", "GOOS=linux GOARCH=amd64"),
 )
 require(
     ".dockerignore",
