@@ -53,6 +53,10 @@ de reset/clean sur un checkout contenant des modifications utilisateur.
 
 ## Recette locale Linux/WSL sur une copie
 
+Le [guide WSL et ngrok](RECETTE_WSL_NGROK.md) fournit désormais le script
+`run-recette.py` pour lancer les services de recette déjà préparés, en HTTP
+local ou via un tunnel HTTPS, sans charger le `.env` existant.
+
 La recette v1.7.1 déjà réalisée ne remplace pas celle du correctif. Garder le
 relais Windows 127.0.0.1 → ::1 qui fonctionne ; aucune règle portproxy ni
 élévation n'est nécessaire pour ce jalon. `PUBLIC_ORIGIN` doit rester vide
