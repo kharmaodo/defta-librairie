@@ -50,7 +50,7 @@ func NewLoginService(users loginUserStore, tokens *auth.TokenManager) (*LoginSer
 
 func (s *LoginService) Login(ctx context.Context, username, password, ipAddress string) (LoginResult, error) {
 	username = strings.TrimSpace(username)
-	if len(username) > 256 || len(password) > 4096 || !utf8.ValidString(username) || !utf8.ValidString(password) {
+	if len(username) > 256 || len(password) > 256*1024 || !utf8.ValidString(username) || !utf8.ValidString(password) {
 		s.auditUnknown(ctx, ipAddress)
 		return LoginResult{}, ErrInvalidCredentials
 	}

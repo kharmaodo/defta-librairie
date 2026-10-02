@@ -6,6 +6,7 @@ import (
 	"defta-librairie/internal/models"
 	"defta-librairie/internal/repositories"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 )
@@ -52,6 +53,16 @@ func TestLoginServiceSuccessAndInvalidPassword(t *testing.T) {
 	result, err := service.Login(context.Background(), "owner", "Correct-Horse-2026", "127.0.0.1")
 	if err != nil || result.AccessToken == "" || store.succeeded != 1 {
 		t.Fatalf("successful login: token=%v succeeded=%d err=%v", result.AccessToken != "", store.succeeded, err)
+	}
+	// Passwords previously allowed by the HTTP body limit must remain usable.
+	longPassword := strings.Repeat("x", 5000) + "A1!"
+	longHash, hashErr := auth.HashPassword(longPassword)
+	if hashErr != nil {
+		t.Fatal(hashErr)
+	}
+	store.user.PasswordHash = longHash
+	if _, loginErr := service.Login(context.Background(), "owner", longPassword, "127.0.0.1"); loginErr != nil {
+		t.Fatalf("existing long password rejected: %v", loginErr)
 	}
 	_, err = service.Login(context.Background(), "owner", "Wrong-Password-2026", "127.0.0.1")
 	if !errors.Is(err, ErrInvalidCredentials) || store.failed != 1 {
