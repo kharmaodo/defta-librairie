@@ -35,7 +35,7 @@ Chaîne existante conservée : `AuthenticateSession` vérifie signature JWT, ses
 
 - Le rendu HTML utilise `html/template`. Aucun `template.HTML`, `template.JS` ou rendu HTML par `text/template` trouvé dans les chemins applicatifs examinés. Les données restent du texte échappé ; la CSP fournit une protection supplémentaire.
 - Les sinks `innerHTML` restants dans les scripts admin contenaient des constantes. Ils ont été supprimés : `replaceChildren`, `createElement`, `textContent` pour paiements/retours ; formulaire de retour fournisseur déplacé dans le template HTML. Aucun `eval` ou `insertAdjacentHTML` trouvé dans les sources clients examinées. Les bundles React générés ne sont pas réécrits manuellement.
-- Les requêtes SQL utilisent des valeurs liées. Les fragments dynamiques de filtres/tri sont des constantes serveur ; les noms de tables temporaires FTS proviennent d'un compteur interne. Aucun identifiant SQL ne vient directement d'une valeur utilisateur. La syntaxe de recherche FTS est conservée et liée en paramètre ; recherche bornée à 256 caractères, repli LIKE existant conservé. Le log de recherche brut est retiré.
+- Les requêtes SQL utilisent des valeurs liées. Les fragments dynamiques de filtres/tri sont des constantes serveur ; les noms de tables temporaires FTS proviennent d'un compteur interne. Aucun identifiant SQL ne vient directement d'une valeur utilisateur. La syntaxe de recherche FTS est conservée et liée en paramètre ; recherche bornée à 256 caractères, repli LIKE conservé et son tri qualifié `d.id` pour éviter une ambiguïté après jointures taxonomiques (révélée par le test XSS). Le log de recherche brut est retiré.
 - Uploads existants conservés : MaxBytesReader avant parsing multipart, validation réelle JPEG/PNG (signature/décodage), taille et dimensions/pixels, limites de lot et quota, stockage privé. Imports : 100 fichiers et 500 MiB par lot, enveloppe multipart bornée. Aucun SVG/HTML accepté comme image.
 - Les exports CSV appliquent déjà `safeCSVCell` : préfixe apostrophe lorsque la première valeur significative est `=`, `+`, `-`, `@` après espaces/contrôles/BOM. Les tests correspondants restent obligatoires. L'import CSV ne doit jamais évaluer les formules ; les chemins examinés ne les évaluent pas.
 
@@ -545,7 +545,7 @@ Le câblage ci-dessus illustre les imports et la composition ; les variables `to
 
 ### Correctifs JS, templates et fuites
 
-Les fichiers complets prêts à utiliser sont `static/js/admin-http.js`, `admin-payments.js`, `admin-returns.js`, `admin-supplier-returns.js`, `templates/admin.html`, `base.html`, `login.html` et les deux partials livres. Ils conservent les sélecteurs existants. Chaque réponse HTML passe par html/template ; les DOM clients utilisent du texte. Exemple minimal complet de remplacement d'une ligne dynamique :
+Les fichiers complets prêts à utiliser sont `static/js/admin-http.js`, `admin-payments.js`, `admin-returns.js`, `admin-supplier-returns.js`, `templates/admin.html`, `base.html`, `catalogue.html`, `login.html` et les deux partials livres. Ils conservent les sélecteurs existants. Chaque réponse HTML passe par html/template ; les DOM clients utilisent du texte. Exemple minimal complet de remplacement d'une ligne dynamique :
 
 ```js
 function appendTextCell(row, value) {

@@ -21,12 +21,30 @@ func TestPublicBookDoesNotExposeInternalStateAndMapsAuthor(t *testing.T) {
 		t.Fatal(string(data))
 	}
 	malicious := publicBook(models.Book{Title: `<img src=x onerror=alert(1)>`})
-	tmpl := template.Must(template.New("x").Parse(`<h3>{{.Title}}</h3>`))
-	var out bytes.Buffer
-	if err = tmpl.Execute(&out, malicious); err != nil {
+	tmpl, err := template.New("catalogue").Funcs(template.FuncMap{
+		"GetMsg": func(lang, key string) string { return key },
+		"default": func(value, fallback string) string {
+			if value == "" {
+				return fallback
+			}
+			return value
+		},
+	}).ParseFiles("../../templates/base.html", "../../templates/catalogue.html")
+	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(out.String(), "<img") {
+	var out bytes.Buffer
+	if err = tmpl.ExecuteTemplate(&out, "base.html", map[string]interface{}{
+		"Title": "Catalogue", "Lang": "ar", "Query": malicious.Title,
+		"HasResults": true, "Books": []PublicBook{malicious, value},
+		"Total": 2, "PageSize": 30, "View": "card", "TotalPages": 1,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(out.String(), "<img src=x") ||
+		strings.Contains(out.String(), "MODIFIED") ||
+		!strings.Contains(out.String(), "Distinct author") ||
+		!strings.Contains(out.String(), "&lt;img") {
 		t.Fatal(out.String())
 	}
 }

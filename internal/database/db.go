@@ -155,7 +155,7 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
             LEFT JOIN book_categories bc ON bc.book_id=d.id AND bc.is_primary=1
             LEFT JOIN categories c ON c.id=bc.category_id
             WHERE d.deleted_at IS NULL
-            ORDER BY id DESC
+            ORDER BY d.id DESC
             LIMIT ? OFFSET ?
         `, limit, offset)
 		if err != nil {
@@ -241,7 +241,7 @@ func SearchBooks(query string, offset, limit int) ([]models.Book, int, error) {
           AND (d.title LIKE ?
            OR d.auteur LIKE ?
            OR d.editeur LIKE ?)
-        ORDER BY id DESC
+        ORDER BY d.id DESC
         LIMIT ? OFFSET ?
     `, likePattern, likePattern, likePattern, limit, offset)
 

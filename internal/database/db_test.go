@@ -127,7 +127,6 @@ func TestSearchBooksUsesFTS5AndKeepsTotal(t *testing.T) {
 	}
 }
 
-
 func TestSearchBooksPrefersPublicTaxonomyTranslations(t *testing.T) {
 	dbPath := filepath.Join(t.TempDir(), "taxonomy-public.db")
 	var err error
@@ -167,4 +166,22 @@ func TestSearchBooksPrefersPublicTaxonomyTranslations(t *testing.T) {
 		!books[0].Categorie.Valid || books[0].Categorie.String != "الفقه" {
 		t.Fatalf("public taxonomy labels=%+v", books)
 	}
+	// Invalid FTS syntax must fall back to bound LIKE even with taxonomy joins.
+	malicious := `"><img src=x onerror=window.deftaXSS=1>`
+	if _, err = DB.Exec(`INSERT INTO defta(title, auteur, price, volume) VALUES (?, ?, 0, 0)`, malicious, "Distinct author"); err != nil {
+		t.Fatal(err)
+	}
+	for _, query := range []string{"", malicious, "' OR 1=1 --"} {
+		found, count, searchErr := SearchBooks(query, 0, 30)
+		if searchErr != nil {
+			t.Fatalf("query %q failed: %v", query, searchErr)
+		}
+		if query == malicious && (count != 1 || len(found) != 1 || found[0].Title != malicious) {
+			t.Fatalf("literal query returned %d / %+v", count, found)
+		}
+		if query == "' OR 1=1 --" && count != 0 {
+			t.Fatalf("query was not treated as data: %d", count)
+		}
+	}
+
 }
