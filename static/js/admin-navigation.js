@@ -274,3 +274,43 @@
     }
   });
 })();
+
+// RESP-08: presentation only; the existing HTTP/session implementation stays authoritative.
+(() => {
+  if (!document.querySelector('#dashboard-main')) return;
+  const status = document.createElement('p');
+  status.className = 'ui-feedback'; status.setAttribute('role','status');
+  status.setAttribute('aria-live','polite'); status.hidden = true;
+  status.textContent = 'Chargement en cours…'; document.body.append(status);
+  let reads = 0, timer;
+  const forms = new WeakMap();
+  document.addEventListener('submit', event => {
+    if (forms.has(event.target)) {event.preventDefault(); event.stopImmediatePropagation();}
+  }, true);
+  window.DeftaFeedback = Object.freeze({begin(options = {}) {
+    const mutating = !['GET','HEAD'].includes((options.method || 'GET').toUpperCase());
+    const form = mutating && document.activeElement?.closest('form.entity-form');
+    if (form) {
+      let state = forms.get(form);
+      if (!state) {
+        const note = document.createElement('p'); note.className = 'form-note';
+        note.setAttribute('role','status'); note.textContent = 'Enregistrement en cours…';
+        const buttons = [...form.querySelectorAll('button[type=submit],button:not([type])')]
+          .map(button => ({button, disabled:button.disabled}));
+        state = {count:0,note,buttons,focused:document.activeElement,busy:form.getAttribute('aria-busy')};
+        forms.set(form,state); form.setAttribute('aria-busy','true');
+        buttons.forEach(({button}) => {button.disabled = true;}); form.append(note);
+      }
+      state.count++;
+      return () => {
+        if (--state.count) return;
+        state.buttons.forEach(({button,disabled}) => {button.disabled = disabled;});
+        if (state.busy === null) form.removeAttribute('aria-busy'); else form.setAttribute('aria-busy',state.busy);
+        state.note.remove(); forms.delete(form);
+        if (state.focused.isConnected && document.activeElement === document.body) state.focused.focus({preventScroll:true});
+      };
+    }
+    if (++reads === 1) timer = setTimeout(() => {status.hidden = false;},150);
+    return () => {if (--reads === 0) {clearTimeout(timer);status.hidden = true;}};
+  }});
+})();

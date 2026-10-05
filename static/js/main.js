@@ -1,6 +1,10 @@
 document.addEventListener('DOMContentLoaded', () => {
   const main = document.querySelector('main');
   if (!main?.querySelector('.catalogue')) return;
+  const status = document.createElement('p');
+  status.className = 'ui-feedback'; status.setAttribute('role','status');
+  status.setAttribute('aria-live','polite'); status.hidden = true;
+  status.textContent = 'جارٍ تحميل النتائج…'; document.body.append(status);
   let controller, busy = false, scrollTimer;
   const readMode = () => {try {return localStorage.getItem('viewMode') || 'card';} catch {return 'card';}};
   function setView(mode) {
@@ -28,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!pop) saveScroll();
     controller?.abort();
     const request = new AbortController(); controller = request; busy = true;
-    main.setAttribute('aria-busy', 'true');
+    main.setAttribute('aria-busy', 'true'); status.hidden = false;
     try {
       // Only the same-origin server-rendered catalogue is imported; no API/HTML contract changes.
       const response = await fetch(url, {signal:request.signal, credentials:'same-origin', headers:{Accept:'text/html'}});
@@ -59,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // Ordinary document navigation preserves the existing SSR path on any failure.
       if (pop) location.reload(); else location.assign(url.href);
     } finally {
-      if (controller === request) {busy = false; main.removeAttribute('aria-busy');}
+      if (controller === request) {busy = false; main.removeAttribute('aria-busy'); status.hidden = true;}
     }
   }
   main.addEventListener('submit', event => {
