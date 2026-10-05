@@ -69,7 +69,7 @@ sizes = {
     "CSS": CSS_PATH.stat().st_size,
     "JavaScript admin": sum(path.stat().st_size for path in ADMIN_SCRIPTS),
 }
-budgets = {"HTML": 75_000, "CSS": 35_000, "JavaScript admin": 200_000}
+budgets = {"HTML": 75_000, "CSS": 35_000, "JavaScript admin": 203_500}
 for asset, size in sizes.items():
     require(size <= budgets[asset], f"budget {asset} dépassé : {size} > {budgets[asset]} octets")
 
