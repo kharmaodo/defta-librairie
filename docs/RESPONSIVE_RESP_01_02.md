@@ -11,7 +11,7 @@ navigation partielle façon SPA sera traitée dans RESP-07.
 
 | Écran | État observé dans le code | Suite |
 |---|---|---|
-| Accueil `/` | Viewport déjà présent ; grille à seuils 700/420 px ; hauteur de couvertures fixe ; titres sans espace non coupés ; recherche et pagination peu flexibles | RESP-02 : grille bornée, couvertures proportionnées, texte coupable, recherche sur deux lignes sur petit mobile, pagination adaptable |
+| Accueil `/` | Viewport déjà présent ; grille à seuils 700/420 px ; hauteur de couvertures fixe ; titres sans espace non coupés ; recherche et pagination peu flexibles | RESP-02 : grille bornée, couvertures proportionnées, retour ligne des textes, recherche sur deux lignes sur petit mobile, pagination adaptable |
 | Catalogue en tableau | Défilement horizontal interne déjà présent, colonnes sans retour ligne ; zone non focalisable au clavier | Texte enveloppé, région nommée et focalisable, défilement limité au tableau |
 | `/login` | Viewport et feuille admin déjà présents | Socle commun de réduction des tailles intrinsèques ; parcours existants conservés |
 | `/admin` | Menu adaptatif et tableaux défilants existants ; tests 390 à 1440 px | Socle commun et contrôle ajouté à 320 px ; refonte navigation/tableaux/dialogues dans RESP-03 à RESP-05 |

@@ -1,7 +1,7 @@
 const {test, expect} = require('@playwright/test');
 
 const root = {username: 'browser-root', password: 'Browser-Root-Only-2026!'};
-const widths = [320, 390, 768, 1024, 1440];
+const widths = [390, 768, 1024, 1440];
 
 async function login(page) {
   await page.goto('/login');
@@ -12,7 +12,7 @@ async function login(page) {
   await expect(page.locator('#role-badge')).toHaveText('SUPER ADMIN ROOT');
 }
 
-for (const width of widths) {
+for (const width of [320, ...widths]) {
   test(`dashboard remains usable at ${width}px`, async ({page}) => {
     await page.setViewportSize({width, height: 900});
     await login(page);
