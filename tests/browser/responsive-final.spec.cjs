@@ -11,7 +11,10 @@ test.beforeAll(async({request})=>{
   const {library}=await owner.json();
   for(let i=0;i<31;i++)expect((await request.post('/api/manage/books',{headers,data:{libraryId:library.id,title:`${query} كتاب ${i}`,price:1000}})).status()).toBe(201);
 });
-async function contained(page){expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual((await page.viewportSize()).width+1);}
+async function contained(page){
+  const geometry=await page.evaluate(()=>({width:document.documentElement.scrollWidth,offenders:[...document.querySelectorAll('body *')].filter(el=>{const box=el.getBoundingClientRect();return box.width && (box.right>innerWidth+1 || box.left< -1);}).slice(0,10).map(el=>({element:el.tagName,class:el.className,right:el.getBoundingClientRect().right,left:el.getBoundingClientRect().left}))}));
+  expect(geometry.width,JSON.stringify(geometry.offenders)).toBeLessThanOrEqual((await page.viewportSize()).width+1);
+}
 async function login(page){await page.goto('/login');await page.locator('[name=username]').fill(value('DEFTA_ROOT_USERNAME'));await page.locator('[name=password]').fill(value('DEFTA_ROOT_PASSWORD'));await page.locator('#login-form button[type=submit]').click();await expect(page.locator('#role-badge')).toHaveText('SUPER ADMIN ROOT');}
 test.describe('native public catalogue fallback',()=>{
   test.use({javaScriptEnabled:false});
@@ -31,8 +34,8 @@ for(const width of [320,1440]){
     expect(await page.evaluate(()=>getComputedStyle(document.documentElement).fontSize)).toBe('32px');await contained(page);
     await login(page);await page.evaluate(()=>{document.documentElement.style.fontSize='32px';});await contained(page);
     await page.locator('#add-book-button').click();const dialog=page.locator('#book-dialog');await expect(dialog).toBeVisible();
-    const geometry=await dialog.evaluate(el=>({scroll:el.scrollWidth,client:el.clientWidth,right:el.getBoundingClientRect().right}));
-    expect(geometry.scroll).toBeLessThanOrEqual(geometry.client+1);expect(geometry.right).toBeLessThanOrEqual(width+1);
+    const geometry=await dialog.evaluate(el=>({scroll:el.scrollWidth,client:el.clientWidth,right:el.getBoundingClientRect().right,offenders:[...el.querySelectorAll('*')].filter(child=>child.getBoundingClientRect().right>el.getBoundingClientRect().right-1).map(child=>({element:child.tagName,class:child.className,id:child.id,right:child.getBoundingClientRect().right,scroll:child.scrollWidth,client:child.clientWidth}))}));
+    expect(geometry.scroll,JSON.stringify(geometry.offenders)).toBeLessThanOrEqual(geometry.client+1);expect(geometry.right).toBeLessThanOrEqual(width+1);
     await page.keyboard.press('Escape');await expect(dialog).not.toBeVisible();
   });
 }

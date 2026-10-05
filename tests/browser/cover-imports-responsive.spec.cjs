@@ -5,10 +5,20 @@ async function fits(page, width) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
 }
 for (const [width,height,role] of [[320,700,'OWNER_LIBRARY'],[390,844,'SUPER_ADMIN_ROOT'],[768,1024,'OWNER_LIBRARY'],[812,375,'SUPER_ADMIN_ROOT']]) {
-  test(`cover import UI reflows through upload and manual review at ${width}x${height}`, async ({page}) => {
+  test(`cover import UI reflows through upload and manual review at ${width}x${height}`, async ({page,browserName}) => {
     let uploaded=false, accepted=false, dismissed=false, status='REVIEW_REQUIRED';
     const scope = role === 'SUPER_ADMIN_ROOT' ? 'library-a' : '';
-    await page.addInitScript(() => sessionStorage.setItem('defta.accessToken','browser-test-token'));
+    await page.addInitScript(() => {
+      sessionStorage.setItem('defta.accessToken','browser-test-token');
+      const fetch = window.fetch;
+      window.fetch = function(input, init) {
+        if (new URL(typeof input === 'string' ? input : input.url, location.href).pathname === '/api/manage/cover-imports' && init?.body instanceof FormData) {
+          // Observe the actual fetch body: WebKit's network inspector omits file bytes.
+          window.coverUploadFiles = Promise.all([...init.body.values()].filter(value => value instanceof File).map(async file => ({name:file.name,type:file.type,bytes:[...new Uint8Array(await file.arrayBuffer())]})));
+        }
+        return fetch.apply(this, arguments);
+      };
+    });
     await page.route('**/api/auth/me', route => route.fulfill({json:{id:'responsive-user',role,libraryId:role === 'OWNER_LIBRARY' ? 'library-a' : null,passwordChangeRequired:false}}));
     await page.route('**/api/admin/owners?**', route => route.fulfill({json:{results:[{username:'owner',library:{id:'library-a',name:longTitle,status:'ACTIVE'}}],total:1}}));
     await page.route('**/api/manage/books/22/cover?**', route => route.fulfill({body:pixel,contentType:'image/png'}));
@@ -16,7 +26,8 @@ for (const [width,height,role] of [[320,700,'OWNER_LIBRARY'],[390,844,'SUPER_ADM
       const request=route.request(), path=new URL(request.url()).pathname;
       if (path === '/api/manage/cover-imports' && request.method()==='POST') {
         expect(request.headers()['idempotency-key']).toMatch(/^[0-9a-f-]{36}$/);
-        expect(request.postDataBuffer().includes(pixel)).toBe(true);
+        expect(request.headers()['content-type']).toMatch(/^multipart\/form-data; boundary=/);
+        if (browserName !== 'webkit') expect(request.postDataBuffer().includes(pixel)).toBe(true);
         uploaded=true; return route.fulfill({status:202,json:{id:'batch',status:'PENDING'}});
       }
       if (path === '/api/manage/cover-imports') return route.fulfill({json:{results:uploaded ? [{id:'batch',libraryId:'library-a',createdAt:'2026-10-05T10:00:00Z',totalFiles:2,jobs:[{id:'job',status,contentType:'image/png'},{id:'failed',status:'FAILED',contentType:'image/png'}]}] : []}});
@@ -38,6 +49,7 @@ for (const [width,height,role] of [[320,700,'OWNER_LIBRARY'],[390,844,'SUPER_ADM
     expect((await upload.boundingBox()).height).toBeGreaterThanOrEqual(44);
     await upload.click();
     await expect(page.getByText('Rattachement à revoir')).toBeVisible();
+    expect(await page.evaluate(() => window.coverUploadFiles)).toEqual([{name:'couverture.png',type:'image/png',bytes:[...pixel]}]);
     await page.getByRole('button',{name:'Revoir',exact:true}).click();
     const panel=page.getByRole('region',{name:'Revue de l’image'});
     await expect(panel.getByRole('heading',{name:'Revue de l’image'})).toBeFocused();
