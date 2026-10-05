@@ -1,0 +1,96 @@
+/* RESP-04: keep native table semantics and all business columns/actions. */
+.table-scroll-hint {
+  margin: .5rem 1rem;
+  color: var(--muted);
+  font-size: .8rem;
+}
+.table-wrap:focus-visible {
+  outline: 3px solid var(--input-border-hover-color);
+  outline-offset: -3px;
+}
+.tag-chip {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+@media screen and (max-width:900px) {
+  .table-wrap {
+    position: relative;
+    max-width: 100%;
+    padding-inline: 0;
+  }
+  .table-wrap th,
+  .table-wrap td {
+    min-width: 8rem;
+    max-width: 24rem;
+    padding: .75rem;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    vertical-align: top;
+  }
+  .table-wrap td {
+    display: table-cell;
+  }
+  .table-empty-message {
+    display: block;
+    position: sticky;
+    left: 0;
+    width: min(24rem,calc(100vw - 4rem));
+    text-align: left;
+    overflow-wrap: anywhere;
+  }
+  .table-wrap .device {
+    max-width: 16rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .table-with-actions th:last-child,
+  .table-with-actions td:last-child:not([colspan]) {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    min-width: 9rem;
+    max-width: 12rem;
+    background: var(--white);
+    border-left: 1px solid var(--line);
+  }
+  .table-with-actions th:last-child {
+    background: var(--surface-soft);
+    z-index: 2;
+  }
+  .table-wrap .row-actions {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: .4rem;
+  }
+  .table-wrap td.row-actions .row-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: .2rem;
+  }
+  .table-wrap .row-button,
+  .tag-chip button {
+    min-width: 44px;
+    min-height: 44px;
+    white-space: normal;
+  }
+  .tag-chip {
+    flex-wrap: wrap;
+  }
+  .panel > .pagination {
+    flex-wrap: wrap;
+    row-gap: .75rem;
+  }
+  .panel > .pagination .button {
+    min-height: 44px;
+  }
+}
+@media print {
+  .table-scroll-hint {
+    display: none;
+  }
+  .table-with-actions th:last-child,
+  .table-with-actions td:last-child {
+    position: static;
+  }
+}
