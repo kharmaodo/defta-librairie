@@ -20,7 +20,7 @@ modules de ventes, paiements, stocks et retours.
 
 ## Comportement
 
-Le module admin-tables.js identifie les régions table-wrap et lit les en-têtes
+Le composant tableaux, regroupé dans admin-navigation.js, identifie les régions table-wrap et lit les en-têtes
 existants. Il ne recompose ni les lignes de données ni les actions. Les régions
 sont nommées à partir du panneau/dialogue ; les noms existants sont préservés.
 Une indication de défilement et un tabindex sont ajoutés quand le tableau
@@ -43,6 +43,9 @@ le sticky sont désactivés pour l'impression.
 Le budget JavaScript admin passe de 200 000 à 203 500 octets pour compter
 explicitement le module (aucune exclusion du contrôle). Les budgets HTML et
 CSS historiques restent inchangés. La feuille du composant est séparée.
+La navigation et les tableaux sont regroupés dans un seul fichier pour garder
+la limite de 25 scripts chargés. Le test de performance et son contrôle d’un
+seul appel initial auth/me restent inchangés.
 
 ## Vérification
 
