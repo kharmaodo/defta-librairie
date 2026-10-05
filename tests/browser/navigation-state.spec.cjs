@@ -1,0 +1,61 @@
+const {test, expect} = require('@playwright/test');
+const {readFileSync} = require('node:fs');
+const {resolve} = require('node:path');
+const {randomUUID,randomBytes} = require('node:crypto');
+const fixture = readFileSync(resolve(__dirname,'../../scripts/browser-test-server.cjs'),'utf8');
+const value = key => fixture.match(new RegExp(`${key}:'([^']+)'`))[1];
+let query;
+test.beforeAll(async ({request}) => {
+  query=`state${randomUUID().slice(0,8)}`;
+  const login=await request.post('/api/auth/login',{data:{username:value('DEFTA_ROOT_USERNAME'),password:value('DEFTA_ROOT_PASSWORD')}});
+  expect(login.status()).toBe(200);
+  const headers={Authorization:`Bearer ${(await login.json()).accessToken}`};
+  const owner=await request.post('/api/admin/owners',{headers,data:{username:query,email:`${query}@example.test`,password:`Aa!${randomBytes(24).toString('hex')}`,library:{name:query}}});
+  expect(owner.status()).toBe(201); const {library}=await owner.json();
+  for(let i=0;i<31;i++) expect((await request.post('/api/manage/books',{headers,data:{libraryId:library.id,title:`${query} كتاب ${i}`,price:1000}})).status()).toBe(201);
+});
+test('catalogue keeps its document, view, URL history and scroll across partial updates',async({page})=>{
+  await page.setViewportSize({width:390,height:844});await page.emulateMedia({reducedMotion:'reduce'});
+  await page.goto('/');await page.evaluate(()=>window.resp07Marker='same-document');
+  await page.locator('#search-input').fill(query);await page.locator('#search-btn').click();
+  await expect(page.locator('.book-card')).toHaveCount(30);await expect(page).toHaveURL(new RegExp(`q=${query}`));
+  await page.locator('[data-view=table]').click();await expect(page.locator('#books-table-view')).toBeVisible();
+  await page.evaluate(()=>window.scrollTo({top:600,behavior:'instant'}));await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(600);
+  await page.locator('[rel=next]').evaluate(el=>el.click());await expect(page.locator('.book-card')).toHaveCount(1);
+  await expect(page).toHaveURL(/page=2/);await expect(page.locator('#books-table-view')).toBeVisible();
+  await page.goBack();await expect(page.locator('.book-card')).toHaveCount(30);await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(600);
+  await page.goForward();await expect(page.locator('.book-card')).toHaveCount(1);
+  expect(await page.evaluate(()=>window.resp07Marker)).toBe('same-document');
+  await page.locator('.clear-search').click();await expect(page.locator('.welcome-panel')).toBeVisible();
+  await expect(page.locator('main')).not.toHaveAttribute('aria-busy','true');
+});
+test('catalogue cancels stale responses and falls back to SSR after a failed fetch',async({page})=>{
+  await page.goto('/');
+  await page.route('**/?q=slow*',async route=>{
+    const response=await route.fetch();await new Promise(resolve=>setTimeout(resolve,400));
+    await route.fulfill({response});
+  });
+  await page.locator('#search-input').fill('slow');await page.locator('#search-btn').click();
+  await page.locator('#search-input').fill(query);await page.locator('#search-btn').click();
+  await expect(page.locator('.book-card')).toHaveCount(30);await expect(page.locator('#search-input')).toHaveValue(query);
+  await expect(page.locator('main')).not.toHaveAttribute('aria-busy','true');
+  await page.route('**/?q=fallback*',route=>route.request().isNavigationRequest()?route.continue():route.abort());
+  await page.evaluate(()=>window.resp07Marker='before-fallback');
+  await page.locator('#search-input').fill('fallback');await page.locator('#search-btn').click();
+  await expect(page).toHaveURL(/q=fallback/);await expect(page.locator('.empty-state')).toBeVisible();
+  expect(await page.evaluate(()=>window.resp07Marker)).toBeUndefined();
+});
+test('admin section history keeps the existing book filter without reloading the document',async({page})=>{
+  await page.goto('/login');await page.locator('[name=username]').fill(value('DEFTA_ROOT_USERNAME'));await page.locator('[name=password]').fill(value('DEFTA_ROOT_PASSWORD'));
+  await page.locator('#login-form button[type=submit]').click();await expect(page.locator('#role-badge')).toHaveText('SUPER ADMIN ROOT');
+  await page.evaluate(()=>window.resp07Marker='admin-document');
+  const nav=page.locator('[data-dashboard-nav]');await nav.getByRole('button',{name:/Catalogue/}).click();
+  await nav.getByRole('link',{name:'Livres',exact:true}).click();await expect(page).toHaveURL(/#books-panel$/);
+  await page.locator('#book-search-form [name=q]').fill(query);await page.locator('#book-search-form button').click();
+  await expect(page.locator('#books-body tr')).toHaveCount(10);
+  await nav.getByRole('link',{name:'Tags',exact:true}).click();await expect(page).toHaveURL(/#tags-panel$/);
+  await page.goBack();await expect(page).toHaveURL(/#books-panel$/);await expect(page.locator('#books-panel')).toBeFocused();
+  await expect(page.locator('#book-search-form [name=q]')).toHaveValue(query);await expect(page.locator('#books-body tr')).toHaveCount(10);
+  expect(await page.evaluate(()=>window.resp07Marker)).toBe('admin-document');
+  await page.goForward();await expect(page).toHaveURL(/#tags-panel$/);
+});

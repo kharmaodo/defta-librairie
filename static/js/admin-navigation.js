@@ -104,7 +104,7 @@
 
   navigation.addEventListener('click', event => {
     const link = event.target.closest('[data-dashboard-nav-link]');
-    if (!link) return;
+    if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
 
     const target = document.querySelector(link.hash);
     if (!target || target.hidden) return;
@@ -115,7 +115,7 @@
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     target.scrollIntoView({behavior: reducedMotion ? 'auto' : 'smooth', block: 'start'});
     target.focus({preventScroll: true});
-    history.replaceState(null, '', link.hash);
+    if (location.hash !== link.hash) history.pushState(history.state, '', link.hash);
   });
 
   document.addEventListener('keydown', event => {
@@ -158,6 +158,14 @@
 
     visibleTargets.forEach(item => observer.observe(item.target));
   }
+
+  window.addEventListener('popstate', () => {
+    const link = links.find(item => item.hash === location.hash);
+    const target = link && document.querySelector(link.hash);
+    if (!target || target.hidden) return;
+    closeMenu(); setActiveLink(link);
+    target.scrollIntoView({block:'start'}); target.focus({preventScroll:true});
+  });
 
   const initialLink = links.find(link => link.hash === window.location.hash)
     || links.find(link => link.hash === '#dashboard-overview');
