@@ -97,6 +97,7 @@ button,input { font: inherit; } a { color: inherit; }
 /* Catalogue reflow: allow intrinsic content to shrink without hiding overflow. */
 .header-inner,.footer-inner,.results-toolbar,.pagination { flex-wrap: wrap; }
 .brand,.brand > span,.results-toolbar > div,.view-toggle,#results-container { min-width: 0; }
+.results-toolbar > div { max-inline-size: 100%; }
 .hero h1,.hero-copy,.results-toolbar h2,.empty-state h2,.welcome-panel h2,.price { overflow-wrap: anywhere; }
 .search-icon,.clear-search,#search-btn { flex-shrink: 0; }
 .clear-search,.view-btn,.page-link { min-height: 44px; }

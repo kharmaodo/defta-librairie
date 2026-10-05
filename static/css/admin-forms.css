@@ -13,8 +13,34 @@
   .modal .sale-line > *, .modal .purchase-line > *, .modal .return-line > * {
     min-inline-size: 0;
   }
+  .modal .entity-form, .modal .form-grid label {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .modal .book-cover-panel > div { max-inline-size: 100%; }
+  .modal .book-cover-preview { min-inline-size: 0; }
+  .modal .book-cover-panel p { overflow-wrap: anywhere; }
+  /* Native controls keep their full values/options, but contain their inline display. */
+  .modal select:not([multiple]), .modal input[type=file] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .modal select:not([multiple]) {
+    appearance: none;
+    padding-inline-end: 2rem;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+      linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 1rem) center, calc(100% - .75rem) center;
+    background-size: .25rem .25rem;
+    background-repeat: no-repeat;
+  }
+  .modal input[type=file] { padding-inline: .25rem; }
+  .modal input[type=file]::file-selector-button {
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   .modal .modal-heading { gap: .75rem; }
-  .modal .modal-heading h2, .modal .alert, .modal .form-note,
+  .modal .modal-heading h2, .modal .eyebrow, .modal .alert, .modal .form-note,
   .modal label, .modal small { overflow-wrap: anywhere; }
   .modal .modal-heading .icon-button { flex: 0 0 auto; }
   .modal .modal-actions { flex-wrap: wrap; gap: .75rem; }

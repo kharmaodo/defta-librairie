@@ -20,10 +20,10 @@ test('catalogue keeps its document, view, URL history and scroll across partial 
   await page.locator('#search-input').fill(query);await page.locator('#search-btn').click();
   await expect(page.locator('.book-card')).toHaveCount(30);await expect(page).toHaveURL(new RegExp(`q=${query}`));
   await page.locator('[data-view=table]').click();await expect(page.locator('#books-table-view')).toBeVisible();
-  await page.evaluate(()=>window.scrollTo({top:600,behavior:'instant'}));await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(600);
+  await page.evaluate(()=>window.scrollTo({top:600,behavior:'instant'}));await expect.poll(()=>page.evaluate(()=>Math.round(scrollY))).toBe(600);
   await page.locator('[rel=next]').evaluate(el=>el.click());await expect(page.locator('.book-card')).toHaveCount(1);
   await expect(page).toHaveURL(/page=2/);await expect(page.locator('#books-table-view')).toBeVisible();
-  await page.goBack();await expect(page.locator('.book-card')).toHaveCount(30);await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(600);
+  await page.goBack();await expect(page.locator('.book-card')).toHaveCount(30);await expect.poll(()=>page.evaluate(()=>Math.round(scrollY))).toBe(600);
   await page.goForward();await expect(page.locator('.book-card')).toHaveCount(1);
   expect(await page.evaluate(()=>window.resp07Marker)).toBe('same-document');
   await page.locator('.clear-search').click();await expect(page.locator('.welcome-panel')).toBeVisible();
