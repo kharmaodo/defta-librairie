@@ -32,7 +32,7 @@ for (const [width,height] of [[320,700],[390,844],[768,1024],[812,375]]) {
     expect(await page.evaluate(()=>document.querySelector('[data-dashboard-nav]').contains(document.activeElement))).toBe(true);
     await page.keyboard.press('Tab');
     await expect(close).toBeFocused();
-    await navigation.getByRole('button',{name:'Catalogue',exact:true}).click();
+    await navigation.getByRole('button',{name:/Catalogue/}).click();
     await navigation.getByRole('link',{name:'Livres',exact:true}).click();
     await expect(page.locator('#books-panel')).toBeFocused();
     await expect(page.locator('#dashboard-main')).not.toHaveAttribute('inert','');
