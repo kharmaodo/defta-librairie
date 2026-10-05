@@ -53,14 +53,14 @@ for (const [width, height] of [[320,700],[390,844],[768,1024],[1024,768],[1440,9
     expect(box.height).toBeGreaterThan(0);
     expect(box.height / box.width).toBeLessThan(1.5);
     await expect(page.locator('.public-book-cover').first()).toHaveAttribute('src', /book-cover-placeholder/);
-    await page.locator('[data-view=table]').click();
+    await page.locator('button[data-view=table]').click();
     await expect(page.locator('#books-table-view')).toBeVisible();
     await contained(page);
     await page.locator('#books-table-view').focus();
     await expect(page.locator('#books-table-view')).toBeFocused();
     await page.reload();
     await expect(page.locator('#books-table-view')).toBeVisible();
-    await page.locator('[data-view=card]').click();
+    await page.locator('button[data-view=card]').click();
     await page.locator('[rel=next]').click();
     await expect(page.locator('.book-card')).toHaveCount(1);
     await contained(page);
