@@ -1,7 +1,7 @@
 const {test, expect} = require('@playwright/test');
 
 const root = {username: 'browser-root', password: 'Browser-Root-Only-2026!'};
-const widths = [390, 768, 1024, 1440];
+const widths = [320, 390, 768, 1024, 1440];
 
 async function login(page) {
   await page.goto('/login');
