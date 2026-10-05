@@ -1,0 +1,4 @@
+/* Shared reflow foundation. Screen-specific layouts remain in their own CSS. */
+main, section, article, fieldset { min-inline-size: 0; }
+img, svg, video { max-inline-size: 100%; }
+input, select, textarea { min-inline-size: 0; }

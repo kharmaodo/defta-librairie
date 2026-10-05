@@ -42,7 +42,7 @@
                     </article>
                 {{end}}
             </div>
-            <div id="books-table-view" class="table-view" hidden>
+            <div id="books-table-view" class="table-view" role="region" aria-label="نتائج البحث في جدول" tabindex="0" hidden>
                 <table class="book-table">
                     <thead><tr><th>العنوان</th><th>المؤلف</th><th>الناشر</th><th>السعر</th><th>التصنيف</th></tr></thead>
                     <tbody>{{range .Books}}<tr>

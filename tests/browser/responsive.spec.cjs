@@ -12,7 +12,7 @@ async function login(page) {
   await expect(page.locator('#role-badge')).toHaveText('SUPER ADMIN ROOT');
 }
 
-for (const width of widths) {
+for (const width of [320, ...widths]) {
   test(`dashboard remains usable at ${width}px`, async ({page}) => {
     await page.setViewportSize({width, height: 900});
     await login(page);
