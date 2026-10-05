@@ -1,0 +1,38 @@
+name: Responsive validation
+on:
+  pull_request:
+    paths:
+      - 'static/**'
+      - 'templates/**'
+      - 'frontend/**'
+      - 'tests/browser/**'
+      - 'scripts/browser-test-server.cjs'
+      - 'playwright*.config.cjs'
+      - 'package*.json'
+      - '.github/workflows/responsive.yml'
+  push:
+    branches: [develop]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  responsive:
+    name: Responsive (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run test:responsive -- --project=${{ matrix.browser }}
