@@ -3,6 +3,7 @@
 
   const navigation = document.querySelector('[data-dashboard-nav]');
   const menuToggle = document.querySelector('[data-dashboard-menu-toggle]');
+  const menuClose = document.querySelector('[data-dashboard-menu-close]');
   const backdrop = document.querySelector('[data-dashboard-nav-backdrop]');
 
   if (!navigation || !menuToggle || !backdrop) return;
@@ -22,18 +23,37 @@
     submenu.hidden = !expanded;
   }
 
+  const backgroundState = new Map();
+
+  function isolateBackground(isolated) {
+    if (isolated) {
+      for (const element of document.body.children) {
+        if (element === navigation || element === backdrop) continue;
+        if (!backgroundState.has(element)) backgroundState.set(element, element.inert);
+        element.inert = true;
+      }
+    } else {
+      for (const [element, previous] of backgroundState) element.inert = previous;
+      backgroundState.clear();
+    }
+  }
+
   function closeMenu({restoreFocus = false} = {}) {
     navigation.removeAttribute('data-open');
     document.body.removeAttribute('data-navigation-open');
     menuToggle.setAttribute('aria-expanded', 'false');
     backdrop.hidden = true;
+    isolateBackground(false);
+    navigation.inert = mobileQuery.matches;
+    navigation.removeAttribute('role');
+    navigation.removeAttribute('aria-modal');
     if (restoreFocus) menuToggle.focus();
   }
 
   function setActiveLink(activeLink) {
     links.forEach(link => {
       link.classList.toggle('is-active', link === activeLink);
-      if (link === activeLink) link.setAttribute('aria-current', 'location');
+      if (link === activeLink) link.setAttribute('aria-current', "location");
       else link.removeAttribute('aria-current');
     });
 
@@ -69,8 +89,16 @@
     document.body.toggleAttribute('data-navigation-open', opening);
     menuToggle.setAttribute('aria-expanded', String(opening));
     backdrop.hidden = !opening;
-    if (opening) navigation.querySelector('[aria-current="location"], button, a')?.focus();
+    navigation.inert = false;
+    if (opening && mobileQuery.matches) {
+      isolateBackground(true);
+      navigation.setAttribute('role', 'dialog');
+      navigation.setAttribute('aria-modal', 'true');
+      menuClose?.focus();
+    } else if (!opening) closeMenu({restoreFocus: true});
   });
+
+  menuClose?.addEventListener('click', () => closeMenu({restoreFocus: true}));
 
   backdrop.addEventListener('click', () => closeMenu({restoreFocus: true}));
 
@@ -83,20 +111,36 @@
 
     event.preventDefault();
     setActiveLink(link);
-    target.scrollIntoView({behavior: 'smooth', block: 'start'});
-    target.focus({preventScroll: true});
     closeMenu();
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({behavior: reducedMotion ? 'auto' : 'smooth', block: 'start'});
+    target.focus({preventScroll: true});
     history.replaceState(null, '', link.hash);
   });
 
   document.addEventListener('keydown', event => {
+    if (event.key === 'Tab' && mobileQuery.matches && navigation.hasAttribute('data-open')) {
+      const focusable = [...navigation.querySelectorAll('button, a[href], [tabindex="0"]')]
+        .filter(element => !element.disabled && element.getClientRects().length && !element.closest('[hidden]'));
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first?.focus();
+      }
+    }
     if (event.key === 'Escape' && navigation.hasAttribute('data-open')) {
       closeMenu({restoreFocus: true});
     }
   });
 
   mobileQuery.addEventListener('change', event => {
-    if (!event.matches) closeMenu();
+    const focused = navigation.contains(document.activeElement);
+    closeMenu({restoreFocus: event.matches && focused});
+    if (!event.matches && document.activeElement === menuClose) {
+      navigation.querySelector('[data-dashboard-nav-group] > button')?.focus();
+    }
   });
 
   const visibleTargets = links
@@ -118,4 +162,5 @@
   const initialLink = links.find(link => link.hash === window.location.hash)
     || links.find(link => link.hash === '#dashboard-overview');
   setActiveLink(initialLink);
+  closeMenu();
 })();
