@@ -19,6 +19,14 @@
   .modal .book-cover-panel > div { max-inline-size: 100%; }
   .modal .book-cover-preview { min-inline-size: 0; }
   .modal .book-cover-panel p { overflow-wrap: anywhere; }
+  /* Native controls keep their full values/options, but contain their inline display. */
+  .modal select, .modal input[type=file] { overflow: hidden; text-overflow: ellipsis; }
+  .modal input[type=file] { padding-inline: .25rem; }
+  .modal input[type=file]::file-selector-button {
+    max-inline-size: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   .modal .modal-heading { gap: .75rem; }
   .modal .modal-heading h2, .modal .eyebrow, .modal .alert, .modal .form-note,
   .modal label, .modal small { overflow-wrap: anywhere; }
