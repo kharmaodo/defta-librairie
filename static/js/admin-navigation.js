@@ -248,3 +248,21 @@
   window.addEventListener('resize', schedule);
   refresh();
 })();
+
+// Keep keyboard traversal inside the native modal, including at either boundary.
+(() => {
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Tab' || event.defaultPrevented) return;
+    const dialog = document.activeElement?.closest('dialog:modal');
+    if (!dialog) return;
+    const controls = [...dialog.querySelectorAll('button, a[href], input, select, textarea, [tabindex]')]
+      .filter(element => element.tabIndex >= 0 && !element.disabled && element.getClientRects().length);
+    const first = controls[0], last = controls[controls.length - 1];
+    if (!first) return;
+    if ((event.shiftKey && document.activeElement === first) ||
+        (!event.shiftKey && document.activeElement === last)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    }
+  });
+})();

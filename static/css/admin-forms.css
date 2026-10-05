@@ -1,0 +1,50 @@
+/* RESP-05: native dialogs retain their focus and business handlers. */
+@media screen {
+  dialog.modal {
+    max-inline-size: calc(100vw - 2rem);
+    max-block-size: calc(100vh - 2rem);
+    max-block-size: calc(100dvh - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-padding-block: 1rem;
+  }
+  .modal .entity-form, .modal .form-grid,
+  .modal .form-grid > *, .modal .modal-heading > *,
+  .modal .sale-line > *, .modal .purchase-line > *, .modal .return-line > * {
+    min-inline-size: 0;
+  }
+  .modal .modal-heading { gap: .75rem; }
+  .modal .modal-heading h2, .modal .alert, .modal .form-note,
+  .modal label, .modal small { overflow-wrap: anywhere; }
+  .modal .modal-heading .icon-button { flex: 0 0 auto; }
+  .modal .modal-actions { flex-wrap: wrap; gap: .75rem; }
+  .modal .modal-actions .button { white-space: normal; overflow-wrap: anywhere; }
+}
+@media screen and (max-width: 900px) {
+  .modal :is(input:not([type=hidden]), select, textarea, button) {
+    min-block-size: 44px;
+    max-inline-size: 100%;
+  }
+  .modal .icon-button { min-inline-size: 44px; }
+  .modal :is(input, select, textarea) { font-size: 1rem; }
+  .modal .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .modal .form-grid.single { grid-template-columns: minmax(0, 1fr); }
+  .modal :is(.sale-line, .purchase-line, .return-line) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .modal :is(.sale-lines-heading, .sale-summary) { flex-wrap: wrap; }
+}
+@media screen and (max-width: 600px) {
+  dialog.modal {
+    inline-size: calc(100% - 1rem);
+    max-inline-size: calc(100vw - 1rem);
+    max-block-size: calc(100vh - 1rem);
+    max-block-size: calc(100dvh - 1rem);
+    border-radius: 12px;
+  }
+  .modal .entity-form { padding: 1rem; gap: 1rem; }
+  .modal .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .modal .form-grid label.full { grid-column: auto; }
+  .modal .modal-actions .button { flex: 1 1 100%; }
+  .modal.return-modal .payment-balance { margin-inline: 0; }
+}
