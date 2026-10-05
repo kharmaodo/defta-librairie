@@ -20,7 +20,10 @@
   .modal .book-cover-preview { min-inline-size: 0; }
   .modal .book-cover-panel p { overflow-wrap: anywhere; }
   /* Native controls keep their full values/options, but contain their inline display. */
-  .modal select, .modal input[type=file] { overflow: hidden; text-overflow: ellipsis; }
+  .modal select:not([multiple]), .modal input[type=file] {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .modal input[type=file] { padding-inline: .25rem; }
   .modal input[type=file]::file-selector-button {
     max-inline-size: 100%;
