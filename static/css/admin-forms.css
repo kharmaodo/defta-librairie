@@ -13,6 +13,10 @@
   .modal .sale-line > *, .modal .purchase-line > *, .modal .return-line > * {
     min-inline-size: 0;
   }
+  .modal .entity-form { grid-template-columns: minmax(0, 1fr); }
+  .modal .book-cover-panel > div { max-inline-size: 100%; }
+  .modal .book-cover-preview { min-inline-size: 0; }
+  .modal .book-cover-panel p { overflow-wrap: anywhere; }
   .modal .modal-heading { gap: .75rem; }
   .modal .modal-heading h2, .modal .alert, .modal .form-note,
   .modal label, .modal small { overflow-wrap: anywhere; }

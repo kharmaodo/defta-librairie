@@ -1,6 +1,6 @@
 # RESP-09 — validation finale responsive
 
-Les RESP-01 à RESP-08 sont fusionnés et validés par le développeur. RESP-09 ajoute une matrice de contrôle continue, sans changement backend, API, données, auth, `.env` ou dépendances. Aucun résultat automatisé ne vaut certification de tous les appareils.
+Les RESP-01 à RESP-08 sont fusionnés et validés par le développeur. RESP-09 ajoute une matrice de contrôle continue et corrige les contraintes CSS révélées avec le texte agrandi à 320 px, sans changement backend, API, données, auth, `.env` ou dépendances. Aucun résultat automatisé ne vaut certification de tous les appareils.
 
 ## Matrice automatisée
 
@@ -17,6 +17,8 @@ La configuration habituelle garde la suite métier complète sur Chromium. `play
 | Complément RESP-09 | GET/pagination sans JavaScript, texte racine de 16 à 32 px sur 320/1440 px, grand écran 1920 px |
 
 L'augmentation du texte est un contrôle CSS, pas une simulation exacte du zoom navigateur à 200 %. WebKit Playwright n'est pas Safari installé sur un iPhone ; les sélecteurs de fichiers et claviers mobiles restent ceux de la recette réelle.
+
+Les mesures Firefox arrondissent les dimensions subpixel à 0,01 px et la position de défilement au pixel, tout en gardant les seuils fonctionnels. L'upload vérifie les octets, le nom et le type du fichier présent dans le `FormData` réellement donné à `fetch` sur les trois moteurs, ainsi que la requête multipart et sa clé d'idempotence. Chromium et Firefox vérifient aussi les octets interceptés ; WebKit ne les expose pas dans son inspecteur réseau ([limite Playwright #6479](https://github.com/microsoft/playwright/issues/6479)). Le serveur d'import est simulé pour cette matrice ; le parcours métier existant conserve ses contrôles d'intégration.
 
 ## Commandes Linux/WSL
 
