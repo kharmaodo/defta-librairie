@@ -38,7 +38,14 @@ function CandidateImage({candidate}: {candidate: Candidate}) {
 function Confirmation({text, busy, accept, cancel}: {text: string; busy: boolean; accept: () => void; cancel: () => void}) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {dialog.current?.showModal(); return () => dialog.current?.close();}, []);
-  return <dialog ref={dialog} aria-labelledby="confirmation-title" onCancel={event => {event.preventDefault(); if (!busy) cancel();}}>
+  return <dialog ref={dialog} aria-labelledby="confirmation-title" onKeyDown={event => {
+    if (event.key !== 'Tab') return;
+    const controls = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+    const first = controls[0], last = controls[controls.length - 1];
+    if (first && ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last))) {
+      event.preventDefault(); (event.shiftKey ? last : first).focus();
+    }
+  }} onCancel={event => {event.preventDefault(); if (!busy) cancel();}}>
     <h2 id="confirmation-title">Confirmer la décision</h2><p>{text}</p>
     <div className="actions"><button type="button" disabled={busy} onClick={cancel}>Annuler</button><button type="button" className="primary" disabled={busy} onClick={accept}>Confirmer</button></div>
   </dialog>;
