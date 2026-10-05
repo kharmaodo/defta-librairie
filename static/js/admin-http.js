@@ -164,12 +164,16 @@
     }
     return checked(response);
   }
+  function feedback(promise, options) {
+    const finish = window.DeftaFeedback?.begin(options);
+    return promise.finally(() => finish?.());
+  }
   const pendingJSONReads = new Map();
   function json(path, options) {
-    if (options !== undefined) return request(path, options).then(decode);
+    if (options !== undefined) return feedback(request(path, options).then(decode), options);
     const key = String(path);
     if (pendingJSONReads.has(key)) return pendingJSONReads.get(key);
-    const pending = request(path).then(decode)
+    const pending = feedback(request(path).then(decode))
       .finally(() => pendingJSONReads.delete(key));
     pendingJSONReads.set(key, pending);
     return pending;
