@@ -1594,3 +1594,33 @@ tbody tr:last-child td {
 }
 
 .library-logo { max-width:120px; max-height:100px; }
+
+
+/* Titres des panneaux : retour à la ligne avec texte agrandi. */
+.panel-heading > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.panel-heading h2,
+.panel-heading .eyebrow {
+  overflow-wrap: anywhere;
+}
+
+
+/* Synthèse : permettre aux cartes et à leur texte de se rétrécir. */
+.dashboard-summary-heading > *,
+.dashboard-summary-filters > *,
+.summary-card,
+.summary-card > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.dashboard-summary {
+  overflow-wrap: anywhere;
+}
+
+.summary-card {
+  grid-template-columns: minmax(0, 1fr);
+}
